@@ -1,0 +1,13 @@
+{
+  "itemGroup.neo_sim": "Example Mod Tab",
+  "block.neo_sim.example_block": "Example Block",
+  "item.neo_sim.example_item": "Example Item",
+
+  "neo_sim.configuration.title": "Neo-Sim Configs",
+  "neo_sim.configuration.section.neo_sim.common.toml": "Neo-Sim Configs",
+  "neo_sim.configuration.section.neo_sim.common.toml.title": "Neo-Sim Configs",
+  "neo_sim.configuration.items": "Item List",
+  "neo_sim.configuration.logDirtBlock": "Log Dirt Block",
+  "neo_sim.configuration.magicNumberIntroduction": "Magic Number Text",
+  "neo_sim.configuration.magicNumber": "Magic Number"
+}
