@@ -1,6 +1,6 @@
 # Neo-Sim   新模拟城市
 
-### 使用NeoForge-1.21.1开发的[模拟城市](https://www.mcmod.cn/class/489.html)mod
+### 使用NeoForge-1.21.1开发的类似[模拟城市](https://www.mcmod.cn/class/489.html)mod
 
 
 
