@@ -27,7 +27,7 @@ modId="${mod_id}" #mandatory
 version="${mod_version}" #mandatory
 
 # A display name for the mod
-displayName="${mod_name}" #mandatory
+displayName="新模拟城市" #此处更改mod名字
 
 # A URL to query for updates for this mod. See the JSON update specification https://docs.neoforged.net/docs/misc/updatechecker/
 #updateJSONURL="https://change.me.example.invalid/updates.json" #optional
@@ -42,12 +42,12 @@ displayName="${mod_name}" #mandatory
 #credits="" #optional
 
 # The authors of the mod, displayed in the mod UI (optional)
-authors="WenZai"
+authors="文仔"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-Neo-Sim
-Neo forge开发的类似模拟城市 (Sim-U-Kraft)模组
+Neo-Sim 新模拟城市
+使用NeoForge-1.21.1开发的类似模拟城市 (Sim-U-Kraft)模组
 '''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
