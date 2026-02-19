@@ -1,5 +1,6 @@
 package com.wenzai.neosim;
 
+import com.wenzai.neosim.block.ModBlocks;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -29,10 +30,16 @@ public class NeoSim
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
     public NeoSim(IEventBus modEventBus, ModContainer modContainer)
     {
+        //
         CreateFiles.initNeoSimDir();
 
         // Register the commonSetup method for mod-loading
         modEventBus.addListener(this::commonSetup);
+
+        //
+        ModItems.register(modEventBus);
+        ModBlocks.register(modEventBus);
+        CreativeModeTabs.register(modEventBus);
 
         // Register ourselves for server and other game events we are interested in.
         // Note that this is necessary if and only if we want *this* class (NeoSim) to respond directly to events.
