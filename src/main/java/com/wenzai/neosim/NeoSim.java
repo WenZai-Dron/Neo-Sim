@@ -36,7 +36,9 @@ public class NeoSim
         // Register the commonSetup method for mod-loading
         modEventBus.addListener(this::commonSetup);
 
-        //
+
+
+        // 此处进行注册
         ModItems.register(modEventBus);
         ModBlocks.register(modEventBus);
         CreativeModeTabs.register(modEventBus);

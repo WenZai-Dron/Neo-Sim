@@ -18,9 +18,19 @@ public class ModBlocks
     public static final DeferredRegister.Blocks BLOCKS =
             DeferredRegister.createBlocks(NeoSim.MOD_ID);
 
+
+
     // 此处注册方块
     public static final DeferredBlock<Block> BUILDING_CONSTRUCTOR =
             registerBlocks("building_constructor", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F)));
+    public static final DeferredBlock<Block> CONTROL_BOX =
+            registerBlocks("control_box", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F)));
+    public static final DeferredBlock<Block> MARKER =
+            registerBlocks("marker", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F)));
+    public static final DeferredBlock<Block> FARMING_BOX =
+            registerBlocks("farming_box", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F)));
+    public static final DeferredBlock<Block> MINING_BOX =
+            registerBlocks("mining_box", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F)));
 
     private static  <T extends Block> void registerBlockItems(String name, DeferredBlock<T> block)
     {
