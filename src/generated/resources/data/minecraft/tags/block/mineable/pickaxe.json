@@ -1,0 +1,9 @@
+{
+  "values": [
+    "neo_sim:building_constructor",
+    "neo_sim:control_box",
+    "neo_sim:marker",
+    "neo_sim:farming_box",
+    "neo_sim:mining_box"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "block.neo_sim.building_constructor": "建筑模盒",
+  "block.neo_sim.control_box": "控制箱",
+  "block.neo_sim.farming_box": "农业盒",
+  "block.neo_sim.marker": "标记棒",
+  "block.neo_sim.mining_box": "矿业盒",
+  "itemGroup.neosim_tab": "新模拟城市"
+}
