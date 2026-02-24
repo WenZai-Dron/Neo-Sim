@@ -31,9 +31,6 @@ public class Data
                 List.of(new LootTableProvider.SubProviderEntry(LootTables::new, LootContextParamSets.BLOCK)), lookupProvider));
         generator.addProvider(event.includeServer(), new Recipes(packOutput, lookupProvider));
 
-        BlockTagsProvider blockTagsProvider = new Tags(packOutput, lookupProvider, existingFileHelper);
-        generator.addProvider(event.includeServer(), blockTagsProvider);
-
         generator.addProvider(event.includeClient(), new BlockStates(packOutput, existingFileHelper));
         generator.addProvider(event.includeClient(), new LangEnUs(packOutput));
         generator.addProvider(event.includeClient(), new LangZhCn(packOutput));

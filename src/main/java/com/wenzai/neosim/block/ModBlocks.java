@@ -21,15 +21,16 @@ public class ModBlocks
 
     // 此处注册方块
     public static final DeferredBlock<Block> BUILDING_CONSTRUCTOR =
-            registerBlocks("building_constructor", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F).requiresCorrectToolForDrops()));
+            registerBlocks("building_constructor", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)));
     public static final DeferredBlock<Block> CONTROL_BOX =
-            registerBlocks("control_box", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F).noLootTable()));
+            registerBlocks("control_box", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)
+                    .noLootTable()));
     public static final DeferredBlock<Block> MARKER =
-            registerBlocks("marker", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F)));
+            registerBlocks("marker", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)));
     public static final DeferredBlock<Block> FARMING_BOX =
-            registerBlocks("farming_box", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F).requiresCorrectToolForDrops()));
+            registerBlocks("farming_box", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)));
     public static final DeferredBlock<Block> MINING_BOX =
-            registerBlocks("mining_box", () -> new Block(BlockBehaviour.Properties.of().strength(1.0F).requiresCorrectToolForDrops()));
+            registerBlocks("mining_box", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)));
 
     private static  <T extends Block> void registerBlockItems(String name, DeferredBlock<T> block)
     {
