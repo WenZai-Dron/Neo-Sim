@@ -21,9 +21,9 @@ public class ModBlocks
 
     // 此处注册方块
     public static final DeferredBlock<Block> BUILDING_CONSTRUCTOR =
-            registerBlocks("building_constructor", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)));
+            registerBlocks("building_constructor", () -> new BuildingConstructor(BlockBehaviour.Properties.of().strength(0.5F)));
     public static final DeferredBlock<Block> CONTROL_BOX =
-            registerBlocks("control_box", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)
+            registerBlocks("control_box", () -> new Block(BlockBehaviour.Properties.of().strength(2.5F)
                     .noLootTable()));
     public static final DeferredBlock<Block> MARKER =
             registerBlocks("marker", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)));
@@ -37,7 +37,7 @@ public class ModBlocks
         ModItems.ITEMS.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
     }
 
-    private  static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier block)
+    private  static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier<T> block) // 此处新增泛式
     {
         DeferredBlock<T> blocks = BLOCKS.register(name, block);
         registerBlockItems(name, blocks);

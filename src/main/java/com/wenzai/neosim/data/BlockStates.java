@@ -19,7 +19,7 @@ public class BlockStates extends BlockStateProvider
         simpleBlockWithItem(ModBlocks.BUILDING_CONSTRUCTOR.get(), cubeAll(ModBlocks.BUILDING_CONSTRUCTOR.get()));
         simpleBlockWithItem(ModBlocks.CONTROL_BOX.get(), cubeAll(ModBlocks.CONTROL_BOX.get()));
         simpleBlockWithItem(ModBlocks.MARKER.get(), cubeAll(ModBlocks.MARKER.get()));
-        simpleBlockWithItem(ModBlocks.FARMING_BOX.get(), cubeAll(ModBlocks.MINING_BOX.get()));
-        simpleBlockWithItem(ModBlocks.MINING_BOX.get(), cubeAll(ModBlocks.FARMING_BOX.get()));
+        simpleBlockWithItem(ModBlocks.FARMING_BOX.get(), cubeAll(ModBlocks.FARMING_BOX.get()));
+        simpleBlockWithItem(ModBlocks.MINING_BOX.get(), cubeAll(ModBlocks.MINING_BOX.get()));
     }
 }
