@@ -1,0 +1,15 @@
+{
+  "block.neo_sim.building_constructor": "Building Constructor",
+  "block.neo_sim.control_box": "Control Box",
+  "block.neo_sim.farming_box": "Farming Box",
+  "block.neo_sim.marker": "Marker",
+  "block.neo_sim.mining_box": "Mining Box",
+  "gui.neosim.run.button1": "Normal Mode",
+  "gui.neosim.run.button2": "Creative Mode",
+  "gui.neosim.run.button3": "Hardcore Mode",
+  "gui.neosim.run.tip1": "Author doesn't know what will happen:)",
+  "gui.neosim.run.tip2": "Author doesn't know how to translate:(",
+  "gui.neosim.run.tip3": "Author doesn't know how to translate:(",
+  "gui.neosim.run.title": "Please Choose Game Mode",
+  "itemGroup.neosim_tab": "Neo-Sim"
+}
