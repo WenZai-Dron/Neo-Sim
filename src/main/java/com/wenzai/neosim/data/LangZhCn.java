@@ -30,5 +30,8 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.run.tip1","作者也不知道会干嘛:)");
         add("gui.neosim.run.tip2","无限资金和资源");
         add("gui.neosim.run.tip3","建筑需要所有方块");
+
+        add("gui.neosim.information.super","超");
+        add("gui.neosim.information.population","人口");
     }
 }

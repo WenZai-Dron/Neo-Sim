@@ -15,27 +15,27 @@ public class Run extends Screen
 
     public Run()
     {
-        // 标题
         super(Component.translatable("gui.neosim.run.title"));
     }
+    
+    short[] Mode = new short[1];
 
     @Override
     protected void init()
     {
+        // 初始化
         super.init();
-
-        final short[] ModMode = new short[1];
 
         // Button1：普通模式 / Normal Mode
         this.addRenderableWidget(Button.builder(
                         Component.translatable("gui.neosim.run.button1"),
                         button ->
                         {
-                            ModMode[0] = 1;
+                            Mode[0] = 1;
                             onClose();
                         }
                         )
-                .pos(this.width / 2 - 100, 85)
+                .pos(140 / 2 - 100, 85)
                 .size(200, 20)
                 .build());
 
@@ -44,11 +44,11 @@ public class Run extends Screen
                         Component.translatable("gui.neosim.run.button2"),
                         button ->
                         {
-                            ModMode[0] = 2;
+                            Mode[0] = 2;
                             onClose();
                         }
                         )
-                .pos(this.width / 2 - 100, 145)
+                .pos(140 / 2 - 100, 145)
                 .size(200, 20)
                 .build());
 
@@ -57,11 +57,11 @@ public class Run extends Screen
                         Component.translatable("gui.neosim.run.button3"),
                         button ->
                         {
-                            ModMode[0] = 3;
+                            Mode[0] = 3;
                             onClose();
                         }
                         )
-                .pos(this.width / 2 - 100, 205)
+                .pos(140 / 2 - 100, 205)
                 .size(200, 20)
                 .build());
     }
@@ -69,7 +69,7 @@ public class Run extends Screen
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick)
     {
-        // 先绘背景
+        // 先渲染背景
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
 
         super.render(guiGraphics, mouseX, mouseY, partialTick);
@@ -80,7 +80,7 @@ public class Run extends Screen
         guiGraphics.drawString(
                 font,
                 Component.translatable("gui.neosim.run.tip1"),
-                this.width / 2 - 90, 110,
+                150, 110,
                 0xFFFFFF00,
                 false
         );
@@ -89,7 +89,7 @@ public class Run extends Screen
         guiGraphics.drawString(
                 font,
                 Component.translatable("gui.neosim.run.tip2"),
-                this.width / 2 - 90, 170,
+                150, 170,
                 0xFFFFFF00,
                 false
         );
@@ -98,7 +98,7 @@ public class Run extends Screen
         guiGraphics.drawString(
                 font,
                 Component.translatable("gui.neosim.run.tip3"),
-                this.width / 2 - 90, 230,
+                150, 230,
                 0xFFFFFF00,
                 false
         );

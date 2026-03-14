@@ -30,5 +30,8 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.run.tip1","Author doesn't know what will happen:)");     //
         add("gui.neosim.run.tip2","Author doesn't know how to translate:(");     //
         add("gui.neosim.run.tip3","Author doesn't know how to translate:(");     //
+
+        add("gui.neosim.information.super","super");
+        add("gui.neosim.information.population","population");
     }
 }

@@ -4,6 +4,8 @@
   "block.neo_sim.farming_box": "Farming Box",
   "block.neo_sim.marker": "Marker",
   "block.neo_sim.mining_box": "Mining Box",
+  "gui.neosim.information.population": "population",
+  "gui.neosim.information.super": "super",
   "gui.neosim.run.button1": "Normal Mode",
   "gui.neosim.run.button2": "Creative Mode",
   "gui.neosim.run.button3": "Hardcore Mode",
