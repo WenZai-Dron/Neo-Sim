@@ -27,6 +27,9 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.run.button1","普通模式");
         add("gui.neosim.run.button2","创造模式");
         add("gui.neosim.run.button3","硬核模式");
+        add("gui.neosim.run.button4","单人模式");
+        add("gui.neosim.run.button5","多人模式");
+        add("gui.neosim.run.button6","确定已选模式");
         add("gui.neosim.run.tip1","作者也不知道会干嘛:)");
         add("gui.neosim.run.tip2","无限资金和资源");
         add("gui.neosim.run.tip3","建筑需要所有方块");

@@ -19,6 +19,7 @@ public class Run extends Screen
     }
     
     short[] Mode = new short[1];
+    short[] SingeOrMuti = new short[1];
 
     @Override
     protected void init()
@@ -35,8 +36,8 @@ public class Run extends Screen
                             onClose();
                         }
                         )
-                .pos(140 / 2 - 100, 85)
-                .size(200, 20)
+                .pos(90, 85)
+                .size(135, 20)
                 .build());
 
         // Button2：创造模式 / Creative Mode
@@ -48,8 +49,8 @@ public class Run extends Screen
                             onClose();
                         }
                         )
-                .pos(140 / 2 - 100, 145)
-                .size(200, 20)
+                .pos(90, 145)
+                .size(135, 20)
                 .build());
 
         // Button3：硬核模式 / Hardcore Mode
@@ -61,8 +62,46 @@ public class Run extends Screen
                             onClose();
                         }
                         )
-                .pos(140 / 2 - 100, 205)
-                .size(200, 20)
+                .pos(90, 205)
+                .size(135, 20)
+                .build());
+
+        // Button4：单人模式 / Singe-Player
+        this.addRenderableWidget(Button.builder(
+                        Component.translatable("gui.neosim.run.button4"),
+                        button ->
+                        {
+                            SingeOrMuti[0] = 1;
+                            onClose();
+                        }
+                        )
+                .pos(265, 85)
+                .size(135, 20)
+                .build());
+
+        // Button5：多人模式 / Muti-Player
+        this.addRenderableWidget(Button.builder(
+                        Component.translatable("gui.neosim.run.button5"),
+                        button ->
+                        {
+                            SingeOrMuti[0] = 2;
+                            onClose();
+                        }
+                )
+                .pos(265, 145)
+                .size(135, 20)
+                .build());
+
+        // Button6：确定已选模式 / Untranslatable:(
+        this.addRenderableWidget(Button.builder(
+                        Component.translatable("gui.neosim.run.button6"),
+                        button ->
+                        {
+                            onClose();
+                        }
+                )
+                .pos(265, 205)
+                .size(135, 20)
                 .build());
     }
 
@@ -80,7 +119,7 @@ public class Run extends Screen
         guiGraphics.drawString(
                 font,
                 Component.translatable("gui.neosim.run.tip1"),
-                150, 110,
+                100, 110,
                 0xFFFFFF00,
                 false
         );
@@ -89,7 +128,7 @@ public class Run extends Screen
         guiGraphics.drawString(
                 font,
                 Component.translatable("gui.neosim.run.tip2"),
-                150, 170,
+                100, 170,
                 0xFFFFFF00,
                 false
         );
@@ -98,7 +137,7 @@ public class Run extends Screen
         guiGraphics.drawString(
                 font,
                 Component.translatable("gui.neosim.run.tip3"),
-                150, 230,
+                100, 230,
                 0xFFFFFF00,
                 false
         );

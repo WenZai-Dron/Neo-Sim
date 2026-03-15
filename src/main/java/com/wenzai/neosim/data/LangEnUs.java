@@ -27,6 +27,9 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.run.button1","Normal Mode");
         add("gui.neosim.run.button2","Creative Mode");
         add("gui.neosim.run.button3","Hardcore Mode");
+        add("gui.neosim.run.button4","Singe-Player");
+        add("gui.neosim.run.button5","Muti-Player");
+        add("gui.neosim.run.button6","Untranslatable:(");
         add("gui.neosim.run.tip1","Author doesn't know what will happen:)");     //
         add("gui.neosim.run.tip2","Author doesn't know how to translate:(");     //
         add("gui.neosim.run.tip3","Author doesn't know how to translate:(");     //
