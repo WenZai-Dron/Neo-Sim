@@ -4,7 +4,6 @@ import com.wenzai.neosim.gui.Run;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -24,8 +23,8 @@ public class BuildingConstructor extends Block
         Minecraft.getInstance().setScreen(new Run(Component.translatable("gui.neosim.run.title")));
     }
 
-    //@Override
-    public InteractionResult use(BlockState state, Level level, BlockPos pos , Player player, InteractionHand hand, BlockHitResult hitResult)
+    @Override
+    public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos , Player player, BlockHitResult hitResult)
     {
         if (level.isClientSide)
         {
