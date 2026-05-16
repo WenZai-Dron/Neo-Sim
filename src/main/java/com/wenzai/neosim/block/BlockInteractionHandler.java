@@ -1,7 +1,6 @@
 package com.wenzai.neosim.block;
 
 import com.wenzai.neosim.NeoSim;
-import com.wenzai.neosim.gui.Information;
 import com.wenzai.neosim.gui.Run;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -32,22 +31,6 @@ public class BlockInteractionHandler
 
             // 打开Run
             Minecraft.getInstance().setScreen(new Run());
-        }
-    }
-
-    // 此用于测试Information.java
-    @SubscribeEvent
-    public static void onRightClickControlBox(PlayerInteractEvent.RightClickBlock event)
-    {
-        BlockPos clickPos = event.getPos();
-        BlockState clickedBlock = event.getLevel().getBlockState(clickPos);
-
-        if (clickedBlock.is(ModBlocks.CONTROL_BOX.get()))
-        {
-            event.setCanceled(true);
-            event.setCancellationResult(net.minecraft.world.InteractionResult.SUCCESS);
-
-            Minecraft.getInstance().setScreen(new Information());
         }
     }
 }
