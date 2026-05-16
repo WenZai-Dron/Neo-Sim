@@ -38,7 +38,7 @@ public class ModBlocks
         ModItems.ITEMS.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
     }
 
-    private  static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier<T> block) // 此处新增泛式
+    private  static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier<T> block) // 此处新增泛型
     {
         DeferredBlock<T> blocks = BLOCKS.register(name, block);
         registerBlockItems(name, blocks);
