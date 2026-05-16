@@ -109,11 +109,11 @@ public class ModSavedData extends SavedData
     {
         return level.getDataStorage().computeIfAbsent(
                 new SavedData.Factory<>(
-                        ModSavedData::new,      // 新建逻辑
-                        ModSavedData::load,     // 加载逻辑
+                        ModSavedData::new, // 新建逻辑
+                        ModSavedData::load, // 加载逻辑
                         null
                 ),
-                ID                              // 存档ID
+                ID // 存档ID
         );
 }
 }
