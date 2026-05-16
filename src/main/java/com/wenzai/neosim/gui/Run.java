@@ -13,9 +13,9 @@ public class Run extends Screen
         super(Component.translatable("gui.neosim.run.title"));
     }
 
-    public int mode = 0;
-    public int singleOrMulti = 0;
-    Button button1, button2, button3, button4, button5, button6;
+    int mode = 0;
+    int singleOrMulti = 0;
+    private Button button1, button2, button3, button4, button5, button6;
     private final Component tip1 = Component.translatable("gui.neosim.run.tip1"),
                             tip2 = Component.translatable("gui.neosim.run.tip2"),
                             tip3 = Component.translatable("gui.neosim.run.tip3");
