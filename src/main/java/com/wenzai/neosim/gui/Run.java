@@ -1,10 +1,12 @@
 package com.wenzai.neosim.gui;
 
+import com.wenzai.neosim.SyncConfigPayload;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.network.chat.Component;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 public class Run extends Screen
 {
@@ -83,13 +85,21 @@ public class Run extends Screen
         this.addRenderableWidget(button5);
 
         button6 = Button.builder(Component.translatable("gui.neosim.run.button6"), Button -> {
+            syncToServer();
             onClose();
         })
                 .pos(265, 205)
                 .size(135, 20)
                 .build();
         this.addRenderableWidget(button6);
-        }
+    }
+
+    // 发送网络包
+    private void syncToServer()
+    {
+        PacketDistributor.sendToServer(new SyncConfigPayload(mode, singleOrMulti));
+    }
+
 
     // 渲染组件
     @Override

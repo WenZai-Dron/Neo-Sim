@@ -11,9 +11,13 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import org.jetbrains.annotations.NotNull;
 
 public class ModSavedData extends SavedData
 {
+    // 固定ID（世界存档文件名）
+    public static final String ID = NeoSim.MOD_ID + "_data";
+
     private int mode = 0;
     private int singleOrMulti = 0;
     private int population = 0;
@@ -21,46 +25,48 @@ public class ModSavedData extends SavedData
     private int day = 1;
     private double credit = 10.0;
 
-    // 固定ID（世界存档文件名）
-    public static final String ID = "NeoSim";
-
-    // 读取数据，从存档加载
-    public static ModSavedData load(CompoundTag tag, HolderLookup.Provider provider)
+    // 读取数据
+    private static ModSavedData load(CompoundTag tag, HolderLookup.Provider provider)
     {
         ModSavedData data = new ModSavedData();
 
-        // 从NBT读取所有状态对应原版的文件读取
+        // 从NBT读取
         data.mode = tag.getInt("mode");
         data.singleOrMulti = tag.getInt("singleOrMulti");
         data.population = tag.getInt("population");
         data.dayOfWeek = tag.getInt("dayOfWeek");
         data.day = tag.getInt("day");
         data.credit = tag.getDouble("credit");
+
         return data;
     }
 
     // 保存数据
     @Override
-    public CompoundTag save(CompoundTag tag, HolderLookup.Provider provider)
+    public @NotNull CompoundTag save(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider)
     {
         tag.putInt("mode", mode);
         tag.putInt("singleOrMulti", singleOrMulti);
         tag.putInt("population", population);
         tag.putInt("dayOfWeek", dayOfWeek);
-        tag.putInt("day",day);
-        tag.putDouble("credit",credit);
+        tag.putInt("day", day);
+        tag.putDouble("credit", credit);
+
+        // 日志
+        NeoSim.LOGGER.info(
+                "NeoSim-ModSavedData: mode={}, singleOrMulti={}, population={}, dayOfWeek={}, day={}, credit={}",
+                mode, singleOrMulti, population, dayOfWeek, day, credit
+        );
+
         return tag;
     }
+
+    public static final SavedData.Factory<ModSavedData> FACTORY =
+            new Factory<>(ModSavedData::new, ModSavedData::load);
 
     public ModSavedData()
     {
         setDirty();
-
-        // 日志
-        NeoSim.LOGGER.info(
-                "NeoSim: Saved | mode={}, singleOrMulti={}, population={}, dayOfWeek={}, day={}, credit={}",
-                mode, singleOrMulti, population, dayOfWeek, day, credit
-        );
     }
 
     public void setMode(int mode)
@@ -105,15 +111,9 @@ public class ModSavedData extends SavedData
     }
     public double getCredit() {return credit;}
 
+    // 工具方法：全局获取数据
     public static ModSavedData get(ServerLevel level)
     {
-        return level.getDataStorage().computeIfAbsent(
-                new SavedData.Factory<>(
-                        ModSavedData::new, // 新建逻辑
-                        ModSavedData::load, // 加载逻辑
-                        null
-                ),
-                ID // 存档ID
-        );
-}
+        return level.getDataStorage().computeIfAbsent(FACTORY, ID);
+    }
 }

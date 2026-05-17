@@ -1,6 +1,8 @@
 package com.wenzai.neosim;
 
 import com.wenzai.neosim.block.ModBlocks;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -50,6 +52,19 @@ public class NeoSim
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+
+        // 注册网络包
+        modEventBus.addListener(this::registerPayloads);
+    }
+
+    private void registerPayloads(RegisterPayloadHandlersEvent event)
+    {
+        PayloadRegistrar registrar = event.registrar(MOD_ID).versioned("1.0");
+        registrar.playToServer(
+                SyncConfigPayload.TYPE,
+                SyncConfigPayload.STREAM_CODEC,
+                SyncConfigPayload::handle
+        );
     }
 
     private void commonSetup(FMLCommonSetupEvent event)
