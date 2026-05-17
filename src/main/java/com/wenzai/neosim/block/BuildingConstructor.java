@@ -20,7 +20,7 @@ public class BuildingConstructor extends Block
 
     public static void OpenGuiRun()
     {
-        Minecraft.getInstance().setScreen(new Run(Component.translatable("gui.neosim.run.title")));
+        Minecraft.getInstance().setScreen(new Run());
     }
 
     @Override
