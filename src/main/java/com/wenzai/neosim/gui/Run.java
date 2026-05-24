@@ -17,81 +17,76 @@ public class Run extends Screen
 
     int mode = 0;
     int singleOrMulti = 0;
-    private Button button1, button2, button3, button4, button5, button6;
-    private final Component tip1 = Component.translatable("gui.neosim.run.tip1"),
-                            tip2 = Component.translatable("gui.neosim.run.tip2"),
-                            tip3 = Component.translatable("gui.neosim.run.tip3");
-
-    public Run(Component title)
-    {
-        super(title);
-    }
+    private Button buttonNormal, buttonCreative, buttonHardcore, buttonSingle, buttonMulti, buttonClose;
+    private final Component tipNormal = Component.translatable("gui.neosim.run.tipNormal"),
+                            tipCreative = Component.translatable("gui.neosim.run.tipCreative"),
+                            tipHardcore = Component.translatable("gui.neosim.run.tipHardcore");
 
     // 初始化按钮组件
     @Override
     protected void init()
     {
-        button1 = Button.builder(Component.translatable("gui.neosim.run.button1"), Button -> {
+        buttonNormal = Button.builder(Component.translatable("gui.neosim.run.buttonNormal"), Button -> {
             mode = 1;
-            button2.active = true;
-            button3.active = true;
+            buttonCreative.active = true;
+            buttonHardcore.active = true;
             Button.active = false;
         })
                 .pos(90, 85)
                 .size(135, 20)
                 .build();
-        this.addRenderableWidget(button1);
+        this.addRenderableWidget(buttonNormal);
 
-        button2 = Button.builder(Component.translatable("gui.neosim.run.button2"), Button -> {
+        buttonCreative = Button.builder(Component.translatable("gui.neosim.run.buttonCreative"), Button -> {
             mode = 2;
-            button1.active = true;
-            button3.active = true;
+            buttonNormal.active = true;
+            buttonHardcore.active = true;
             Button.active = false;
         })
                 .pos(90, 145)
                 .size(135, 20)
                 .build();
-        this.addRenderableWidget(button2);
+        this.addRenderableWidget(buttonCreative);
 
-        button3 = Button.builder(Component.translatable("gui.neosim.run.button3"), Button -> {
+        buttonHardcore = Button.builder(Component.translatable("gui.neosim.run.buttonHardcore"), Button -> {
             mode = 3;
-            button1.active = true;
-            button2.active = true;
+            buttonNormal.active = true;
+            buttonCreative.active = true;
             Button.active = false;
         })
                 .pos(90, 205)
                 .size(135, 20)
                 .build();
-        this.addRenderableWidget(button3);
+        this.addRenderableWidget(buttonHardcore);
 
-        button4 = Button.builder(Component.translatable("gui.neosim.run.button4"), Button -> {
+        buttonSingle = Button.builder(Component.translatable("gui.neosim.run.buttonSingle"), Button -> {
             singleOrMulti = 1;
-            button5.active = true;
+            buttonMulti.active = true;
             Button.active = false;
         })
                 .pos(265, 85)
                 .size(135, 20)
                 .build();
-        this.addRenderableWidget(button4);
+        this.addRenderableWidget(buttonSingle);
 
-        button5 = Button.builder(Component.translatable("gui.neosim.run.button5"), Button -> {
+        buttonMulti = Button.builder(Component.translatable("gui.neosim.run.buttonMulti"), Button -> {
             singleOrMulti = 2;
-            button4.active = true;
+            buttonSingle.active = true;
             Button.active = false;
         })
                 .pos(265, 145)
                 .size(135, 20)
                 .build();
-        this.addRenderableWidget(button5);
+        this.addRenderableWidget(buttonMulti);
 
-        button6 = Button.builder(Component.translatable("gui.neosim.run.button6"), Button -> {
+        buttonClose = Button.builder(Component.translatable("gui.neosim.run.buttonClose"), Button -> {
             syncToServer();
             onClose();
         })
                 .pos(265, 205)
                 .size(135, 20)
                 .build();
-        this.addRenderableWidget(button6);
+        this.addRenderableWidget(buttonClose);
     }
 
     // 发送网络包
@@ -113,8 +108,8 @@ public class Run extends Screen
 
         Font font = this.font;
 
-        guiGraphics.drawCenteredString(font, tip1, 150, 110, 0xFFFFFF00);
-        guiGraphics.drawCenteredString(font, tip2, 150, 170, 0xFFFFFF00);
-        guiGraphics.drawCenteredString(font, tip3, 150, 230, 0xFFFFFF00);
+        guiGraphics.drawCenteredString(font, tipNormal, 150, 110, 0xFFFFFF00);
+        guiGraphics.drawCenteredString(font, tipCreative, 150, 170, 0xFFFFFF00);
+        guiGraphics.drawCenteredString(font, tipHardcore, 150, 230, 0xFFFFFF00);
     }
 }

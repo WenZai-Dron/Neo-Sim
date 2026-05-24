@@ -24,15 +24,15 @@ public class LangEnUs extends LanguageProvider
         add("itemGroup.neosim_tab","Neo-Sim");
 
         add("gui.neosim.run.title","Please Choose Game Mode");
-        add("gui.neosim.run.button1","Normal Mode");
-        add("gui.neosim.run.button2","Creative Mode");
-        add("gui.neosim.run.button3","Hardcore Mode");
-        add("gui.neosim.run.button4","Single-Player");
-        add("gui.neosim.run.button5","Multi-Player");
-        add("gui.neosim.run.button6","Untranslatable:(");
-        add("gui.neosim.run.tip1","Author doesn't know what will happen:)");     //
-        add("gui.neosim.run.tip2","Author doesn't know how to translate:(");     //
-        add("gui.neosim.run.tip3","Author doesn't know how to translate:(");     //
+        add("gui.neosim.run.buttonNormal","Normal Mode");
+        add("gui.neosim.run.buttonCreative","Creative Mode");
+        add("gui.neosim.run.buttonHardcore","Hardcore Mode");
+        add("gui.neosim.run.buttonSingle","Single-Player");
+        add("gui.neosim.run.buttonMulti","Multi-Player");
+        add("gui.neosim.run.buttonClose","Close");
+        add("gui.neosim.run.tipNormal","Author doesn't know what will happen:)");     //
+        add("gui.neosim.run.tipCreative","Author doesn't know how to translate:(");     //
+        add("gui.neosim.run.tipHardcore","Author doesn't know how to translate:(");     //
 
         add("gui.neosim.information.super","super");
         add("gui.neosim.information.population","population");
