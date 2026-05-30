@@ -18,6 +18,7 @@ public class ModSavedData extends SavedData
     // 固定ID（世界存档文件名）
     public static final String ID = NeoSim.MOD_ID + "_data";
 
+    // 初始变量
     private int mode = 0;
     private int singleOrMulti = 0;
     private int population = 0;
