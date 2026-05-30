@@ -42,7 +42,8 @@ public record SyncConfigPayload(int mode, int singleOrMulti, int population, int
 
             // 日志
             NeoSim.LOGGER.info(
-                    "NeoSim-SyncConfigPayload: mode={}, singleOrMulti={}", payload.mode(), payload.singleOrMulti()
+                    "NeoSim-SyncConfigPayload: mode={}, singleOrMulti={}, population={}, dayOfWeek={}, day={}, credit={}",
+                    payload.mode(), payload.singleOrMulti(), payload.population(), payload.dayOfWeek(), payload.day(), payload.credit()
             );
         });
     }
