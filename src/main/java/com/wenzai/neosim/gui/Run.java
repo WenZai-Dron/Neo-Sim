@@ -26,6 +26,8 @@ public class Run extends Screen
     @Override
     protected void init()
     {
+        buttonClose.active = false;
+
         buttonNormal = Button.builder(Component.translatable("gui.neosim.run.buttonNormal"), Button -> {
             mode = 1;
             buttonCreative.active = true;
@@ -80,8 +82,12 @@ public class Run extends Screen
         this.addRenderableWidget(buttonMulti);
 
         buttonClose = Button.builder(Component.translatable("gui.neosim.run.buttonClose"), Button -> {
-            syncToServer();
-            onClose();
+            if ( mode != 0 && singleOrMulti != 0 )
+                    {
+                        Button.active = true;
+                        syncToServer();
+                        onClose();
+                    }
         })
                 .pos(265, 205)
                 .size(135, 20)
@@ -92,7 +98,8 @@ public class Run extends Screen
     // 发送网络包
     private void syncToServer()
     {
-        PacketDistributor.sendToServer(new SyncConfigPayload(mode, singleOrMulti));
+        // 0 与 0.0是占位符，服务端将直接无视
+        PacketDistributor.sendToServer(new SyncConfigPayload(mode, singleOrMulti, 0, 0, 0, 0.0));
     }
 
 
