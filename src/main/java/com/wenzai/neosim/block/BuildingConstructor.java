@@ -18,17 +18,12 @@ public class BuildingConstructor extends Block
         super(properties);
     }
 
-    public static void OpenGuiRun()
-    {
-        Minecraft.getInstance().setScreen(new Run());
-    }
-
     @Override
     public InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos , Player player, BlockHitResult hitResult)
     {
         if (level.isClientSide)
         {
-            OpenGuiRun();
+            Minecraft.getInstance().setScreen(new Run());
         }
 
         return InteractionResult.sidedSuccess(level.isClientSide());

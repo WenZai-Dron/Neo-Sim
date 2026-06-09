@@ -1,6 +1,12 @@
 package com.wenzai.neosim;
 
 import com.wenzai.neosim.block.ModBlocks;
+import com.wenzai.neosim.gui.HUD;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.slf4j.Logger;
@@ -19,7 +25,6 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
-// The value here should match an entry in the META-INF/neoforge.mods.toml file
 @Mod(NeoSim.MOD_ID)
 public class NeoSim
 {
@@ -53,23 +58,40 @@ public class NeoSim
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
 
+        // 注册HUD
+        if (FMLEnvironment.dist == Dist.CLIENT)
+        {
+            NeoForge.EVENT_BUS.register(new HUD());
+        }
+
         // 注册网络包
         modEventBus.addListener(this::registerPayloads);
+    }
+
+    // 玩家加入自动同步数据
+    @SubscribeEvent
+    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event)
+    {
+        if (event.getEntity() instanceof ServerPlayer player)
+        {
+            ModSavedData data = ModSavedData.get(player.serverLevel());
+            SyncDataPayload payload = new SyncDataPayload(data.getData());
+            PacketDistributor.sendToPlayer(player, payload);
+        }
     }
 
     private void registerPayloads(RegisterPayloadHandlersEvent event)
     {
         PayloadRegistrar registrar = event.registrar(MOD_ID).versioned("1.0");
-        registrar.playToServer(
-                SyncConfigPayload.TYPE,
-                SyncConfigPayload.STREAM_CODEC,
-                SyncConfigPayload::handle
+        registrar.playBidirectional(
+                SyncDataPayload.TYPE,
+                SyncDataPayload.STREAM_CODEC,
+                SyncDataPayload::handle
         );
     }
 
     private void commonSetup(FMLCommonSetupEvent event)
     {
-        // Some common setup code
         LOGGER.info("HELLO FROM COMMON SETUP");
 
         if (Config.LOG_DIRT_BLOCK.getAsBoolean())

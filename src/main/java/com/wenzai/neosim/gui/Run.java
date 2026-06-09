@@ -1,6 +1,7 @@
 package com.wenzai.neosim.gui;
 
-import com.wenzai.neosim.SyncConfigPayload;
+import com.wenzai.neosim.SimData;
+import com.wenzai.neosim.SyncDataPayload;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -22,17 +23,25 @@ public class Run extends Screen
                             tipCreative = Component.translatable("gui.neosim.run.tipCreative"),
                             tipHardcore = Component.translatable("gui.neosim.run.tipHardcore");
 
+    // 启用关闭按钮
+    private void tryEnableClose()
+    {
+        if (mode != 0 && singleOrMulti != 0)
+        {
+            buttonClose.active = true;
+        }
+    }
+
     // 初始化按钮组件
     @Override
     protected void init()
     {
-        buttonClose.active = false;
-
         buttonNormal = Button.builder(Component.translatable("gui.neosim.run.buttonNormal"), Button -> {
             mode = 1;
             buttonCreative.active = true;
             buttonHardcore.active = true;
             Button.active = false;
+            tryEnableClose();
         })
                 .pos(90, 85)
                 .size(135, 20)
@@ -44,6 +53,7 @@ public class Run extends Screen
             buttonNormal.active = true;
             buttonHardcore.active = true;
             Button.active = false;
+            tryEnableClose();
         })
                 .pos(90, 145)
                 .size(135, 20)
@@ -55,6 +65,7 @@ public class Run extends Screen
             buttonNormal.active = true;
             buttonCreative.active = true;
             Button.active = false;
+            tryEnableClose();
         })
                 .pos(90, 205)
                 .size(135, 20)
@@ -65,6 +76,7 @@ public class Run extends Screen
             singleOrMulti = 1;
             buttonMulti.active = true;
             Button.active = false;
+            tryEnableClose();
         })
                 .pos(265, 85)
                 .size(135, 20)
@@ -75,6 +87,7 @@ public class Run extends Screen
             singleOrMulti = 2;
             buttonSingle.active = true;
             Button.active = false;
+            tryEnableClose();
         })
                 .pos(265, 145)
                 .size(135, 20)
@@ -82,24 +95,21 @@ public class Run extends Screen
         this.addRenderableWidget(buttonMulti);
 
         buttonClose = Button.builder(Component.translatable("gui.neosim.run.buttonClose"), Button -> {
-            if ( mode != 0 && singleOrMulti != 0 )
-                    {
-                        Button.active = true;
-                        syncToServer();
-                        onClose();
-                    }
+            syncToServer();
+            onClose();
         })
                 .pos(265, 205)
                 .size(135, 20)
                 .build();
         this.addRenderableWidget(buttonClose);
+
+        buttonClose.active = false;
     }
 
     // 发送网络包
     private void syncToServer()
     {
-        // 0 与 0.0是占位符，服务端将直接无视
-        PacketDistributor.sendToServer(new SyncConfigPayload(mode, singleOrMulti, 0, 0, 0, 0.0));
+        PacketDistributor.sendToServer(new SyncDataPayload(new SimData(mode, singleOrMulti, 0, 0, 0, 0.0)));
     }
 
 

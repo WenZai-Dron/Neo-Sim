@@ -1,118 +1,110 @@
-/*  使用：
-    ModSavedData data = ModSavedData.get(level);
-    data.setCredit(data.getCredit() + 5.0);     credit += 5
-    data.setMode(1);                            设置mode为1
-
-*/
-
 package com.wenzai.neosim;
 
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.saveddata.SavedData;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
 
 public class ModSavedData extends SavedData
 {
-    // 固定ID（世界存档文件名）
     public static final String ID = NeoSim.MOD_ID + "_data";
 
-    // 初始变量
-    private int mode = 0;
-    private int singleOrMulti = 0;
-    private int population = 0;
-    private int dayOfWeek = 0;
-    private int day = 1;
-    private double credit = 10.0;
+    private SimData data = SimData.DEFAULT;
 
-    // 读取数据
+    // NBT持久化
     private static ModSavedData load(CompoundTag tag, HolderLookup.Provider provider)
     {
-        ModSavedData data = new ModSavedData();
-
-        // 从NBT读取
-        data.mode = tag.getInt("mode");
-        data.singleOrMulti = tag.getInt("singleOrMulti");
-        data.population = tag.getInt("population");
-        data.dayOfWeek = tag.getInt("dayOfWeek");
-        data.day = tag.getInt("day");
-        data.credit = tag.getDouble("credit");
-
-        return data;
+        ModSavedData sd = new ModSavedData();
+        sd.data = SimData.fromNBT(tag);
+        return sd;
     }
 
-    // 保存数据
     @Override
     public @NotNull CompoundTag save(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider)
     {
-        tag.putInt("mode", mode);
-        tag.putInt("singleOrMulti", singleOrMulti);
-        tag.putInt("population", population);
-        tag.putInt("dayOfWeek", dayOfWeek);
-        tag.putInt("day", day);
-        tag.putDouble("credit", credit);
-
-        // 日志
-        NeoSim.LOGGER.info(
-                "NeoSim-ModSavedData: mode={}, singleOrMulti={}, population={}, dayOfWeek={}, day={}, credit={}",
-                mode, singleOrMulti, population, dayOfWeek, day, credit
-        );
-
+        data.toNBT(tag);
+        NeoSim.LOGGER.info("NeoSim-SavedData: {}", data);
         return tag;
     }
 
     public static final SavedData.Factory<ModSavedData> FACTORY =
             new Factory<>(ModSavedData::new, ModSavedData::load);
 
+    // 网络同步
+    private void syncToClients(ServerLevel level)
+    {
+        SyncDataPayload payload = new SyncDataPayload(data);
+        level.players().forEach(player -> PacketDistributor.sendToPlayer(player, payload));
+    }
+
     public ModSavedData()
     {
         setDirty();
     }
 
-    public void setMode(int mode)
-    {
-        this.mode = mode;
-        setDirty();
-    }
-    public int getMode() {return mode;}
+    // 获取内部数据，用于构造网络包
+    public SimData getData() { return data; }
 
-    public void setSingleOrMulti(int singleOrMulti)
+    // 全量替换数据并同步一次
+    public void setData(SimData newData, ServerLevel level)
     {
-        this.singleOrMulti = singleOrMulti;
+        this.data = newData;
         setDirty();
+        syncToClients(level);
     }
-    public int getSingleOrMulti() {return singleOrMulti;}
 
-    public void setPopulation(int population)
+    // 单独Getter/Setter（每次调用会触发同步）
+    public int getMode() { return data.mode(); }
+    public void setMode(int mode, ServerLevel level)
     {
-        this.population = population;
+        this.data = data.withMode(mode);
         setDirty();
+        syncToClients(level);
     }
-    public int getPopulation() {return population;}
 
-    public void setDayOfWeek(int dayOfWeek)
+    public int getSingleOrMulti() { return data.singleOrMulti(); }
+    public void setSingleOrMulti(int singleOrMulti, ServerLevel level)
     {
-        this.dayOfWeek = dayOfWeek;
+        this.data = data.withSingleOrMulti(singleOrMulti);
         setDirty();
+        syncToClients(level);
     }
-    public int getDayOfWeek() {return dayOfWeek;}
 
-    public void setDay(int day)
+    public int getPopulation() { return data.population(); }
+    public void setPopulation(int population, ServerLevel level)
     {
-        this.day = day;
+        this.data = data.withPopulation(population);
         setDirty();
+        syncToClients(level);
     }
-    public int getDay() {return day;}
 
-    public void setCredit(double credit)
+    public int getDayOfWeek() { return data.dayOfWeek(); }
+    public void setDayOfWeek(int dayOfWeek, ServerLevel level)
     {
-        this.credit = credit;
+        this.data = data.withDayOfWeek(dayOfWeek);
         setDirty();
+        syncToClients(level);
     }
-    public double getCredit() {return credit;}
 
-    // 工具方法：全局获取数据
+    public int getDay() { return data.day(); }
+    public void setDay(int day, ServerLevel level)
+    {
+        this.data = data.withDay(day);
+        setDirty();
+        syncToClients(level);
+    }
+
+    public double getCredit() { return data.credit(); }
+    public void setCredit(double credit, ServerLevel level)
+    {
+        this.data = data.withCredit(credit);
+        setDirty();
+        syncToClients(level);
+    }
+
+    // 获取实例
     public static ModSavedData get(ServerLevel level)
     {
         return level.getDataStorage().computeIfAbsent(FACTORY, ID);
