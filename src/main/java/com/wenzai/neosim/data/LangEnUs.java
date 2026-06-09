@@ -41,5 +41,12 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.hud.dayOfWeek","dayOfWeek");
         add("gui.neosim.hud.day","day");
         add("gui.neosim.hud.credit","credit");
+        add("gui.neosim.hud.monday","Monday");
+        add("gui.neosim.hud.tuesday","Tuesday");
+        add("gui.neosim.hud.wednesday","Wednesday");
+        add("gui.neosim.hud.thursday","Thursday");
+        add("gui.neosim.hud.friday","Friday");
+        add("gui.neosim.hud.saturday","Saturday");
+        add("gui.neosim.hud.sunday","Sunday");
     }
 }

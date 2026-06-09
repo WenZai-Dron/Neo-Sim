@@ -40,5 +40,12 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.hud.dayOfWeek","星期");
         add("gui.neosim.hud.day","天数");
         add("gui.neosim.hud.credit","资金");
+        add("gui.neosim.hud.monday","星期一");
+        add("gui.neosim.hud.tuesday","星期二");
+        add("gui.neosim.hud.wednesday","星期三");
+        add("gui.neosim.hud.thursday","星期四");
+        add("gui.neosim.hud.friday","星期五");
+        add("gui.neosim.hud.saturday","星期六");
+        add("gui.neosim.hud.sunday","星期日");
     }
 }

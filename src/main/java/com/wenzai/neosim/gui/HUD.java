@@ -40,14 +40,32 @@ public class HUD
             default -> "Null";
         };
 
-        String singleOrMultiStr = switch (data.getMode())
+        String singleOrMultiStr = switch (data.getSingleOrMulti())
         {
             case 1 -> Component.translatable("gui.neosim.run.buttonSingle").getString();
             case 2 -> Component.translatable("gui.neosim.run.buttonMulti").getString();
             default -> "Null";
         };
 
+        String dayOfWeekStr = switch (data.getDayOfWeek())
+        {
+            case 0 -> Component.translatable("gui.neosim.hud.sunday").getString();
+            case 1 -> Component.translatable("gui.neosim.hud.monday").getString();
+            case 2 -> Component.translatable("gui.neosim.hud.tuesday").getString();
+            case 3 -> Component.translatable("gui.neosim.hud.wednesday").getString();
+            case 4 -> Component.translatable("gui.neosim.hud.thursday").getString();
+            case 5 -> Component.translatable("gui.neosim.hud.friday").getString();
+            case 6 -> Component.translatable("gui.neosim.hud.saturday").getString();
+            default -> "Null";
+        };
+
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(0.8f, 0.8f, 1.0f);
         guiGraphics.drawString(mc.font, Component.translatable("gui.neosim.hud.mode").getString() + ": " + modeStr, 10, 10, 0xFFFFFF);
-        guiGraphics.drawString(mc.font, Component.translatable("gui.neosim.hud.singleOrMulti").getString() + ": " + singleOrMultiStr, 50, 10, 0xFFFFFF);
+        guiGraphics.drawString(mc.font, Component.translatable("gui.neosim.hud.singleOrMulti").getString() + ": " + singleOrMultiStr, 110, 10, 0xFFFFFF);
+        guiGraphics.drawString(mc.font, dayOfWeekStr, 210, 10, 0xFFFFFF);
+        guiGraphics.drawString(mc.font, Component.translatable("gui.neosim.hud.day").getString() + ": " + data.getDay(), 310, 10, 0xFFFFFF);
+        guiGraphics.drawString(mc.font, Component.translatable("gui.neosim.hud.credit").getString() + ": " + data.getCredit(), 410, 10, 0xFFFFFF);
+        guiGraphics.pose().popPose();
     }
 }
