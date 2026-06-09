@@ -30,11 +30,16 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.run.buttonSingle","Singleplayer");
         add("gui.neosim.run.buttonMulti","Multiplayer");
         add("gui.neosim.run.buttonClose","Close");
-        add("gui.neosim.run.tipNormal","Author doesn't know what will happen:)");     //
-        add("gui.neosim.run.tipCreative","Author doesn't know how to translate:(");     //
-        add("gui.neosim.run.tipHardcore","Author doesn't know how to translate:(");     //
+        add("gui.neosim.run.tipNormal","Author doesn't know what will happen:)");
+        add("gui.neosim.run.tipCreative","Author doesn't know how to translate:(");
+        add("gui.neosim.run.tipHardcore","Author doesn't know how to translate:(");
 
-        add("gui.neosim.information.super","super");
-        add("gui.neosim.information.population","population");
+
+        add("gui.neosim.hud.mode","mode");
+        add("gui.neosim.hud.singleOrMulti","singleOrMulti");
+        add("gui.neosim.hud.population","population");
+        add("gui.neosim.hud.dayOfWeek","dayOfWeek");
+        add("gui.neosim.hud.day","day");
+        add("gui.neosim.hud.credit","credit");
     }
 }

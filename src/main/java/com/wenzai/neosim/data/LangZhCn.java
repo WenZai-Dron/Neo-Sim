@@ -34,6 +34,11 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.run.tipCreative","无限资金和资源");
         add("gui.neosim.run.tipHardcore","建筑需要所有方块");
 
-        add("gui.neosim.information.population","人口");
+        add("gui.neosim.hud.mode","游戏模式");
+        add("gui.neosim.hud.singleOrMulti","游玩模式");
+        add("gui.neosim.hud.population","人口");
+        add("gui.neosim.hud.dayOfWeek","星期");
+        add("gui.neosim.hud.day","天数");
+        add("gui.neosim.hud.credit","资金");
     }
 }
