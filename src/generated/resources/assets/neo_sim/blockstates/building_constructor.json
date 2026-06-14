@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "neo_sim:block/building_constructor"
+    }
+  }
+}
