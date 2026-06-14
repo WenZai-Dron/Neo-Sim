@@ -1,4 +1,4 @@
-![NeoSimLogo.png](src/main/resources/assets/neo_sim/NeoSimLogo.png)
+![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
 
 # Neo-Sim   新模拟城市
 
@@ -10,4 +10,4 @@
 
 1. 使用类似[投影](https://www.mcmod.cn/class/2261.html)mod的方块放置方式完成建筑方面开发
 
-2. 支持多人游戏
+2. 支持多人游戏，服务器游戏
