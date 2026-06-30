@@ -2,33 +2,33 @@
 
 package com.wenzai.neosim;
 
-import net.minecraft.nbt.CompoundTag;
+import com.google.gson.JsonObject;
 
 public record SimData(byte mode, short population, int dayOfWeek, int day, double credit)
 {
 
     public static final SimData DEFAULT = new SimData((byte)0, (short)0, 0, 1, 10.0);
 
-    // NBT序列化
-    public static SimData fromNBT(CompoundTag tag)
+    // 文件序列化
+    public static SimData fromJson(JsonObject json)
     {
         return new SimData(
-                tag.getByte("mode"),
-                tag.getShort("population"),
-                tag.getInt("dayOfWeek"),
-                tag.getInt("day"),
-                tag.getDouble("credit")
+                json.get("mode").getAsByte(),
+                json.get("population").getAsShort(),
+                json.get("dayOfWeek").getAsInt(),
+                json.get("day").getAsInt(),
+                json.get("credit").getAsDouble()
         );
     }
 
-    public CompoundTag toNBT(CompoundTag tag)
+    public JsonObject toJson(JsonObject json)
     {
-        tag.putByte("mode", mode);
-        tag.putShort("population", population);
-        tag.putInt("dayOfWeek", dayOfWeek);
-        tag.putInt("day", day);
-        tag.putDouble("credit", credit);
-        return tag;
+        json.addProperty("mode", mode);
+        json.addProperty("population", population);
+        json.addProperty("dayOfWeek", dayOfWeek);
+        json.addProperty("day", day);
+        json.addProperty("credit", credit);
+        return json;
     }
 
     // 返回新实例

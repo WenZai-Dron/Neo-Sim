@@ -4,6 +4,12 @@
   "block.neo_sim.farming_box": "Farming Box",
   "block.neo_sim.marker": "Marker",
   "block.neo_sim.mining_box": "Mining Box",
+  "gui.neosim.city.add": "Add City",
+  "gui.neosim.city.choose": "Choose City",
+  "gui.neosim.city.title": "City",
+  "gui.neosim.cityAdd.buttonConfirm": "Confirm",
+  "gui.neosim.cityAdd.input": "City Name",
+  "gui.neosim.cityAdd.title": "Add City",
   "gui.neosim.hud.credit": "credit",
   "gui.neosim.hud.dayOfWeek": "dayOfWeek",
   "gui.neosim.hud.friday": "Friday",
@@ -22,6 +28,6 @@
   "gui.neosim.run.tipCreative": "Author doesn't know how to translate:(",
   "gui.neosim.run.tipHardcore": "Author doesn't know how to translate:(",
   "gui.neosim.run.tipNormal": "Author doesn't know what will happen:)",
-  "gui.neosim.run.title": "Please Choose Game Mode",
+  "gui.neosim.run.title": "Run",
   "itemGroup.neosim_tab": "Neo-Sim"
 }

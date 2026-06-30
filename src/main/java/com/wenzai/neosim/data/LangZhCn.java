@@ -23,7 +23,7 @@ public class LangZhCn extends LanguageProvider
 
         add("itemGroup.neosim_tab","新模拟城市");
 
-        add("gui.neosim.run.title","请选择游戏模式");
+        add("gui.neosim.run.title","运行");
         add("gui.neosim.run.buttonNormal","普通模式");
         add("gui.neosim.run.buttonCreative","创造模式");
         add("gui.neosim.run.buttonHardcore","硬核模式");
@@ -43,5 +43,13 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.hud.friday","星期五");
         add("gui.neosim.hud.saturday","星期六");
         add("gui.neosim.hud.sunday","星期日");
+
+        add("gui.neosim.city.title","城市");
+        add("gui.neosim.city.add","新增城市");
+        add("gui.neosim.city.choose","选择城市");
+
+        add("gui.neosim.cityAdd.title","新增城市");
+        add("gui.neosim.cityAdd.input","城市名称");
+        add("gui.neosim.cityAdd.buttonConfirm","确认");
     }
 }

@@ -1,5 +1,6 @@
 package com.wenzai.neosim;
 
+import com.wenzai.neosim.gui.City;
 import com.wenzai.neosim.gui.Run;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
@@ -19,6 +20,7 @@ import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 public class NeoSimClient
 {
     private static int openRunGuiTimer = -1;
+    private static int openCityGuiTimer = -1;
 
     public NeoSimClient(ModContainer container)
     {
@@ -41,6 +43,16 @@ public class NeoSimClient
         openRunGuiTimer = 200; // 20 ticks/s * 10s = 200 ticks
     }
 
+    public static void scheduleOpenCityGui()
+    {
+        openCityGuiTimer = 200; // 20 ticks/s * 10s = 200 ticks
+    }
+
+    public static int getOpenRunGuiTimer()
+    {
+        return openRunGuiTimer;
+    }
+
     @SubscribeEvent
     static void onClientTick(ClientTickEvent.Post event)
     {
@@ -55,6 +67,20 @@ public class NeoSimClient
                     mc.setScreen(new Run());
                 }
                 openRunGuiTimer = -1;
+            }
+        }
+
+        if (openCityGuiTimer > 0)
+        {
+            openCityGuiTimer--;
+            if (openCityGuiTimer == 0)
+            {
+                Minecraft mc = Minecraft.getInstance();
+                if (mc.player != null && mc.level != null)
+                {
+                    mc.setScreen(new City());
+                }
+                openCityGuiTimer = -1;
             }
         }
     }

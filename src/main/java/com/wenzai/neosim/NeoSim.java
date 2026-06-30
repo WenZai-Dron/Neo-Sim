@@ -74,22 +74,62 @@ public class NeoSim
         modEventBus.addListener(this::registerPayloads);
     }
 
-    // 玩家加入自动同步数据，触发Run选择界面
+    // 玩家加入自动同步数据，触发对应界面
     @SubscribeEvent
     public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event)
     {
         if (event.getEntity() instanceof ServerPlayer player)
         {
             ModSavedData data = ModSavedData.get(player.serverLevel());
-            SyncDataPayload payload = new SyncDataPayload(data.getData());
-            PacketDistributor.sendToPlayer(player, payload);
+            String playerName = player.getName().getString();
+            String cityName = ModSavedData.getActiveCityName();
 
-            // 客户端打开Run
+            // 只有player.json中含有的玩家才能读取 data.json
+            if (!cityName.isEmpty())
+            {
+                boolean isDedicated = player.serverLevel().getServer().isDedicatedServer();
+                boolean authorized;
+                if (isDedicated)
+                {
+                    authorized = FileCreater.isPlayerInCity(cityName, playerName);
+                }
+                else
+                {
+                    String saveName = player.serverLevel().getServer().getWorldData().getLevelName();
+                    authorized = FileCreater.isPlayerInCity(cityName, saveName, playerName);
+                }
+                if (authorized)
+                {
+                    SyncDataPayload payload = new SyncDataPayload(data.getData());
+                    PacketDistributor.sendToPlayer(player, payload);
+                }
+                else
+                {
+                    NeoSim.LOGGER.info("NeoSim-onPlayerJoin: {} not authorized for city {}", playerName, cityName);
+                }
+            }
+            else
+            {
+                // 无城市时正常同步
+                SyncDataPayload payload = new SyncDataPayload(data.getData());
+                PacketDistributor.sendToPlayer(player, payload);
+            }
+
+            // 第一个玩家第一次进入，打开Run
             if (!data.isRunGuiSent() && data.getMode() == 0)
             {
                 data.setRunGuiSent(true);
+                data.markPlayerJoined(player.getUUID());
                 PacketDistributor.sendToPlayer(player, new OpenRunGuiPayload());
-                NeoSim.LOGGER.info("NeoSim-isRunGuiSent(): Succeed");
+                NeoSim.LOGGER.info("NeoSim-onPlayerJoin: open Run for {}", playerName);
+            }
+
+            // 其他玩家第一次进入，打开City
+            else if (!data.isPlayerJoined(player.getUUID()))
+            {
+                data.markPlayerJoined(player.getUUID());
+                PacketDistributor.sendToPlayer(player, new OpenCityGuiPayload());
+                NeoSim.LOGGER.info("NeoSim-onPlayerJoin: open City for {}", playerName);
             }
         }
     }
@@ -137,6 +177,13 @@ public class NeoSim
                 OpenRunGuiPayload.TYPE,
                 OpenRunGuiPayload.STREAM_CODEC,
                 OpenRunGuiPayload::handle
+        );
+
+        // 服务端→客户端：通知打开City
+        registrar.playToClient(
+                OpenCityGuiPayload.TYPE,
+                OpenCityGuiPayload.STREAM_CODEC,
+                OpenCityGuiPayload::handle
         );
 
         // 客户端→服务端

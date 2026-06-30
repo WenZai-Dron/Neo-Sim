@@ -23,7 +23,7 @@ public class LangEnUs extends LanguageProvider
 
         add("itemGroup.neosim_tab","Neo-Sim");
 
-        add("gui.neosim.run.title","Please Choose Game Mode");
+        add("gui.neosim.run.title","Run");
         add("gui.neosim.run.buttonNormal","Normal Mode");
         add("gui.neosim.run.buttonCreative","Creative Mode");
         add("gui.neosim.run.buttonHardcore","Hardcore Mode");
@@ -44,5 +44,13 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.hud.friday","Friday");
         add("gui.neosim.hud.saturday","Saturday");
         add("gui.neosim.hud.sunday","Sunday");
+
+        add("gui.neosim.city.title","City");
+        add("gui.neosim.city.add","Add City");
+        add("gui.neosim.city.choose","Choose City");
+
+        add("gui.neosim.cityAdd.title","Add City");
+        add("gui.neosim.cityAdd.input","City Name");
+        add("gui.neosim.cityAdd.buttonConfirm","Confirm");
     }
 }

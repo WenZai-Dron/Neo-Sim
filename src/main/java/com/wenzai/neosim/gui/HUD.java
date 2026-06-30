@@ -1,6 +1,7 @@
 package com.wenzai.neosim.gui;
 
 import com.wenzai.neosim.ClientDataHolder;
+import com.wenzai.neosim.NeoSimClient;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
@@ -32,9 +33,19 @@ public class HUD
         // 获取客户端缓存的数据
         ClientDataHolder data = ClientDataHolder.getInstance();
 
-        // mode为0时不渲染
-        if (data.getMode() == 0)
+        int runTimer = NeoSimClient.getOpenRunGuiTimer();
+
+        // 不渲染
+        if (data.getMode() == 0 && runTimer <= 0)
         {
+            return;
+        }
+
+        // 显示倒计时
+        if (data.getMode() == 0 && runTimer > 0)
+        {
+            String countdown = ((runTimer + 19) / 20) + "";
+            guiGraphics.drawString(mc.font, countdown, 10, 10, 0xFFFFFF);
             return;
         }
 
@@ -65,8 +76,7 @@ public class HUD
         int minute = (int) ((adjustedTicks % 1000) * 60 / 1000);
         String timeStr = String.format("%02d:%02d", hour, minute);
 
-        guiGraphics.drawString(mc.font, Component.translatable("gui.neosim.hud.mode").getString() + ": " + modeStr + " - "
-                + timeStr + " - "
+        guiGraphics.drawString(mc.font, timeStr + " - "
                 + dayOfWeekStr + " - "
                 + "第" + data.getDay() + "天" + " - "
                 + Component.translatable("gui.neosim.hud.population").getString() + ": " + data.getPopulation() + " - "

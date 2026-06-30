@@ -21,7 +21,7 @@ public record OpenRunGuiPayload() implements CustomPacketPayload
     {
         context.enqueueWork(() -> {
             NeoSimClient.scheduleOpenRunGui();
-            NeoSim.LOGGER.debug("NeoSim-OpenRunGui(S→C): scheduled");
+            NeoSim.LOGGER.debug("NeoSim-OpenRunGui(S→C): Success");
         }).exceptionally(e -> {
             NeoSim.LOGGER.error("NeoSim-OpenRunGuiPayload: Fail", e);
             return null;

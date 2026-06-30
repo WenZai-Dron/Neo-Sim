@@ -1,50 +1,150 @@
 package com.wenzai.neosim;
 
-import net.minecraft.core.HolderLookup;
-import net.minecraft.nbt.CompoundTag;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.saveddata.SavedData;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.network.PacketDistributor;
-import org.jetbrains.annotations.NotNull;
 
-public class ModSavedData extends SavedData
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+
+public class ModSavedData
 {
-    public static final String ID = NeoSim.MOD_ID + "_data";
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Path DATA_DIR = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
 
+    private static ModSavedData INSTANCE;
+    private static String activeCityName = "";
+
+    private Path dataFile;
     private SimData data = SimData.DEFAULT;
     private boolean runGuiSent = false;
+    private final Set<String> joinedPlayers = new HashSet<>();
 
-    // NBT持久化
-    private static ModSavedData load(CompoundTag tag, HolderLookup.Provider provider)
+    private ModSavedData() {}
+
+    public static void setActiveCityName(String name)
     {
-        ModSavedData sd = new ModSavedData();
-        sd.data = SimData.fromNBT(tag);
-        sd.runGuiSent = tag.getBoolean("runGuiSent");
-        return sd;
+        activeCityName = name;
     }
 
-    @Override
-    public @NotNull CompoundTag save(@NotNull CompoundTag tag, @NotNull HolderLookup.Provider provider)
+    public static String getActiveCityName()
     {
-        data.toNBT(tag);
-        tag.putBoolean("NeoSim-SavedData", runGuiSent);
-        NeoSim.LOGGER.info("NeoSim-SavedData: {}", data);
-        return tag;
+        return activeCityName;
     }
 
-    public static final SavedData.Factory<ModSavedData> FACTORY =
-            new Factory<>(ModSavedData::new, ModSavedData::load);
+    // 根据端类型决定文件路径
+    private static Path resolvePath(ServerLevel level)
+    {
+        boolean isDedicated = level.getServer().isDedicatedServer();
+        if (isDedicated)
+        {
+            // 服务端：NeoSim/data/<cityName>/data.json
+            return DATA_DIR.resolve(activeCityName).resolve("data.json");
+        }
+        else
+        {
+            // 客户端：NeoSim/data/<存档名>/<cityName>/data.json
+            String saveName = level.getServer().getWorldData().getLevelName();
+            return DATA_DIR.resolve(saveName).resolve(activeCityName).resolve("data.json");
+        }
+    }
 
-    // 网络同步
+    // 文件持久化
+    private void loadFromFile()
+    {
+        if (Files.exists(dataFile))
+        {
+            try (Reader reader = Files.newBufferedReader(dataFile))
+            {
+                JsonObject json = GSON.fromJson(reader, JsonObject.class);
+                data = SimData.fromJson(json);
+                runGuiSent = json.get("runGuiSent").getAsBoolean();
+                if (json.has("joinedPlayers"))
+                {
+                    JsonArray arr = json.getAsJsonArray("joinedPlayers");
+                    for (JsonElement e : arr)
+                    {
+                        joinedPlayers.add(e.getAsString());
+                    }
+                }
+                NeoSim.LOGGER.info("NeoSim-loadFromFile: {}", dataFile);
+            }
+            catch (IOException e)
+            {
+                NeoSim.LOGGER.error("NeoSim-loadFromFile: {}", e.getMessage(), e);
+            }
+        }
+        else
+        {
+            saveToFile();
+        }
+    }
+
+    private void saveToFile()
+    {
+        try
+        {
+            Files.createDirectories(dataFile.getParent());
+            try (Writer writer = Files.newBufferedWriter(dataFile))
+            {
+                JsonObject json = new JsonObject();
+                data.toJson(json);
+                json.addProperty("runGuiSent", runGuiSent);
+                JsonArray arr = new JsonArray();
+                for (String uuid : joinedPlayers)
+                {
+                    arr.add(uuid);
+                }
+                json.add("joinedPlayers", arr);
+                GSON.toJson(json, writer);
+                NeoSim.LOGGER.info("NeoSim-saveToFile: {}", dataFile);
+            }
+        }
+        catch (IOException e)
+        {
+            NeoSim.LOGGER.error("NeoSim-saveToFile: {}", e.getMessage(), e);
+        }
+    }
+
+    // 网络同步：仅同步给player.json中含有的玩家
     private void syncToClients(ServerLevel level)
     {
         SyncDataPayload payload = new SyncDataPayload(data);
-        level.players().forEach(player -> PacketDistributor.sendToPlayer(player, payload));
-    }
-
-    public ModSavedData()
-    {
-        setDirty();
+        String cityName = getActiveCityName();
+        if (cityName.isEmpty())
+        {
+            level.players().forEach(player -> PacketDistributor.sendToPlayer(player, payload));
+            return;
+        }
+        boolean isDedicated = level.getServer().isDedicatedServer();
+        String saveName = isDedicated ? null : level.getServer().getWorldData().getLevelName();
+        level.players().forEach(player -> {
+            String playerName = player.getName().getString();
+            boolean authorized;
+            if (isDedicated)
+            {
+                authorized = FileCreater.isPlayerInCity(cityName, playerName);
+            }
+            else
+            {
+                authorized = FileCreater.isPlayerInCity(cityName, saveName, playerName);
+            }
+            if (authorized)
+            {
+                PacketDistributor.sendToPlayer(player, payload);
+            }
+        });
     }
 
     // 获取内部数据，用于构造网络包
@@ -54,7 +154,7 @@ public class ModSavedData extends SavedData
     public void setData(SimData newData, ServerLevel level)
     {
         this.data = newData;
-        setDirty();
+        saveToFile();
         syncToClients(level);
     }
 
@@ -63,7 +163,7 @@ public class ModSavedData extends SavedData
     public void setMode(byte mode, ServerLevel level)
     {
         this.data = data.withMode(mode);
-        setDirty();
+        saveToFile();
         syncToClients(level);
     }
 
@@ -71,7 +171,7 @@ public class ModSavedData extends SavedData
     public void setPopulation(short population, ServerLevel level)
     {
         this.data = data.withPopulation(population);
-        setDirty();
+        saveToFile();
         syncToClients(level);
     }
 
@@ -79,7 +179,7 @@ public class ModSavedData extends SavedData
     public void setDayOfWeek(int dayOfWeek, ServerLevel level)
     {
         this.data = data.withDayOfWeek(dayOfWeek);
-        setDirty();
+        saveToFile();
         syncToClients(level);
     }
 
@@ -87,7 +187,7 @@ public class ModSavedData extends SavedData
     public void setDay(int day, ServerLevel level)
     {
         this.data = data.withDay(day);
-        setDirty();
+        saveToFile();
         syncToClients(level);
     }
 
@@ -95,7 +195,7 @@ public class ModSavedData extends SavedData
     public void setCredit(double credit, ServerLevel level)
     {
         this.data = data.withCredit(credit);
-        setDirty();
+        saveToFile();
         syncToClients(level);
     }
 
@@ -103,20 +203,38 @@ public class ModSavedData extends SavedData
     public void setRunGuiSent(boolean sent)
     {
         this.runGuiSent = sent;
-        setDirty();
+        saveToFile();
+    }
+
+    public boolean isPlayerJoined(UUID uuid)
+    {
+        return joinedPlayers.contains(uuid.toString());
+    }
+
+    public void markPlayerJoined(UUID uuid)
+    {
+        joinedPlayers.add(uuid.toString());
+        saveToFile();
     }
 
     public void incrementDay(ServerLevel level)
     {
         this.data = data.withDay(data.day() + 1)
                         .withDayOfWeek((data.dayOfWeek() + 1) % 7);
-        setDirty();
+        saveToFile();
         syncToClients(level);
     }
 
     // 获取实例
     public static ModSavedData get(ServerLevel level)
     {
-        return level.getDataStorage().computeIfAbsent(FACTORY, ID);
+        Path expectedPath = resolvePath(level);
+        if (INSTANCE == null || !expectedPath.equals(INSTANCE.dataFile))
+        {
+            INSTANCE = new ModSavedData();
+            INSTANCE.dataFile = expectedPath;
+            INSTANCE.loadFromFile();
+        }
+        return INSTANCE;
     }
 }
