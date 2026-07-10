@@ -90,12 +90,11 @@ public class Run extends Screen
         // 调用父类渲染，即渲染按钮
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
-        Font font = this.font;
         int width = this.width / 2 - 30;
 
-        guiGraphics.drawCenteredString(font, tipNormal, width, 110, 0xFFFFFF00);
-        guiGraphics.drawCenteredString(font, tipCreative, width - 10, 155, 0xFFFFFF00);
-        guiGraphics.drawCenteredString(font, tipHardcore, width - 5, 200, 0xFFFFFF00);
+        guiGraphics.drawCenteredString(this.font, tipNormal, width, 110, 0xFFFFFF00);
+        guiGraphics.drawCenteredString(this.font, tipCreative, width - 10, 155, 0xFFFFFF00);
+        guiGraphics.drawCenteredString(this.font, tipHardcore, width - 5, 200, 0xFFFFFF00);
 
         // 渲染Logo，感觉边缘不得劲
         guiGraphics.blit(LOGO, width - 40, 3, 161, 100, 0.0F, 0.0F, 402, 250, 402, 250);
