@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:block",
+  "pools": [
+    {
+      "bonus_rolls": 0.0,
+      "conditions": [
+        {
+          "condition": "minecraft:survives_explosion"
+        }
+      ],
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "neo_sim:farming_box"
+        }
+      ],
+      "rolls": 1.0
+    }
+  ],
+  "random_sequence": "neo_sim:blocks/farming_box"
+}
