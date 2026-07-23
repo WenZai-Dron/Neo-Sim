@@ -174,9 +174,65 @@ public class Entity extends PathfinderMob
         return (short) (15 + RANDOM.nextInt(11));
     }
 
+    // 获取建筑师职业等级
+    public byte getJobArchitect()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_JOB_ARCHITECT) ? tag.getByte(KEY_JOB_ARCHITECT) : (byte) 1;
+    }
+
+    // 设置建筑师职业等级
+    public void setJobArchitect(byte value)
+    {
+        getPersistentData().putByte(KEY_JOB_ARCHITECT, value);
+    }
+
+    // 获取农夫职业等级
+    public byte getJobFarmer()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_JOB_FARMER) ? tag.getByte(KEY_JOB_FARMER) : (byte) 1;
+    }
+
+    // 设置农夫职业等级
+    public void setJobFarmer(byte value)
+    {
+        getPersistentData().putByte(KEY_JOB_FARMER, value);
+    }
+
+    // 获取矿工职业等级
+    public byte getJobMiner()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_JOB_MINER) ? tag.getByte(KEY_JOB_MINER) : (byte) 1;
+    }
+
+    // 设置矿工职业等级
+    public void setJobMiner(byte value)
+    {
+        getPersistentData().putByte(KEY_JOB_MINER, value);
+    }
+
+    // 获取快递员职业等级
+    public byte getJobCourier()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_JOB_COURIER) ? tag.getByte(KEY_JOB_COURIER) : (byte) 1;
+    }
+
+    // 设置快递员职业等级
+    public void setJobCourier(byte value)
+    {
+        getPersistentData().putByte(KEY_JOB_COURIER, value);
+    }
+
     private static final String KEY_CITY_NAME = "nsnpc_cityName";
     private static final String KEY_SKIN = "nsnpc_skin";
     private static final String KEY_AGE = "nsnpc_age";
+    private static final String KEY_JOB_ARCHITECT = "nsnpc_job_architect";
+    private static final String KEY_JOB_FARMER = "nsnpc_job_farmer";
+    private static final String KEY_JOB_MINER = "nsnpc_job_miner";
+    private static final String KEY_JOB_COURIER = "nsnpc_job_courier";
 
     private static final EntityDataAccessor<String> DATA_SKIN =
             SynchedEntityData.defineId(Entity.class, EntityDataSerializers.STRING);

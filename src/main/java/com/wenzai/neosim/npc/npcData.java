@@ -187,6 +187,14 @@ public class npcData
                 // 年龄
                 json.addProperty("age", entity.getAge());
 
+                // 职业等级
+                JsonObject job = new JsonObject();
+                job.addProperty("architect", entity.getJobArchitect());
+                job.addProperty("farmer", entity.getJobFarmer());
+                job.addProperty("miner", entity.getJobMiner());
+                job.addProperty("courier", entity.getJobCourier());
+                json.add("job", job);
+
                 GSON.toJson(json, writer);
                 LOGGER.info("npcData.save: Succeed, {}", npcFile.toAbsolutePath());
             }

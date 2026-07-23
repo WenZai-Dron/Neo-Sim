@@ -169,6 +169,16 @@ public class Manage
             // 恢复年龄
             if (json.has("age")) npc.setAge(json.get("age").getAsShort());
 
+            // 恢复职业等级
+            if (json.has("job"))
+            {
+                JsonObject job = json.getAsJsonObject("job");
+                if (job.has("architect")) npc.setJobArchitect(job.get("architect").getAsByte());
+                if (job.has("farmer")) npc.setJobFarmer(job.get("farmer").getAsByte());
+                if (job.has("miner")) npc.setJobMiner(job.get("miner").getAsByte());
+                if (job.has("courier")) npc.setJobCourier(job.get("courier").getAsByte());
+            }
+
             level.addFreshEntity(npc);
             NeoSim.LOGGER.info("NeoSim-restoreAll: Restored {} (sex={}) at ({}, {}, {})",
                     npc.getNpcName(), npc.getSex(), npc.getX(), npc.getY(), npc.getZ());
