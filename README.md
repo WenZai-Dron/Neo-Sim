@@ -1,13 +1,6 @@
 ![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
-
 # Neo-Sim   新模拟城市
-
-### 使用NeoForge-1.21.1开发的类似[模拟城市](https://www.mcmod.cn/class/489.html)mod
-
-
-
-预计目标：
-
-1. 使用类似[投影](https://www.mcmod.cn/class/2261.html)mod的方块放置方式完成建筑方面开发
-
-2. 支持多人游戏，服务器游戏
+### 使用NeoForge-1.21.1开发的类似[模拟城市Sim-U-Kraft](https://www.mcmod.cn/class/489.html)mod
+## 预计目标：
+#### 1. 使用类似[投影](https://www.mcmod.cn/class/2261.html)mod的方块放置方式完成建筑方面开发，玩家可以读取其mod的litematica格式文件完成自动化建筑
+#### 2. 支持多人游戏、服务器游戏
