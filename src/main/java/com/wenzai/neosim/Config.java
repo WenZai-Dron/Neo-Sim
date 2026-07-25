@@ -37,7 +37,7 @@ public class Config
             INITIAL_CREDIT.set(0.0);
         }
 
-        // 人口：[1, 10000]
+        // 人口
         int pop = MAX_POPULATION.get();
         if (pop < 1 || pop > 10000)
         {
@@ -46,7 +46,7 @@ public class Config
             MAX_POPULATION.set(clamped);
         }
 
-        // NPC最小年龄：[0, 100]
+        // NPC最小年龄
         int minAge = NPC_MIN_AGE.get();
         if (minAge < 0 || minAge > 100)
         {
@@ -55,23 +55,13 @@ public class Config
             NPC_MIN_AGE.set(clamped);
         }
 
-        // NPC最大年龄：[1, 100]
+        // NPC最大年龄
         int maxAge = NPC_MAX_AGE.get();
         if (maxAge < 1 || maxAge > 100)
         {
             int clamped = Math.max(1, Math.min(100, maxAge));
             NeoSim.LOGGER.warn("Config 'npcMaxAge' out of range ({}), clamped to {}", maxAge, clamped);
             NPC_MAX_AGE.set(clamped);
-        }
-
-        // 交叉校验：minAge不能大于maxAge
-        if (NPC_MIN_AGE.get() > NPC_MAX_AGE.get())
-        {
-            NeoSim.LOGGER.warn("Config 'npcMinAge' ({}) > 'npcMaxAge' ({}), swapping",
-                NPC_MIN_AGE.get(), NPC_MAX_AGE.get());
-            int tmp = NPC_MIN_AGE.get();
-            NPC_MIN_AGE.set(NPC_MAX_AGE.get());
-            NPC_MAX_AGE.set(tmp);
         }
     }
 }
