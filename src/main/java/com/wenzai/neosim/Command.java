@@ -2,7 +2,6 @@ package com.wenzai.neosim;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.wenzai.neosim.npc.Manage;
@@ -25,13 +24,6 @@ public class Command
 
         dispatcher.register(
             Commands.literal("neosim")
-                .then(Commands.literal("mode")
-                    .then(Commands.literal("set")
-                        .then(Commands.argument("value", IntegerArgumentType.integer(0, 3))
-                            .executes(ctx -> setMode(ctx, IntegerArgumentType.getInteger(ctx, "value")))
-                        )
-                    )
-                )
                 .then(Commands.literal("credit")
                     .then(Commands.literal("set")
                         .then(Commands.argument("value", DoubleArgumentType.doubleArg(0))
@@ -45,15 +37,6 @@ public class Command
                     )
                 )
         );
-    }
-
-    private static int setMode(CommandContext<CommandSourceStack> ctx, int value)
-    {
-        ServerLevel level = ctx.getSource().getLevel();
-        ModSavedData data = ModSavedData.get(level);
-        data.setMode((byte) value, level);
-        NeoSim.LOGGER.info("NeoSim-Command: mode={}", value);
-        return 1;
     }
 
     private static int setCredit(CommandContext<CommandSourceStack> ctx, double value)

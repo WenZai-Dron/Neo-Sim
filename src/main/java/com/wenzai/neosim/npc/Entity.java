@@ -1,5 +1,6 @@
 package com.wenzai.neosim.npc;
 
+import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.storage.ModSavedData;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -58,30 +59,33 @@ public class Entity extends PathfinderMob
     // 获取姓名
     public String getNpcName()
     {
-        return Name.of(getPersistentData()).get();
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_FULL_NAME) ? tag.getString(KEY_FULL_NAME) : "";
     }
 
     // 获取姓
     public String getNpcSurname()
     {
-        return Name.of(getPersistentData()).getSurname();
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_SURNAME) ? tag.getString(KEY_SURNAME) : "";
     }
 
     // 获取名
     public String getNpcGivenName()
     {
-        return Name.of(getPersistentData()).getGivenName();
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_GIVEN_NAME) ? tag.getString(KEY_GIVEN_NAME) : "";
     }
 
     // 设置姓名，同步文件
     public void setNpcName(String surname, String givenName)
     {
         String oldName = getNpcName();
-        Name nameObj = Name.of(getPersistentData());
-        nameObj.setSurname(surname);
-        nameObj.setGivenName(givenName);
+        CompoundTag tag = getPersistentData();
+        tag.putString(KEY_SURNAME, surname);
+        tag.putString(KEY_GIVEN_NAME, givenName);
         String fullName = surname + givenName;
-        nameObj.set(fullName);
+        tag.putString(KEY_FULL_NAME, fullName);
         setCustomName(Component.literal(fullName));
         setCustomNameVisible(true);
 
@@ -110,7 +114,7 @@ public class Entity extends PathfinderMob
     public void setNpcName(String name)
     {
         String oldName = getNpcName();
-        Name.of(getPersistentData()).set(name);
+        getPersistentData().putString(KEY_FULL_NAME, name);
         if (name.isEmpty())
         {
             setCustomName(null);
@@ -146,13 +150,14 @@ public class Entity extends PathfinderMob
     // 获取性别
     public String getSex()
     {
-        return Name.of(getPersistentData()).getSex();
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_SEX) ? tag.getString(KEY_SEX) : "male";
     }
 
     // 设置性别
     public void setSex(String sex)
     {
-        Name.of(getPersistentData()).setSex(sex);
+        getPersistentData().putString(KEY_SEX, sex);
     }
 
     // 获取年龄
@@ -168,10 +173,23 @@ public class Entity extends PathfinderMob
         getPersistentData().putShort(KEY_AGE, age);
     }
 
-    // 随机年龄 (15-25)
+    // 随机年龄，范围由配置文件决定
     public static short randomAge()
     {
-        return (short) (15 + RANDOM.nextInt(11));
+        // 使用默认值以防配置尚未加载
+        int min = 15;
+        int max = 25;
+        try
+        {
+            min = Config.NPC_MIN_AGE.get();
+            max = Config.NPC_MAX_AGE.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            // 配置尚未加载，使用默认值
+        }
+        if (min >= max) return (short) min;
+        return (short) (min + RANDOM.nextInt(max - min + 1));
     }
 
     // 获取建筑师职业等级
@@ -234,6 +252,11 @@ public class Entity extends PathfinderMob
     private static final String KEY_JOB_MINER = "nsnpc_job_miner";
     private static final String KEY_JOB_COURIER = "nsnpc_job_courier";
 
+    static final String KEY_FULL_NAME = "nsnpc_name";
+    static final String KEY_SURNAME = "nsnpc_surname";
+    static final String KEY_GIVEN_NAME = "nsnpc_givenName";
+    static final String KEY_SEX = "nsnpc_sex";
+
     private static final EntityDataAccessor<String> DATA_SKIN =
             SynchedEntityData.defineId(Entity.class, EntityDataSerializers.STRING);
 
@@ -253,6 +276,58 @@ public class Entity extends PathfinderMob
     private static final String[] FEMALE_SKINS = {
             "anya03.png", "b0mbies.png", "blazerhack.png", "fearlicia.png", "kajikasu.png",
             "khristinatina.png", "lunatique.png", "mewlee.png", "osukaari.png", "prueli.png"
+    };
+
+    // 姓
+    private static final String[] SURNAMES = {
+            "张", "李", "王", "刘", "陈", "杨", "赵", "黄", "周", "吴",
+            "徐", "孙", "胡", "朱", "高", "林", "何", "郭", "马", "罗",
+            "梁", "宋", "郑", "谢", "韩", "唐", "冯", "于", "董", "萧",
+            "程", "曹", "袁", "邓", "许", "傅", "沈", "曾", "彭", "吕",
+            "苏", "卢", "蒋", "蔡", "贾", "丁", "魏", "薛", "叶", "阎",
+            "余", "潘", "杜", "戴", "夏", "钟", "汪", "田", "任", "姜",
+            "范", "方", "石", "姚", "谭", "廖", "邹", "熊", "金", "陆",
+            "郝", "孔", "白", "崔", "康", "毛", "邱", "秦", "江", "史",
+            "顾", "侯", "邵", "孟", "龙", "万", "段", "雷", "钱", "汤",
+            "尹", "黎", "易", "常", "武", "乔", "贺", "赖", "龚", "文",
+            "严", "华", "金", "魏", "陶", "姜", "戚", "谢", "邹", "喻",
+            "柏", "水", "窦", "章", "云", "苏", "潘", "葛", "奚", "范",
+            "彭", "郎", "鲁", "韦", "昌", "马", "苗", "凤", "花", "方",
+            "俞", "任", "袁", "柳", "酆", "鲍", "史", "唐", "费", "廉",
+            "岑", "薛", "雷", "贺", "倪", "汤", "滕", "殷", "罗", "毕",
+            "郝", "邬", "安", "常", "乐", "于", "时", "傅", "皮", "卞",
+            "齐", "康", "伍", "余", "元", "卜", "顾", "孟", "平", "黄",
+            "和", "穆", "萧", "尹", "姚", "邵", "湛", "汪", "祁", "毛",
+            "禹", "狄", "米", "贝", "明", "臧", "计", "伏", "成", "戴",
+            "谈", "宋", "茅", "庞", "熊", "纪", "舒", "屈", "项", "祝"
+    };
+
+    // 偏男字
+    private static final String[] MALE_NAME_CHARS = {
+            "铮", "朔", "渊", "澈", "辰", "琅", "霄", "翊", "珩", "晏",
+            "临", "峥", "恪", "洵", "灏", "珣", "璁", "岑", "靳", "砚",
+            "肃", "衍", "霁", "鹤", "曜", "冕", "乾", "勋", "铎", "璟",
+            "伟", "宏", "宇", "轩", "毅", "恒", "博", "铭", "哲", "皓",
+            "峻", "峰", "霖", "睿", "瀚", "鹏", "翔", "骏", "鲲", "鸿",
+            "宸", "熙", "煜", "烨", "灿", "昊", "晟", "昱", "昀", "昂",
+            "杰", "豪", "英", "雄", "威", "武", "刚", "勇", "猛", "锐",
+            "志", "远", "承", "启", "开", "拓", "建", "立", "兴", "盛",
+            "文", "章", "学", "思", "明", "达", "通", "彦", "儒", "贤",
+            "景", "泰", "安", "宁", "康", "瑞", "祥", "德", "仁", "义"
+    };
+
+    // 偏女字
+    private static final String[] FEMALE_NAME_CHARS = {
+            "瑜", "瑶", "璇", "琳", "玥", "珞", "瑟", "绮", "素", "蘅",
+            "黛", "漪", "汐", "澜", "琬", "琼", "蕙", "芸", "芊", "霜",
+            "鸾", "笙", "岚", "浅", "晚", "晴", "初", "舞", "胭", "微",
+            "婷", "婉", "慧", "雅", "静", "芳", "妍", "倩", "婵", "娟",
+            "淑", "贤", "洁", "清", "滢", "澜", "溪", "润", "涵", "沐",
+            "诗", "画", "琴", "棋", "书", "墨", "韵", "音", "歌", "语",
+            "兰", "莲", "荷", "菊", "梅", "桂", "杏", "桃", "樱", "薇",
+            "燕", "莺", "鹃", "凤", "凰", "鸾", "雀", "雁", "鹤", "鸳",
+            "思", "念", "忆", "怀", "梦", "幻", "悦", "欣", "怡", "欢",
+            "若", "如", "依", "曼", "柔", "秀", "丽", "美", "佳", "妙"
     };
 
     // 获取所属城市
@@ -292,6 +367,34 @@ public class Entity extends PathfinderMob
     public static String randomSkin(String sex)
     {
         return "skins/" + sex + "/" + randomSkinFile(sex);
+    }
+
+    // 生成姓名、性别并写入NBT，在NPC生成时调用
+    public static void generateAndSetName(Entity entity)
+    {
+        CompoundTag tag = entity.getPersistentData();
+        String surname = SURNAMES[RANDOM.nextInt(SURNAMES.length)];
+        String sex = RANDOM.nextBoolean() ? "male" : "female";
+        String[] pool = "female".equals(sex) ? FEMALE_NAME_CHARS : MALE_NAME_CHARS;
+        String givenName;
+        if (RANDOM.nextDouble() < 0.3)
+        {
+            givenName = pool[RANDOM.nextInt(pool.length)];
+        }
+        else
+        {
+            int i = RANDOM.nextInt(pool.length);
+            int j;
+            do
+            {
+                j = RANDOM.nextInt(pool.length);
+            } while (j == i);
+            givenName = pool[i] + pool[j];
+        }
+        tag.putString(KEY_SURNAME, surname);
+        tag.putString(KEY_GIVEN_NAME, givenName);
+        tag.putString(KEY_FULL_NAME, surname + givenName);
+        tag.putString(KEY_SEX, sex);
     }
 
     // GUI出现时冻结NPC
@@ -345,6 +448,23 @@ public class Entity extends PathfinderMob
         {
             setFrozen(false);
             faceTarget = null;
+        }
+    }
+
+    // 用于修复玩家非正常退出（崩溃、断线）时GUI未正常关闭导致的NPC永久冻结问题
+    public void cleanupStaleOpeners()
+    {
+        if (isFrozen() && !guiOpeners.isEmpty())
+        {
+            guiOpeners.removeIf(uuid -> {
+                if (level().getServer() == null) return true;
+                return level().getServer().getPlayerList().getPlayer(uuid) == null;
+            });
+            if (guiOpeners.isEmpty())
+            {
+                setFrozen(false);
+                faceTarget = null;
+            }
         }
     }
 
@@ -474,6 +594,8 @@ public class Entity extends PathfinderMob
     // 属性
     public static AttributeSupplier.Builder createAttributes()
     {
+        // 使用默认值，因为 EntityAttributeCreationEvent 在配置加载之前触发。
+        // 如需运行时修改属性，应在实体生成后通过其他方式覆盖。
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 20.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.5D)

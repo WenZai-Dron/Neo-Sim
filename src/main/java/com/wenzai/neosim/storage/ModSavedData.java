@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.LevelResource;
@@ -169,7 +170,8 @@ public class ModSavedData
     public short getPopulation() { return data.population(); }
     public void setPopulation(short population, ServerLevel level)
     {
-        short clamped = population > 200 ? 200 : population;
+        int maxPop = Config.MAX_POPULATION.get();
+        short clamped = population > maxPop ? (short) maxPop : population;
         this.data = data.withPopulation(clamped);
         saveToFile();
         syncToClients(level);

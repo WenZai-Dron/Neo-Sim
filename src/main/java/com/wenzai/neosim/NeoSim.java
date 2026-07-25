@@ -24,8 +24,6 @@ import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
 
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.level.block.Blocks;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
@@ -48,6 +46,9 @@ public class NeoSim
 
     // 用于day++和dayOfWeek++
     private long lastDayTime = -1;
+
+    // 用于定期清理因玩家非正常退出（崩溃、断线）而永久冻结的NPC
+    private int frozenCleanupTimer = 0;
 
     // The constructor for the mod class is the first code that is run when your mod is loaded.
     // FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
@@ -75,7 +76,7 @@ public class NeoSim
         modEventBus.addListener(this::addCreative);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
+        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC, "neo-sim.toml");
 
         // 注册HUD
         if (FMLEnvironment.dist == Dist.CLIENT)
@@ -174,12 +175,19 @@ public class NeoSim
         if (event.getEntity() instanceof ServerPlayer player)
         {
             java.util.UUID playerUUID = player.getUUID();
-            
-            // 遍历玩家所在维度的所有NPC，移除该玩家的GUI引用
-            for (Entity npc : player.serverLevel().getEntitiesOfClass(Entity.class,
-                    new AABB(player.blockPosition()).inflate(256.0)))
+
+            // 遍历所有维度的所有已加载NPC，确保每个被该玩家冻结的NPC都被解冻
+            if (player.getServer() != null)
             {
-                npc.unfreezeBy(playerUUID);
+                for (ServerLevel serverLevel : player.getServer().getAllLevels())
+                {
+                    for (Entity npc : serverLevel.getEntitiesOfClass(Entity.class,
+                            new AABB(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY,
+                                     Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)))
+                    {
+                        npc.unfreezeBy(playerUUID);
+                    }
+                }
             }
             NeoSim.LOGGER.debug("NeoSim-onPlayerLogout: cleaned up GUI refs for player={}", playerUUID);
         }
@@ -189,6 +197,22 @@ public class NeoSim
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event)
     {
+        // 定期清理因玩家非正常退出（崩溃、断线）而永久冻结的NPC
+        frozenCleanupTimer++;
+        if (frozenCleanupTimer >= 200)
+        {
+            frozenCleanupTimer = 0;
+            for (ServerLevel serverLevel : event.getServer().getAllLevels())
+            {
+                for (Entity npc : serverLevel.getEntitiesOfClass(Entity.class,
+                        new AABB(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY,
+                                 Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)))
+                {
+                    npc.cleanupStaleOpeners();
+                }
+            }
+        }
+
         ServerLevel level = event.getServer().overworld();
         long dayTime = level.getDayTime();
         long timeOfDay = dayTime % 24000;
@@ -248,16 +272,10 @@ public class NeoSim
 
     private void commonSetup(FMLCommonSetupEvent event)
     {
-        LOGGER.info("HELLO FROM COMMON SETUP");
+        LOGGER.info("TOML: initialCredit={}", Config.INITIAL_CREDIT.get());
+        LOGGER.info("maxPopulation={}", Config.MAX_POPULATION.get());
 
-        if (Config.LOG_DIRT_BLOCK.getAsBoolean())
-        {
-            LOGGER.info("DIRT BLOCK >> {}", BuiltInRegistries.BLOCK.getKey(Blocks.DIRT));
-        }
-
-        LOGGER.info("{}{}", Config.MAGIC_NUMBER_INTRODUCTION.get(), Config.MAGIC_NUMBER.getAsInt());
-
-        Config.ITEM_STRINGS.get().forEach((item) -> LOGGER.info("ITEM >> {}", item));
+        LOGGER.info("npcAgeRange=[{}, {}]", Config.NPC_MIN_AGE.get(), Config.NPC_MAX_AGE.get());
     }
 
     // Add the example block item to the building blocks tab

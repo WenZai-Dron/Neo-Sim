@@ -155,13 +155,12 @@ public class npcData
                 JsonObject json = new JsonObject();
 
                 // 姓名
-                Name name = Name.of(entity.getPersistentData());
-                json.addProperty("name", name.get());
-                json.addProperty("surname", name.getSurname());
-                json.addProperty("givenName", name.getGivenName());
+                json.addProperty("name", entity.getNpcName());
+                json.addProperty("surname", entity.getNpcSurname());
+                json.addProperty("givenName", entity.getNpcGivenName());
 
                 // 性别
-                json.addProperty("sex", name.getSex());
+                json.addProperty("sex", entity.getSex());
 
                 // 皮肤
                 json.addProperty("skin", entity.getSkin());

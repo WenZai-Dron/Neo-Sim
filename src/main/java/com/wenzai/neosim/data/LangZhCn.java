@@ -88,5 +88,15 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.npc.skin.searchConfirm","确定");
         add("gui.neosim.npc.skin.searching","正在搜索...");
         add("gui.neosim.npc.skin.searchFailed","失败");
+
+        add("config.neosim.initialCredit","初始信用点");
+        add("config.neosim.initialCredit.tooltip","城市的初始信用点");
+        add("config.neosim.maxPopulation","最大人口数");
+        add("config.neosim.maxPopulation.tooltip","城市的最大人口数");
+
+        add("config.neosim.npcMinAge","NPC最小年龄");
+        add("config.neosim.npcMinAge.tooltip","NPC的最小随机年龄");
+        add("config.neosim.npcMaxAge","NPC最大年龄");
+        add("config.neosim.npcMaxAge.tooltip","NPC的最大随机年龄");
     }
 }

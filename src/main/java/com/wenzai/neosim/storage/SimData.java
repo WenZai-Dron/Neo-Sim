@@ -3,11 +3,12 @@
 package com.wenzai.neosim.storage;
 
 import com.google.gson.JsonObject;
+import com.wenzai.neosim.Config;
 
 public record SimData(byte mode, short population, int dayOfWeek, int day, double credit)
 {
 
-    public static final SimData DEFAULT = new SimData((byte)0, (short)0, 0, 1, 10.00);
+    public static final SimData DEFAULT = new SimData((byte)0, (short)0, 0, 1, Config.INITIAL_CREDIT.get());
 
     // 文件序列化
     public static SimData fromJson(JsonObject json)

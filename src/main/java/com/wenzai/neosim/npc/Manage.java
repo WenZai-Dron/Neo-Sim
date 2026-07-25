@@ -1,5 +1,6 @@
 package com.wenzai.neosim.npc;
 
+import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.storage.ModSavedData;
 import net.minecraft.core.BlockPos;
@@ -7,6 +8,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 
 import com.google.gson.JsonObject;
+import net.minecraft.nbt.CompoundTag;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,7 +72,7 @@ public class Manage
     public static void ensurePopulationNotEmpty(ServerLevel level)
     {
         ModSavedData data = ModSavedData.get(level);
-        if (data.getPopulation() >= 200)
+        if (data.getPopulation() >= Config.MAX_POPULATION.get())
         {
             return;
         }
@@ -133,17 +135,17 @@ public class Manage
             }
 
             // 恢复姓名
-            Name name = Name.of(npc.getPersistentData());
-            if (json.has("surname")) name.setSurname(json.get("surname").getAsString());
-            if (json.has("givenName")) name.setGivenName(json.get("givenName").getAsString());
-            if (json.has("name")) name.set(json.get("name").getAsString());
-            npc.setNpcName(name.get());
+            CompoundTag tag = npc.getPersistentData();
+            if (json.has("surname")) tag.putString(Entity.KEY_SURNAME, json.get("surname").getAsString());
+            if (json.has("givenName")) tag.putString(Entity.KEY_GIVEN_NAME, json.get("givenName").getAsString());
+            if (json.has("name")) tag.putString(Entity.KEY_FULL_NAME, json.get("name").getAsString());
+            npc.setNpcName(json.has("name") ? json.get("name").getAsString() : "");
 
             // 记录所属城市，用于死亡时删除文件
             npc.setCityName(cityName);
 
             // 恢复性别
-            if (json.has("sex")) name.setSex(json.get("sex").getAsString());
+            if (json.has("sex")) npc.setSex(json.get("sex").getAsString());
 
             // 恢复皮肤
             if (json.has("skin")) npc.setSkin(json.get("skin").getAsString());
@@ -195,9 +197,9 @@ public class Manage
     {
         // 人口上限检查
         short currentPop = getPopulation(level, cityName);
-        if (currentPop >= 200)
+        if (currentPop >= Config.MAX_POPULATION.get())
         {
-            NeoSim.LOGGER.warn("NeoSim-spawnAt: Population = 200，city: {}", cityName);
+            NeoSim.LOGGER.warn("NeoSim-spawnAt: Population at max ({}), city: {}", Config.MAX_POPULATION.get(), cityName);
             return;
         }
 
@@ -209,8 +211,8 @@ public class Manage
         }
 
         // 随机姓名与性别
-        Name.of(npc.getPersistentData()).generateAndSet();
-        npc.setNpcName(Name.of(npc.getPersistentData()).get());
+        Entity.generateAndSetName(npc);
+        npc.setNpcName(npc.getNpcName());
 
         // 随机皮肤
         npc.setSkin(Entity.randomSkin(npc.getSex()));
@@ -258,8 +260,8 @@ public class Manage
             }
 
             // 分配姓名
-            Name.of(npc.getPersistentData()).generateAndSet();
-            npc.setNpcName(Name.of(npc.getPersistentData()).get());
+            Entity.generateAndSetName(npc);
+            npc.setNpcName(npc.getNpcName());
 
             // 随机皮肤
             npc.setSkin(Entity.randomSkin(npc.getSex()));

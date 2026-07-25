@@ -88,5 +88,15 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.npc.skin.searchConfirm","OK");
         add("gui.neosim.npc.skin.searching","Searching...");
         add("gui.neosim.npc.skin.searchFailed","Failed");
+
+        add("config.neosim.initialCredit","Initial Credit");
+        add("config.neosim.initialCredit.tooltip","Initial credit points for the city");
+        add("config.neosim.maxPopulation","Max Population");
+        add("config.neosim.maxPopulation.tooltip","Maximum population of the city");
+
+        add("config.neosim.npcMinAge","NPC Min Age");
+        add("config.neosim.npcMinAge.tooltip","Minimum random age of NPCs");
+        add("config.neosim.npcMaxAge","NPC Max Age");
+        add("config.neosim.npcMaxAge.tooltip","Maximum random age of NPCs");
     }
 }
