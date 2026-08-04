@@ -1,6 +1,36 @@
 ![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
-# Neo-Sim   新模拟城市
-### 使用NeoForge-1.21.1开发的类似[模拟城市Sim-U-Kraft](https://www.mcmod.cn/class/489.html)mod
-## 预计目标：
-#### 1. 使用类似[投影](https://www.mcmod.cn/class/2261.html)mod的方块放置方式完成建筑方面开发，玩家可以读取其mod的litematica格式文件完成自动化建筑
-#### 2. 支持多人游戏、服务器游戏
+
+# Neo-Sim · 新模拟城市
+
+基于 **NeoForge 1.21.1** 开发的模拟城市类模组，致敬并延续 [Sim-U-Kraft](https://www.mcmod.cn/class/489.html)，并接入 [投影 (Litematica)](https://www.mcmod.cn/class/2261.html)支持的格式
+
+---
+
+## 特色功能
+
+### 自动化建筑
+- 保留 **155 项 Sim-U-Kraft 旧版社区建筑**（`.txt` 格式），同时支持 **投影 (Litematica)**（`.litematic`格式）
+
+### NPC
+- 多样化 NPC 样貌，支持导入自定义皮肤
+- 支持自定义 NPC 姓名
+
+### 建筑预览
+- 半透明建筑虚影，**移动 / 旋转 / 镜像**自由调整蓝图，支持自由视角鸟瞰
+- **缓存**渲染，再大的建筑也不掉帧
+
+### 城市与模拟
+- 玩家新建 / 加入城市，NPC 随城市生活
+- **HUD 实时显示**，缺料提醒、完工全城公告
+
+### 多人游戏
+- **建造区域冲突检测**，同一区域不会重复建造，先到先得
+- 线程安全的建造引擎，放置高频请求炸服
+
+---
+
+## 致谢
+
+- **所有当年在 Sim-U-Kraft 社区上传建筑的玩家**
+- [Satscape](https://www.youtube.com/satscapeminecraft) 与 Sim-U-Kraft
+- NeoForge 社区与 Litematica 项目
