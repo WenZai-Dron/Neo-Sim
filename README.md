@@ -25,12 +25,12 @@
 
 ### 多人游戏
 - **建造区域冲突检测**，同一区域不会重复建造，先到先得
-- 线程安全的建造引擎，放置高频请求炸服
+- 线程安全的建造引擎，防止高频请求炸服
 
 ---
 
 ## 致谢
 
-- **所有当年在 Sim-U-Kraft 社区上传建筑的玩家**
+- **所有曾在 Sim-U-Kraft 社区上传建筑的玩家**
 - [Satscape](https://www.youtube.com/satscapeminecraft) 与 Sim-U-Kraft
 - NeoForge 社区与 Litematica 项目
