@@ -66,7 +66,10 @@ public class ConstructionTask
     private Entity builderNpc;
 
     private long lastWaitCheck;
-    
+
+    // 工人不在模盒附近的累计tick
+    private int workerMissingTicks;
+
     // 最近一次已通知的缺料
     private Item lastNotifiedMissingItem;
 
@@ -163,7 +166,28 @@ public class ConstructionTask
             if (box == null) box = building.getControlBoxPos();
             if (builderNpc != null && NpcGoals.MoveToSiteGoal.isAboveSite(builderNpc, box))
             {
+                workerMissingTicks = 0;
                 onWorkerArrived();
+            }
+            else if (builderNpc == null)
+            {
+                // 累计超时后处理
+                workerMissingTicks++;
+                if (workerMissingTicks >= 200)
+                {
+                    workerMissingTicks = 0;
+                    String workerName = NeoSim.WORKER_MAP.get(box);
+                    if (workerName != null && !workerName.isEmpty()
+                            && !workerExistsInLevel(workerName))
+                    {
+                        tryRestoreWorker();
+                    }
+                }
+            }
+            else
+            {
+                // 工人在正常寻路中，重置计时
+                workerMissingTicks = 0;
             }
             return;
         }
@@ -386,6 +410,8 @@ public class ConstructionTask
 
                 // 双开门
                 fixDoubleDoor(worldPos);
+                LOGGER.info("NeoSim-ConstructionTask: door placed at {} → {}", worldPos,
+                        level.getBlockState(worldPos));
             }
             else if (toPlace.getBlock() instanceof BedBlock)
             {
@@ -474,6 +500,10 @@ public class ConstructionTask
             building.setBuilderName(null);
             setBuilderAnim(0.0F);
             clearBuilderHand();
+
+            // 完工：统一校正双开门铰链
+            repairDoubleDoors();
+
             announceComplete();
 
             // 生活点注册：建造者优先入住，剩余空位分给城市无家NPC
@@ -701,7 +731,11 @@ public class ConstructionTask
         // 一律以下半格为准
         BlockPos lowerPos = doorPos;
         BlockState lower = level.getBlockState(lowerPos);
-        if (!(lower.getBlock() instanceof DoorBlock)) return;
+        if (!(lower.getBlock() instanceof DoorBlock))
+        {
+            LOGGER.info("NeoSim-ConstructionTask: fixDoubleDoor skip {} — not a door", lowerPos);
+            return;
+        }
         if (lower.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER)
         {
             lowerPos = lowerPos.below();
@@ -710,11 +744,16 @@ public class ConstructionTask
         }
 
         Direction facing = lower.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        LOGGER.info("NeoSim-ConstructionTask: fixDoubleDoor lower={} facing={} hinge={}",
+                lowerPos, facing, lower.getValue(BlockStateProperties.DOOR_HINGE));
 
-        // 先查逆时针侧，再查顺时针侧
+        // 门在朝向的垂直方向相邻、同朝向->铰链取反
         for (Direction side : new Direction[] { facing.getCounterClockWise(), facing.getClockWise() })
         {
-            BlockState neighbor = level.getBlockState(lowerPos.relative(side));
+            BlockPos neighborPos = lowerPos.relative(side);
+            BlockState neighbor = level.getBlockState(neighborPos);
+            LOGGER.info("NeoSim-ConstructionTask: fixDoubleDoor side={} at {} → {}",
+                    side, neighborPos, neighbor.getBlock().getDescriptionId());
             if (neighbor.getBlock() instanceof DoorBlock
                     && neighbor.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing
                     && neighbor.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
@@ -727,6 +766,8 @@ public class ConstructionTask
                         neighborHinge == net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT
                                 ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
                                 : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
+                LOGGER.info("NeoSim-ConstructionTask: fixDoubleDoor pair with {} hinge={} → set {} to {}",
+                        neighborPos, neighborHinge, lowerPos, opposite);
                 if (lower.getValue(BlockStateProperties.DOOR_HINGE) == opposite)
                 {
                     // 已配对
@@ -743,6 +784,113 @@ public class ConstructionTask
                 }
                 return;
             }
+        }
+
+        // txt蓝图的门重定向成双开门
+        for (Direction side : new Direction[] { facing, facing.getOpposite() })
+        {
+            BlockPos neighborPos = lowerPos.relative(side);
+            BlockState neighbor = level.getBlockState(neighborPos);
+            if (neighbor.getBlock() instanceof DoorBlock
+                    && neighbor.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing
+                    && neighbor.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
+            {
+                orientDoubleDoorPair(lowerPos, neighborPos, side);
+                return;
+            }
+        }
+    }
+
+    // 把同朝向、沿朝向轴相邻的两扇门重定向成真正对开门
+    private void orientDoubleDoorPair(BlockPos posA, BlockPos posB, Direction side)
+    {
+        BlockState lowerA = level.getBlockState(posA);
+        Direction orig = lowerA.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        Direction target = pickDoubleDoorFacing(posA, posB, orig);
+
+        // 铰链朝外侧
+        net.minecraft.world.level.block.state.properties.DoorHingeSide hingeA =
+                side == target.getCounterClockWise()
+                        ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
+                        : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
+        net.minecraft.world.level.block.state.properties.DoorHingeSide hingeB =
+                hingeA == net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT
+                        ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
+                        : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
+
+        LOGGER.info("NeoSim-ConstructionTask: orientDoubleDoor {} + {} → facing={} hinge={}/{}",
+                posA, posB, target, hingeA, hingeB);
+        setDoorFacingHinge(posA, target, hingeA);
+        setDoorFacingHinge(posB, target, hingeB);
+    }
+
+    // 目标朝向：垂直于邻接轴，优先选正前方开阔的一侧
+    private Direction pickDoubleDoorFacing(BlockPos posA, BlockPos posB, Direction orig)
+    {
+        Direction a = orig.getClockWise();
+        Direction b = orig.getCounterClockWise();
+        int solidsA = solidsInFront(posA, posB, a);
+        int solidsB = solidsInFront(posA, posB, b);
+        if (solidsA != solidsB)
+        {
+            return solidsA < solidsB ? a : b;
+        }
+        
+        // 平局：取逆时针候选
+        return b;
+    }
+
+    private int solidsInFront(BlockPos posA, BlockPos posB, Direction dir)
+    {
+        int n = 0;
+        if (!level.getBlockState(posA.relative(dir)).isAir()) n++;
+        if (!level.getBlockState(posB.relative(dir)).isAir()) n++;
+        return n;
+    }
+
+    // 改一扇门的朝向与铰链
+    private void setDoorFacingHinge(BlockPos pos, Direction facing,
+                                    net.minecraft.world.level.block.state.properties.DoorHingeSide hinge)
+    {
+        BlockState lower = level.getBlockState(pos);
+        if (!(lower.getBlock() instanceof DoorBlock)) return;
+        level.setBlock(pos, lower.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
+                .setValue(BlockStateProperties.DOOR_HINGE, hinge), Block.UPDATE_ALL);
+        BlockState upper = level.getBlockState(pos.above());
+        if (upper.getBlock() instanceof DoorBlock)
+        {
+            level.setBlock(pos.above(), upper.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
+                    .setValue(BlockStateProperties.DOOR_HINGE, hinge), Block.UPDATE_ALL);
+        }
+    }
+
+    // 完工：把所有蓝图里的门都过一遍双开门配对
+    private void repairDoubleDoors()
+    {
+        LightweightBlockContainer container = schematic.getBlockContainer();
+        int sx = container.getSizeX();
+        int sz = container.getSizeZ();
+        int count = 0;
+        for (int y = 0; y < container.getSizeY(); y++)
+        {
+            for (int z = 0; z < container.getSizeZ(); z++)
+            {
+                for (int x = 0; x < container.getSizeX(); x++)
+                {
+                    BlockState st = container.get(x, y, z);
+                    if (st.getBlock() instanceof DoorBlock
+                            && st.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
+                    {
+                        BlockPos worldPos = building.blueprintToWorld(x, y, z);
+                        fixDoubleDoor(worldPos);
+                        count++;
+                    }
+                }
+            }
+        }
+        if (count > 0)
+        {
+            LOGGER.info("NeoSim-ConstructionTask: repairDoubleDoors checked {} doors", count);
         }
     }
 
@@ -1029,6 +1177,51 @@ public class ConstructionTask
                 }
                 return;
             }
+        }
+    }
+
+    private boolean workerExistsInLevel(String workerName)
+    {
+        for (net.minecraft.world.entity.Entity e : level.getAllEntities())
+        {
+            if (e instanceof Entity npc && workerName.equals(npc.getNpcName()))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // NPC被卸载时，恢复并传送
+    private void tryRestoreWorker()
+    {
+        BlockPos box = building.getConstructorPos();
+        if (box == null) return;
+        String workerName = NeoSim.WORKER_MAP.get(box);
+        if (workerName == null || workerName.isEmpty()) return;
+
+        String city = cityOf(building, level);
+
+        // 城市出错时，放弃本次恢复
+        if (city.isEmpty()) return;
+
+        com.wenzai.neosim.npc.Entity npc =
+                com.wenzai.neosim.npc.Manage.spawnSingle(level, city, workerName, box);
+        if (npc != null)
+        {
+            npc.assignToSite(box);
+            builderNpc = npc;
+            LOGGER.info("NeoSim-ConstructionTask: worker '{}' restored to site (was missing)", workerName);
+        }
+        else
+        {
+            // 已死亡：解雇，任务回到等待，GUI可重新雇佣
+            NeoSim.WORKER_MAP.remove(box);
+            building.setWorkerName(null);
+            currentState = BuildingInstance.BuildState.WAITING_FOR_WORKER;
+            building.setState(currentState);
+            LOGGER.warn("NeoSim-ConstructionTask: worker '{}' gone (file deleted), task back to waiting for worker",
+                    workerName);
         }
     }
 
