@@ -36,7 +36,7 @@ displayName="新模拟城市"
 #displayURL="https://change.me.to.your.mods.homepage.example.invalid/" #optional
 
 # A file name (in the root of the mod JAR) containing a logo for display
-logoFile="neo_sim_logo.png"
+logoFile="assets/neo_sim/neo_sim_logo.png"
 
 # A text field displayed in the mod UI
 #credits="" #optional
