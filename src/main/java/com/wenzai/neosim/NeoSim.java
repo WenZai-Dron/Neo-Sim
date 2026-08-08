@@ -1,48 +1,46 @@
 package com.wenzai.neosim;
 
+import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.block.ModBlocks;
-import com.wenzai.neosim.gui.HUD;
+import com.wenzai.neosim.client.gui.HUD;
+import com.wenzai.neosim.life.LifeSystem;
+import com.wenzai.neosim.network.ClientToServerPayloads;
+import com.wenzai.neosim.network.ServerToClientPayloads;
 import com.wenzai.neosim.npc.Entity;
-import com.wenzai.neosim.storage.FileCreater;
-import com.wenzai.neosim.storage.ModSavedData;
-import com.wenzai.neosim.storage.FreezeNpcPayload;
-import com.wenzai.neosim.storage.OpenGuiPayload;
-import com.wenzai.neosim.storage.SyncDataPayload;
-import com.wenzai.neosim.storage.UpdatePayload;
-import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
+import com.wenzai.neosim.storage.*;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.world.phys.AABB;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
-import net.minecraft.world.phys.AABB;
 import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
-
-import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.minecraft.world.level.storage.LevelResource;
-import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 
 @Mod(NeoSim.MOD_ID)
 public class NeoSim
 {
     // Define mod id in a common place for everything to reference
     public static final String MOD_ID = "neo_sim";
-    // Directly reference a slf4j logger
     public static final Logger LOGGER = LogUtils.getLogger();
+
+    // 共享工作分配表
+    public static final java.util.concurrent.ConcurrentHashMap<net.minecraft.core.BlockPos, String> WORKER_MAP = new java.util.concurrent.ConcurrentHashMap<>();
 
     // 用于day++和dayOfWeek++
     private long lastDayTime = -1;
@@ -134,7 +132,7 @@ public class NeoSim
                 }
                 if (authorized)
                 {
-                    SyncDataPayload payload = new SyncDataPayload(data.getData(), cityName);
+                    ServerToClientPayloads.SyncDataPayload payload = new ServerToClientPayloads.SyncDataPayload(data.getData(), cityName);
                     PacketDistributor.sendToPlayer(player, payload);
                 }
                 else
@@ -145,7 +143,7 @@ public class NeoSim
             else
             {
                 // 无城市时正常同步
-                SyncDataPayload payload = new SyncDataPayload(data.getData(), "");
+                ServerToClientPayloads.SyncDataPayload payload = new ServerToClientPayloads.SyncDataPayload(data.getData(), "");
                 PacketDistributor.sendToPlayer(player, payload);
             }
 
@@ -154,7 +152,7 @@ public class NeoSim
             {
                 data.setRunGuiSent(true);
                 data.markPlayerJoined(player.getUUID());
-                PacketDistributor.sendToPlayer(player, new OpenGuiPayload(OpenGuiPayload.GuiType.RUN));
+                PacketDistributor.sendToPlayer(player, new ServerToClientPayloads.OpenGuiPayload(ServerToClientPayloads.OpenGuiPayload.GuiType.RUN));
                 NeoSim.LOGGER.info("NeoSim-onPlayerJoin: open Run for {}", playerName);
             }
 
@@ -162,7 +160,7 @@ public class NeoSim
             else if (!data.isPlayerJoined(player.getUUID()))
             {
                 data.markPlayerJoined(player.getUUID());
-                PacketDistributor.sendToPlayer(player, new OpenGuiPayload(OpenGuiPayload.GuiType.CITY));
+                PacketDistributor.sendToPlayer(player, new ServerToClientPayloads.OpenGuiPayload(ServerToClientPayloads.OpenGuiPayload.GuiType.CITY));
                 NeoSim.LOGGER.info("NeoSim-onPlayerJoin: open City for {}", playerName);
             }
         }
@@ -214,6 +212,10 @@ public class NeoSim
         }
 
         ServerLevel level = event.getServer().overworld();
+
+        // 生活系统
+        LifeSystem.onServerTick(level);
+
         long dayTime = level.getDayTime();
         long timeOfDay = dayTime % 24000;
 
@@ -230,6 +232,7 @@ public class NeoSim
         {
             ModSavedData data = ModSavedData.get(level);
             data.incrementDay(level);
+            LifeSystem.onDayStart(level, data.getDayOfWeek());   // 生活系统每日结算入口（Phase 5+）
             level.setDayTime(0);
             NeoSim.LOGGER.info("NeoSim: day={}, dayOfWeek={}", data.getDay(), data.getDayOfWeek());
         }
@@ -240,32 +243,49 @@ public class NeoSim
     {
         PayloadRegistrar registrar = event.registrar(MOD_ID).versioned("1.0");
 
-        // 服务端→客户端
         registrar.playToClient(
-                SyncDataPayload.TYPE,
-                SyncDataPayload.STREAM_CODEC,
-                SyncDataPayload::handle
+                ServerToClientPayloads.SyncDataPayload.TYPE,
+                ServerToClientPayloads.SyncDataPayload.STREAM_CODEC,
+                ServerToClientPayloads.SyncDataPayload::handle
         );
 
-        // 服务端→客户端：通知打开Run或City
+        // 材料短缺/完工通知
         registrar.playToClient(
-                OpenGuiPayload.TYPE,
-                OpenGuiPayload.STREAM_CODEC,
-                OpenGuiPayload::handle
+                ServerToClientPayloads.ResourceShortagePacket.TYPE,
+                ServerToClientPayloads.ResourceShortagePacket.STREAM_CODEC,
+                ServerToClientPayloads.ResourceShortagePacket::handle
+        );
+        registrar.playToClient(
+                ServerToClientPayloads.BuildingCompletePacket.TYPE,
+                ServerToClientPayloads.BuildingCompletePacket.STREAM_CODEC,
+                ServerToClientPayloads.BuildingCompletePacket::handle
         );
 
-        // 客户端→服务端
-        registrar.playToServer(
-                UpdatePayload.TYPE,
-                UpdatePayload.STREAM_CODEC,
-                UpdatePayload::handle
+        // 通知打开Run或City
+        registrar.playToClient(
+                ServerToClientPayloads.OpenGuiPayload.TYPE,
+                ServerToClientPayloads.OpenGuiPayload.STREAM_CODEC,
+                ServerToClientPayloads.OpenGuiPayload::handle
         );
 
-        // 客户端→服务端：冻结/解冻NPC
         registrar.playToServer(
-                FreezeNpcPayload.TYPE,
-                FreezeNpcPayload.STREAM_CODEC,
-                FreezeNpcPayload::handle
+                ClientToServerPayloads.UpdatePayload.TYPE,
+                ClientToServerPayloads.UpdatePayload.STREAM_CODEC,
+                ClientToServerPayloads.UpdatePayload::handle
+        );
+
+        // 冻结/解冻NPC
+        registrar.playToServer(
+                ClientToServerPayloads.FreezeNpcPayload.TYPE,
+                ClientToServerPayloads.FreezeNpcPayload.STREAM_CODEC,
+                ClientToServerPayloads.FreezeNpcPayload::handle
+        );
+
+        // 确认建筑放置
+        registrar.playToServer(
+                ClientToServerPayloads.ConfirmPlacementPayload.TYPE,
+                ClientToServerPayloads.ConfirmPlacementPayload.STREAM_CODEC,
+                ClientToServerPayloads.ConfirmPlacementPayload::handle
         );
 
     }

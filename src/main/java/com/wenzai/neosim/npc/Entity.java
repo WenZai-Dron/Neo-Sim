@@ -2,27 +2,42 @@ package com.wenzai.neosim.npc;
 
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.life.Genealogy;
+import com.wenzai.neosim.life.LifeSystem;
+import com.wenzai.neosim.life.SocialGoal;
 import com.wenzai.neosim.storage.ModSavedData;
+import com.wenzai.neosim.storage.NpcData;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.entity.*;
-import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
-import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
@@ -44,6 +59,9 @@ public class Entity extends PathfinderMob
     public Entity(EntityType<? extends PathfinderMob> entityType, Level level)
     {
         super(entityType, level);
+        
+        // NPC持久化
+        setPersistenceRequired();
         setCustomNameVisible(true);
         setAge(randomAge());
     }
@@ -54,6 +72,7 @@ public class Entity extends PathfinderMob
         super.defineSynchedData(builder);
         builder.define(DATA_SKIN, "");
         builder.define(DATA_FROZEN, false);
+        builder.define(DATA_BUILD_ANIM, 0.0F);
     }
 
     // 获取姓名
@@ -97,14 +116,14 @@ public class Entity extends PathfinderMob
             {
                 if (level().getServer().isDedicatedServer())
                 {
-                    npcData.delete(oldName, cityName);
-                    npcData.save(this, cityName);
+                    NpcData.delete(oldName, cityName);
+                    NpcData.save(this, cityName);
                 }
                 else
                 {
                     String saveName = level().getServer().getWorldData().getLevelName();
-                    npcData.delete(oldName, cityName, saveName);
-                    npcData.save(this, cityName, saveName);
+                    NpcData.delete(oldName, cityName, saveName);
+                    NpcData.save(this, cityName, saveName);
                 }
             }
         }
@@ -134,14 +153,14 @@ public class Entity extends PathfinderMob
             {
                 if (level().getServer().isDedicatedServer())
                 {
-                    npcData.delete(oldName, cityName);
-                    npcData.save(this, cityName);
+                    NpcData.delete(oldName, cityName);
+                    NpcData.save(this, cityName);
                 }
                 else
                 {
                     String saveName = level().getServer().getWorldData().getLevelName();
-                    npcData.delete(oldName, cityName, saveName);
-                    npcData.save(this, cityName, saveName);
+                    NpcData.delete(oldName, cityName, saveName);
+                    NpcData.save(this, cityName, saveName);
                 }
             }
         }
@@ -171,6 +190,21 @@ public class Entity extends PathfinderMob
     public void setAge(short age)
     {
         getPersistentData().putShort(KEY_AGE, age);
+    }
+
+    // 是否成年
+    public boolean isAdult()
+    {
+        int adultAge = 15;
+        try
+        {
+            adultAge = Config.LIFE_ADULT_AGE.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            // 配置尚未加载，使用默认值
+        }
+        return getAge() >= adultAge;
     }
 
     // 随机年龄，范围由配置文件决定
@@ -257,14 +291,53 @@ public class Entity extends PathfinderMob
     static final String KEY_GIVEN_NAME = "nsnpc_givenName";
     static final String KEY_SEX = "nsnpc_sex";
 
+    // NPC位置持久化
+    private static final String KEY_ASSIGNED_SITE_X = "nsnpc_site_x";
+    private static final String KEY_ASSIGNED_SITE_Y = "nsnpc_site_y";
+    private static final String KEY_ASSIGNED_SITE_Z = "nsnpc_site_z";
+
+    // 生活点持久化
+    private static final String KEY_HOME_X = "nsnpc_home_x";
+    private static final String KEY_HOME_Y = "nsnpc_home_y";
+    private static final String KEY_HOME_Z = "nsnpc_home_z";
+    private static final String KEY_HOME_BUILDING = "nsnpc_home_building";
+
+    // 今日在家休息
+    private static final String KEY_REST_TODAY = "nsnpc_restToday";
+
+    // 关系与族谱
+    static final String KEY_PARTNER = "nsnpc_partner";
+    static final String KEY_PARENT1 = "nsnpc_parent1";
+    static final String KEY_PARENT2 = "nsnpc_parent2";
+    static final String KEY_CHILDREN = "nsnpc_children";
+    static final String KEY_PREGNANCY = "nsnpc_pregnancy";
+    static final String KEY_MATING = "nsnpc_mating";
+
+    // 串门社交状态（瞬态，不持久化：进度存于relationship文件，计数重启丢可接受）
+    private String hangingWith = "";
+    private int hangTicks = 0;
+
     private static final EntityDataAccessor<String> DATA_SKIN =
             SynchedEntityData.defineId(Entity.class, EntityDataSerializers.STRING);
 
     private static final EntityDataAccessor<Boolean> DATA_FROZEN =
             SynchedEntityData.defineId(Entity.class, EntityDataSerializers.BOOLEAN);
 
+    // 服务端驱动，客户端渲染抬手动画
+    private static final EntityDataAccessor<Float> DATA_BUILD_ANIM =
+            SynchedEntityData.defineId(Entity.class, EntityDataSerializers.FLOAT);
+
+    // 客户端上一帧同步值
+    private float prevBuildAnim;
+
     // 记录哪些玩家打开了该NPC的GUI，用于计数冻结
     private final Set<UUID> guiOpeners = new HashSet<>();
+
+    // 走向工地的寻路目标
+    private NpcGoals.MoveToSiteGoal moveToSiteGoal;
+
+    // 当前寻路目标，避免每tick重复设置重置卡住检测
+    private BlockPos currentMoveTarget;
 
     private static final Random RANDOM = new Random();
 
@@ -343,6 +416,220 @@ public class Entity extends PathfinderMob
         getPersistentData().putString(KEY_CITY_NAME, cityName);
     }
 
+    // 获取家（生活点）位置，无家返回null
+    @Nullable
+    public BlockPos getHomePos()
+    {
+        CompoundTag tag = getPersistentData();
+        if (!tag.contains(KEY_HOME_X) || !tag.contains(KEY_HOME_Y) || !tag.contains(KEY_HOME_Z)) return null;
+        return new BlockPos(tag.getInt(KEY_HOME_X), tag.getInt(KEY_HOME_Y), tag.getInt(KEY_HOME_Z));
+    }
+
+    // 获取家所在建筑名（生活点入住时登记）
+    public String getHomeBuilding()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_HOME_BUILDING) ? tag.getString(KEY_HOME_BUILDING) : "";
+    }
+
+    // 登记为某建筑居民（生活点系统分配时调用）
+    public void setHome(BlockPos home, String buildingName)
+    {
+        CompoundTag tag = getPersistentData();
+        tag.putInt(KEY_HOME_X, home.getX());
+        tag.putInt(KEY_HOME_Y, home.getY());
+        tag.putInt(KEY_HOME_Z, home.getZ());
+        tag.putString(KEY_HOME_BUILDING, buildingName != null ? buildingName : "");
+    }
+
+    // 退房：清空家登记
+    public void clearHome()
+    {
+        CompoundTag tag = getPersistentData();
+        tag.remove(KEY_HOME_X);
+        tag.remove(KEY_HOME_Y);
+        tag.remove(KEY_HOME_Z);
+        tag.remove(KEY_HOME_BUILDING);
+    }
+
+    // 今天是否在家休息
+    public boolean isRestToday()
+    {
+        return getPersistentData().getBoolean(KEY_REST_TODAY);
+    }
+
+    public void setRestToday(boolean rest)
+    {
+        getPersistentData().putBoolean(KEY_REST_TODAY, rest);
+    }
+
+    // 同居/婚姻对象名（等待Phase 3婚姻填充）
+    public String getPartner()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_PARTNER) ? tag.getString(KEY_PARTNER) : "";
+    }
+
+    public void setPartner(String partner)
+    {
+        getPersistentData().putString(KEY_PARTNER, partner != null ? partner : "");
+    }
+
+    // 父1
+    public String getParent1()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_PARENT1) ? tag.getString(KEY_PARENT1) : "";
+    }
+
+    // 母2
+    public String getParent2()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_PARENT2) ? tag.getString(KEY_PARENT2) : "";
+    }
+
+    // 父母名单
+    public List<String> getParentNames()
+    {
+        List<String> parents = new ArrayList<>();
+        String p1 = getParent1();
+        String p2 = getParent2();
+        if (!p1.isEmpty()) parents.add(p1);
+        if (!p2.isEmpty()) parents.add(p2);
+        return parents;
+    }
+
+    public void setParents(String parent1, String parent2)
+    {
+        CompoundTag tag = getPersistentData();
+        tag.putString(KEY_PARENT1, parent1 != null ? parent1 : "");
+        tag.putString(KEY_PARENT2, parent2 != null ? parent2 : "");
+    }
+
+    // 子女名单
+    public List<String> getChildren()
+    {
+        List<String> children = new ArrayList<>();
+        CompoundTag tag = getPersistentData();
+        if (tag.contains(KEY_CHILDREN, Tag.TAG_LIST))
+        {
+            ListTag list = tag.getList(KEY_CHILDREN, Tag.TAG_STRING);
+            for (int i = 0; i < list.size(); i++)
+            {
+                children.add(list.getString(i));
+            }
+        }
+        return children;
+    }
+
+    public void setChildren(List<String> children)
+    {
+        CompoundTag tag = getPersistentData();
+        ListTag list = new ListTag();
+        if (children != null)
+        {
+            for (String c : children)
+            {
+                if (c != null && !c.isEmpty() && !listContains(list, c))
+                {
+                    list.add(StringTag.valueOf(c));
+                }
+            }
+        }
+        tag.put(KEY_CHILDREN, list);
+    }
+
+    public void addChild(String name)
+    {
+        if (name == null || name.isEmpty()) return;
+        CompoundTag tag = getPersistentData();
+        ListTag list = tag.contains(KEY_CHILDREN, Tag.TAG_LIST)
+                ? tag.getList(KEY_CHILDREN, Tag.TAG_STRING) : new ListTag();
+        if (!listContains(list, name))
+        {
+            list.add(StringTag.valueOf(name));
+            tag.put(KEY_CHILDREN, list);
+        }
+    }
+
+    public void removeChild(String name)
+    {
+        if (name == null || name.isEmpty()) return;
+        CompoundTag tag = getPersistentData();
+        if (!tag.contains(KEY_CHILDREN, Tag.TAG_LIST)) return;
+        ListTag old = tag.getList(KEY_CHILDREN, Tag.TAG_STRING);
+        ListTag list = new ListTag();
+        for (int i = 0; i < old.size(); i++)
+        {
+            if (!old.getString(i).equals(name))
+            {
+                list.add(StringTag.valueOf(old.getString(i)));
+            }
+        }
+        tag.put(KEY_CHILDREN, list);
+    }
+
+    // 孕期进度
+    public float getPregnancyStage()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_PREGNANCY) ? tag.getFloat(KEY_PREGNANCY) : 0.0F;
+    }
+
+    public void setPregnancyStage(float stage)
+    {
+        getPersistentData().putFloat(KEY_PREGNANCY, stage);
+    }
+
+    // 进度
+    public float getMatingStage()
+    {
+        CompoundTag tag = getPersistentData();
+        return tag.contains(KEY_MATING) ? tag.getFloat(KEY_MATING) : -1.0F;
+    }
+
+    public void setMatingStage(float stage)
+    {
+        getPersistentData().putFloat(KEY_MATING, stage);
+    }
+
+    private static boolean listContains(ListTag list, String name)
+    {
+        for (int i = 0; i < list.size(); i++)
+        {
+            if (list.getString(i).equals(name)) return true;
+        }
+        return false;
+    }
+
+    // 串门社交：当前对象名/凑在一起累计tick（瞬态）
+    public String getHangingWith()
+    {
+        return hangingWith;
+    }
+
+    public void setHangingWith(String name)
+    {
+        this.hangingWith = name != null ? name : "";
+    }
+
+    public int getHangTicks()
+    {
+        return hangTicks;
+    }
+
+    public void setHangTicks(int ticks)
+    {
+        this.hangTicks = ticks;
+    }
+
+    // 是否有工作（被分配到工地）
+    public boolean hasJob()
+    {
+        return getPersistentData().contains(KEY_ASSIGNED_SITE_X);
+    }
+
     // 获取皮肤
     public String getSkin()
     {
@@ -372,8 +659,13 @@ public class Entity extends PathfinderMob
     // 生成姓名、性别并写入NBT，在NPC生成时调用
     public static void generateAndSetName(Entity entity)
     {
+        generateAndSetName(entity, SURNAMES[RANDOM.nextInt(SURNAMES.length)]);
+    }
+
+    // 以指定姓氏生成姓名，性别随机
+    public static void generateAndSetName(Entity entity, String surname)
+    {
         CompoundTag tag = entity.getPersistentData();
-        String surname = SURNAMES[RANDOM.nextInt(SURNAMES.length)];
         String sex = RANDOM.nextBoolean() ? "male" : "female";
         String[] pool = "female".equals(sex) ? FEMALE_NAME_CHARS : MALE_NAME_CHARS;
         String givenName;
@@ -468,6 +760,35 @@ public class Entity extends PathfinderMob
         }
     }
 
+    // 渲染抬手动画（1.0=手抬到最高）
+    public float getBuildAnim()
+    {
+        return entityData.get(DATA_BUILD_ANIM);
+    }
+
+    // 服务端
+    public void setBuildAnim(float value)
+    {
+        entityData.set(DATA_BUILD_ANIM, Math.max(0.0F, Math.min(1.0F, value)));
+    }
+
+    // 客户端上一帧同步值
+    public float getPrevBuildAnim()
+    {
+        return prevBuildAnim;
+    }
+
+    // 客户端每帧记录上一值，渲染时插值
+    @Override
+    public void tick()
+    {
+        if (level().isClientSide)
+        {
+            prevBuildAnim = getBuildAnim();
+        }
+        super.tick();
+    }
+
     // 冻结时停止移动
     @Override
     protected void customServerAiStep()
@@ -494,8 +815,8 @@ public class Entity extends PathfinderMob
         return result;
     }
 
-    // 同步当前状态
-    private void syncToJson()
+    // 同步当前状态（长岁/调试命令等主动写盘）
+    public void syncToJson()
     {
         String npcName = getNpcName();
         String cityName = getCityName();
@@ -503,12 +824,12 @@ public class Entity extends PathfinderMob
 
         if (level().getServer() != null && level().getServer().isDedicatedServer())
         {
-            npcData.save(this, cityName);
+            NpcData.save(this, cityName);
         }
         else if (level().getServer() != null)
         {
             String saveName = level().getServer().getWorldData().getLevelName();
-            npcData.save(this, cityName, saveName);
+            NpcData.save(this, cityName, saveName);
         }
     }
 
@@ -516,18 +837,27 @@ public class Entity extends PathfinderMob
     @Override
     public void die(DamageSource source)
     {
+        // 死亡公告：按死因广播搞怪文案+年龄感慨
+        if (level() instanceof ServerLevel serverLevel)
+        {
+            announceDeath(serverLevel, source);
+            
+            // 族谱清理：摘除死者+删其全部关系文件
+            Genealogy.onDeath(serverLevel, this);
+        }
+
         String npcName = getNpcName();
         String cityName = getCityName();
         if (!npcName.isEmpty() && !cityName.isEmpty())
         {
             if (level().getServer() != null && level().getServer().isDedicatedServer())
             {
-                npcData.delete(npcName, cityName);
+                NpcData.delete(npcName, cityName);
             }
             else if (level().getServer() != null)
             {
                 String saveName = level().getServer().getWorldData().getLevelName();
-                npcData.delete(npcName, cityName, saveName);
+                NpcData.delete(npcName, cityName, saveName);
             }
 
             // 同步人口
@@ -537,7 +867,43 @@ public class Entity extends PathfinderMob
                 ModSavedData.get(serverLevel).setPopulation(pop, serverLevel);
             }
         }
+
+        // 退房：空出生活点
+        if (level() instanceof ServerLevel serverLevel)
+        {
+            CityLivingManager.releaseHome(serverLevel, this);
+        }
         super.die(source);
+    }
+
+    // 死亡公告：按死因广播搞怪文案+年龄感慨
+    private void announceDeath(ServerLevel level, DamageSource source)
+    {
+        String npcName = getNpcName();
+        String cityName = getCityName();
+        if (npcName.isEmpty() || cityName.isEmpty()) return;
+
+        boolean oldAge = source.is(DamageTypes.GENERIC_KILL);
+        String cause;
+        if (oldAge)
+        {
+            cause = "年纪大了，感觉不太舒服……哦不！";
+        }
+        else if (source.is(DamageTypes.DROWN)) cause = "淹死了";
+        else if (source.is(DamageTypes.LAVA)) cause = "掉进了岩浆里";
+        else if (source.is(DamageTypes.IN_WALL)) cause = "被卡在墙里窒息了";
+        else if (source.is(DamageTypes.FALL) || source.is(DamageTypes.FALLING_BLOCK)) cause = "从高处摔了下来";
+        else if (source.is(DamageTypes.STARVE)) cause = "饿死了（建个农场吧…）";
+        else if (source.is(DamageTypes.ON_FIRE) || source.is(DamageTypes.IN_FIRE)) cause = "被火烧死了";
+        else if (source.is(DamageTypes.LIGHTNING_BOLT)) cause = "被雷劈了";
+        else if (source.is(DamageTypes.CACTUS)) cause = "被仙人掌扎了";
+        else cause = "不幸去世了";
+
+        String remark = oldAge
+                ? "At " + getAge() + " — oh well, they had a good long life!"
+                : "They were only " + getAge() + " years old";
+
+        LifeSystem.announce(level, cityName, "§f" + npcName + " §e" + cause + " §f(" + remark + ")");
     }
 
     // 数据同步
@@ -550,6 +916,16 @@ public class Entity extends PathfinderMob
         if (tag.contains(KEY_SKIN))
         {
             setSkin(tag.getString(KEY_SKIN));
+        }
+
+        // 恢复NPC状态
+        if (getPersistentData().contains(KEY_ASSIGNED_SITE_X))
+        {
+            BlockPos site = new BlockPos(
+                    getPersistentData().getInt(KEY_ASSIGNED_SITE_X),
+                    getPersistentData().getInt(KEY_ASSIGNED_SITE_Y),
+                    getPersistentData().getInt(KEY_ASSIGNED_SITE_Z));
+            assignToSite(site);
         }
 
         // 恢复数据，确保客户端能渲染名字
@@ -583,12 +959,94 @@ public class Entity extends PathfinderMob
     @Override
     protected void registerGoals()
     {
-        // 漫游目标
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new AvoidEntityGoal<>(this, Player.class, 8.0F, 0.5D, 0.5D));
-        this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 0.5D));
-        this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 6.0F));
-        this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
+        this.moveToSiteGoal = new NpcGoals.MoveToSiteGoal(this, 0.6D);
+        this.goalSelector.addGoal(1, moveToSiteGoal);
+        this.goalSelector.addGoal(2, new NpcGoals.GoHomeGoal(this, 0.5D));
+        this.goalSelector.addGoal(2, new NpcGoals.StayHomeGoal(this, 0.5D));
+        this.goalSelector.addGoal(3, new AvoidEntityGoal<>(this, Player.class, 8.0F, 0.5D, 0.5D));
+        this.goalSelector.addGoal(3, new SocialGoal(this));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.5D));
+        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 6.0F));
+        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+    }
+
+    // 分配NPC
+    public void assignToSite(BlockPos site)
+    {
+        getPersistentData().putInt(KEY_ASSIGNED_SITE_X, site.getX());
+        getPersistentData().putInt(KEY_ASSIGNED_SITE_Y, site.getY());
+        getPersistentData().putInt(KEY_ASSIGNED_SITE_Z, site.getZ());
+
+        // 有工作：今日不休息
+        setRestToday(false);
+
+        // 寻路目标尚未注册（如从NBT加载时）则先注册
+        if (this.moveToSiteGoal == null)
+        {
+            this.registerGoals();
+        }
+
+        // 移除AI
+        this.goalSelector.getAvailableGoals().stream()
+                .filter(w -> !(w.getGoal() instanceof NpcGoals.MoveToSiteGoal)
+                          && !(w.getGoal() instanceof FloatGoal)
+                          && !(w.getGoal() instanceof LookAtPlayerGoal)
+                          && !(w.getGoal() instanceof RandomLookAroundGoal))
+                .toList()
+                .forEach(w -> goalSelector.removeGoal(w.getGoal()));
+
+        double distSqr = this.blockPosition().distSqr(site);
+        if (distSqr > 320.0 * 320.0)
+        {
+            // 相距≥320格：直接传送
+            this.teleportTo(site.getX() + 0.5, site.getY() + 1, site.getZ() + 0.5);
+            this.getNavigation().stop();
+            this.moveToSiteGoal.setTarget(null);
+            this.currentMoveTarget = null;
+        }
+        else
+        {
+            // 相距<320格：走路
+            this.moveToSiteGoal.setTarget(site);
+            this.currentMoveTarget = site;
+        }
+    }
+
+    // 设置寻路目标；目标不变时不重复设置
+    public void setMoveTarget(BlockPos pos)
+    {
+        if (pos == null || pos.equals(currentMoveTarget)) return;
+        this.currentMoveTarget = pos;
+        if (this.moveToSiteGoal != null)
+        {
+            this.moveToSiteGoal.setTarget(pos);
+        }
+    }
+
+    // 夜晚入职清空寻路目标
+    public void clearMoveTarget()
+    {
+        this.currentMoveTarget = null;
+        if (this.moveToSiteGoal != null)
+        {
+            this.moveToSiteGoal.setTarget(null);
+        }
+        getNavigation().stop();
+    }
+
+    // 解雇NPC，恢复AI
+    public void releaseFromSite()
+    {
+        getPersistentData().remove(KEY_ASSIGNED_SITE_X);
+        getPersistentData().remove(KEY_ASSIGNED_SITE_Y);
+        getPersistentData().remove(KEY_ASSIGNED_SITE_Z);
+        this.currentMoveTarget = null;
+        
+        // 清空现有目标，重新注册完整AI
+        this.goalSelector.getAvailableGoals().stream().toList()
+                .forEach(w -> goalSelector.removeGoal(w.getGoal()));
+        this.registerGoals();
     }
 
     // 属性

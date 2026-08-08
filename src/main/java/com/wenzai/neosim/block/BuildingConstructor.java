@@ -1,6 +1,6 @@
 package com.wenzai.neosim.block;
 
-import com.wenzai.neosim.gui.BuildingConstructorGui;
+import com.wenzai.neosim.client.gui.BuildingConstructorGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
@@ -22,7 +22,7 @@ public class  BuildingConstructor extends Block
     {
         if (level.isClientSide)
         {
-            Minecraft.getInstance().setScreen(new BuildingConstructorGui());
+            Minecraft.getInstance().setScreen(new BuildingConstructorGui(pos));
         }
 
         return InteractionResult.sidedSuccess(level.isClientSide());

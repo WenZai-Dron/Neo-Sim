@@ -21,9 +21,6 @@ public class CreativeModeTabs
                     .title(Component.translatable("itemGroup.neosim_tab"))
                     .displayItems((itemDisplayParameters, output) -> {
 
-
-
-                        // 此处加入
                         output.accept(ModBlocks.BUILDING_CONSTRUCTOR);
                         output.accept(ModBlocks.CONTROL_BOX);
                         output.accept(ModBlocks.MARKER);

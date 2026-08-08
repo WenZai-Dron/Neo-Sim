@@ -1,7 +1,7 @@
 package com.wenzai.neosim.block;
 
-import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.ModItems;
+import com.wenzai.neosim.NeoSim;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -17,13 +17,11 @@ public class ModBlocks
     public static final DeferredRegister.Blocks BLOCKS =
             DeferredRegister.createBlocks(NeoSim.MOD_ID);
 
-
-
     // 此处注册方块
     public static final DeferredBlock<Block> BUILDING_CONSTRUCTOR =
             registerBlocks("building_constructor", () -> new BuildingConstructor(BlockBehaviour.Properties.of().strength(0.5F)));
     public static final DeferredBlock<Block> CONTROL_BOX =
-            registerBlocks("control_box", () -> new Block(BlockBehaviour.Properties.of().strength(2.5F)
+            registerBlocks("control_box", () -> new ControlBox(BlockBehaviour.Properties.of().strength(2.5F)
                     .noLootTable()));
     public static final DeferredBlock<Block> MARKER =
             registerBlocks("marker", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)

@@ -1,15 +1,15 @@
 package com.wenzai.neosim;
 
-import com.wenzai.neosim.gui.City;
-import com.wenzai.neosim.gui.NPC;
-import com.wenzai.neosim.gui.Run;
+import com.wenzai.neosim.client.gui.City;
+import com.wenzai.neosim.client.gui.NPC;
+import com.wenzai.neosim.client.gui.Run;
 import com.wenzai.neosim.npc.Entity;
-
-import com.wenzai.neosim.storage.ClientDataHolder;
-import com.wenzai.neosim.storage.FreezeNpcPayload;
-import com.wenzai.neosim.storage.OpenGuiPayload;
-import com.wenzai.neosim.npc.Model;
-import com.wenzai.neosim.npc.Renderer;
+import com.wenzai.neosim.client.render.Model;
+import com.wenzai.neosim.client.render.Renderer;
+import com.wenzai.neosim.schematic.SchematicRegistry;
+import com.wenzai.neosim.network.ClientToServerPayloads;
+import com.wenzai.neosim.network.ServerToClientPayloads;
+import com.wenzai.neosim.client.ClientDataHolder;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.InteractionResult;
@@ -22,11 +22,11 @@ import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
-import org.lwjgl.glfw.GLFW;
 import net.neoforged.neoforge.client.gui.ConfigurationScreen;
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.lwjgl.glfw.GLFW;
 
 // This class will not load on dedicated servers. Accessing client side code from here is safe.
 @Mod(value = NeoSim.MOD_ID, dist = Dist.CLIENT)
@@ -35,7 +35,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public class NeoSimClient
 {
     private static int openGuiTimer = -1;
-    private static OpenGuiPayload.GuiType pendingGuiType = null;
+    private static ServerToClientPayloads.OpenGuiPayload.GuiType pendingGuiType = null;
     
     // 检测存档切换，用于重置客户端缓存数据
     private static ClientLevel lastLevel = null;
@@ -54,6 +54,8 @@ public class NeoSimClient
         // Some client setup code
         NeoSim.LOGGER.info("HELLO FROM CLIENT SETUP");
         NeoSim.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+
+        SchematicRegistry.getInstance().initializeAsync();
     }
 
     // 注册实体渲染器
@@ -71,7 +73,7 @@ public class NeoSimClient
         event.registerLayerDefinition(Renderer.SLIM_LAYER, Model::createSlimBodyLayer);
     }
 
-    public static void scheduleOpenGui(OpenGuiPayload.GuiType guiType)
+    public static void scheduleOpenGui(ServerToClientPayloads.OpenGuiPayload.GuiType guiType)
     {
         openGuiTimer = 200;
         pendingGuiType = guiType;
@@ -138,7 +140,7 @@ public class NeoSimClient
             if (mc.player != null && mc.level != null)
             {
                 mc.execute(() -> mc.setScreen(new NPC(npc)));
-                PacketDistributor.sendToServer(new FreezeNpcPayload(npc.getId(), true));
+                PacketDistributor.sendToServer(new ClientToServerPayloads.FreezeNpcPayload(npc.getId(), true));
                 event.setCancellationResult(InteractionResult.SUCCESS);
                 event.setCanceled(true);
             }

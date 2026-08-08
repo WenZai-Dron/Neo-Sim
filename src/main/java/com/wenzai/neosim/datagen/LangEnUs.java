@@ -1,0 +1,210 @@
+package com.wenzai.neosim.datagen;
+
+import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.block.ModBlocks;
+import net.minecraft.data.PackOutput;
+import net.neoforged.neoforge.common.data.LanguageProvider;
+
+public class LangEnUs extends LanguageProvider
+{
+    public LangEnUs(PackOutput output)
+    {
+        super(output, NeoSim.MOD_ID, "en_us");
+    }
+
+    @Override
+    protected void addTranslations()
+    {
+        add(ModBlocks.BUILDING_CONSTRUCTOR.get(), "Building Constructor");
+        add(ModBlocks.CONTROL_BOX.get(), "Control Box");
+        add(ModBlocks.MARKER.get(), "Marker");
+        add(ModBlocks.FARMING_BOX.get(),  "Farming Box");
+        add(ModBlocks.MINING_BOX.get(), "Mining Box");
+        add(ModBlocks.DELIVERY_BOX.get(), "Delivery Box");
+
+        add("itemGroup.neosim_tab","Neo-Sim");
+
+        add("gui.neosim.run.title","Run");
+        add("gui.neosim.run.buttonNormal","Normal Mode");
+        add("gui.neosim.run.buttonCreative","Creative Mode");
+        add("gui.neosim.run.buttonHardcore","Hardcore Mode");
+        add("gui.neosim.run.buttonClose","Close");
+        add("gui.neosim.run.tipNormal","Author doesn't know what will happen:)");
+        add("gui.neosim.run.tipCreative","Unlimited funds and resources");
+        add("gui.neosim.run.tipHardcore","Buildings require all blocks");
+
+        add("gui.neosim.hud.population","population");
+        add("gui.neosim.hud.day","Day %s");
+        add("gui.neosim.hud.credit","credit");
+        add("gui.neosim.hud.monday","Monday");
+        add("gui.neosim.hud.tuesday","Tuesday");
+        add("gui.neosim.hud.wednesday","Wednesday");
+        add("gui.neosim.hud.thursday","Thursday");
+        add("gui.neosim.hud.friday","Friday");
+        add("gui.neosim.hud.saturday","Saturday");
+        add("gui.neosim.hud.sunday","Sunday");
+
+        add("gui.neosim.city.title","City");
+        add("gui.neosim.city.add","Add City");
+        add("gui.neosim.city.choose","Choose City");
+        add("gui.neosim.city.buttonConfirm","OK");
+
+        add("gui.neosim.BuildingConstructor.title","Building Constructor");
+        add("gui.neosim.BuildingConstructor.statusReady","Status: Ready");
+        add("gui.neosim.BuildingConstructor.page0.hint","Please choose a task for this building constructor");
+        add("gui.neosim.BuildingConstructor.page1.hint","Please choose a type of building");
+        add("gui.neosim.BuildingConstructor.page2.hint","Choose a residential building");
+        add("gui.neosim.BuildingConstructor.page3.hint","Choose a commercial building");
+        add("gui.neosim.BuildingConstructor.page4.hint","Choose an industrial building");
+        add("gui.neosim.BuildingConstructor.page5.hint","Choose an other type building");
+        add("gui.neosim.BuildingConstructor.page6.hint","Building requirements for %s");
+        add("gui.neosim.BuildingConstructor.hireBuilder","Hire builder");
+        add("gui.neosim.BuildingConstructor.fireWorker","Fire %s");
+        add("gui.neosim.BuildingConstructor.chooseBuilding","Choose building");
+        add("gui.neosim.BuildingConstructor.buildingPreview","Waiting for update");
+        add("gui.neosim.BuildingConstructor.currentStatus","Current Status");
+        add("gui.neosim.BuildingConstructor.continue","Continue");
+        add("gui.neosim.BuildingConstructor.pause","Pause");
+        add("gui.neosim.BuildingConstructor.choosePlan","Choose plan");
+        add("gui.neosim.BuildingConstructor.moveBuilding","Waiting for update");
+        add("gui.neosim.BuildingConstructor.typeResidential","Residential");
+        add("gui.neosim.BuildingConstructor.typeCommercial","Commercial");
+        add("gui.neosim.BuildingConstructor.typeIndustrial","Industrial");
+        add("gui.neosim.BuildingConstructor.typeOther","Other");
+        add("gui.neosim.BuildingConstructor.typeCustom","Custom");
+        add("gui.neosim.BuildingConstructor.page9.hint","Choose a custom building");
+        add("gui.neosim.BuildingConstructor.add","Add Custom Building");
+        add("gui.neosim.BuildingConstructor.search","Search");
+        add("gui.neosim.BuildingConstructor.prevPage","< Page");
+        add("gui.neosim.BuildingConstructor.nextPage","Page >");
+        add("gui.neosim.BuildingConstructor.goBack","Go Back");
+        add("gui.neosim.BuildingConstructor.preview","Preview");
+        add("gui.neosim.BuildingConstructor.previewAdjust","Adjust Preview");
+        add("gui.neosim.BuildingConstructor.buildIt","Build it!");
+        add("gui.neosim.BuildingConstructor.dimensions","Dimensions: %s");
+        add("gui.neosim.BuildingConstructor.cost","$ %s");
+        add("gui.neosim.BuildingConstructor.totalBlocks","Total blocks: %s");
+        add("gui.neosim.BuildingConstructor.blocks","%s blocks");
+        add("gui.neosim.BuildingConstructor.noMaterials","No materials required (empty building)");
+        add("gui.neosim.BuildingConstructor.materials","Materials: %s block types");
+        add("gui.neosim.BuildingConstructor.moreTypes","  ...and %s more types");
+        add("gui.neosim.BuildingConstructor.unknownAuthor","Unknown");
+        add("gui.neosim.BuildingConstructor.page8.hint","Current Build Status");
+        add("gui.neosim.BuildingConstructor.statusBuilding","Target Building:");
+        add("gui.neosim.BuildingConstructor.statusBuilder","Assigned Builder:");
+        add("gui.neosim.BuildingConstructor.statusState","Build State:");
+        add("gui.neosim.BuildingConstructor.statusProgress","Progress: %s / %s");
+        add("gui.neosim.BuildingConstructor.statusMaterials","Current Missing Material:");
+        add("gui.neosim.BuildingConstructor.statusNone","None");
+        add("gui.neosim.BuildingConstructor.statusState.idle","Idle");
+        add("gui.neosim.BuildingConstructor.statusState.waitingWorker","Waiting for Worker");
+        add("gui.neosim.BuildingConstructor.statusState.workerAssigned","Worker Assigned");
+        add("gui.neosim.BuildingConstructor.statusState.loading","Loading Blueprint");
+        add("gui.neosim.BuildingConstructor.statusState.waiting","Waiting for Resources");
+        add("gui.neosim.BuildingConstructor.statusState.building","Building");
+        add("gui.neosim.BuildingConstructor.statusState.complete","Complete");
+        add("gui.neosim.BuildingConstructor.builderLevel","Builder Lv.%s");
+        add("gui.neosim.BuildingConstructor.soulOut","Soul Out");
+        add("gui.neosim.BuildingConstructor.adjustUp","Up");
+        add("gui.neosim.BuildingConstructor.adjustDown","Down");
+        add("gui.neosim.BuildingConstructor.adjustMirror","Mirror");
+        add("gui.neosim.BuildingConstructor.adjustRotate","Rotate");
+        add("gui.neosim.BuildingConstructor.dirNorth","N");
+        add("gui.neosim.BuildingConstructor.dirSouth","S");
+        add("gui.neosim.BuildingConstructor.dirWest","W");
+        add("gui.neosim.BuildingConstructor.dirEast","E");
+        add("gui.neosim.BuildingConstructor.searchModeBuilding","Building");
+        add("gui.neosim.BuildingConstructor.searchModeAuthor","Author");
+        add("gui.neosim.BuildingConstructor.filterSpecific","Specific Format");
+        add("gui.neosim.BuildingConstructor.filterAll","All Formats");
+        add("gui.neosim.BuildingConstructor.filterTxt","TXT");
+        add("gui.neosim.BuildingConstructor.filterLitematic","Litematic");
+
+        add("gui.neosim.ControlBox.title","Control Box");
+        add("gui.neosim.ControlBox.building","Building: %s");
+        add("gui.neosim.ControlBox.author","Author: %s");
+        add("gui.neosim.ControlBox.placer","Built by: %s");
+        add("gui.neosim.ControlBox.residents","Residents: %s");
+        add("gui.neosim.ControlBox.none","None");
+        add("gui.neosim.ControlBox.noRecord","No record for this building");
+        add("gui.neosim.ControlBox.close","Close");
+
+        add("entity.neo_sim.nsnpc","NSnpc");
+
+        add("gui.neosim.npc.title","NPC");
+        add("gui.neosim.npc.setSkin","Set Skin");
+        add("gui.neosim.npc.rename","Rename");
+        add("gui.neosim.npc.rename.surname","Surname");
+        add("gui.neosim.npc.rename.givenName","Given Name");
+        add("gui.neosim.npc.rename.confirm","Confirm");
+        add("gui.neosim.npc.rename.cancel","Cancel");
+        add("gui.neosim.npc.back","Back");
+        add("gui.neosim.npc.info.sex","Sex: %s");
+        add("gui.neosim.npc.info.male","Male");
+        add("gui.neosim.npc.info.female","Female");
+        add("gui.neosim.npc.info.city","City: %s");
+        add("gui.neosim.npc.info.noCity","None");
+        add("gui.neosim.npc.info.age","Age: %d");
+        add("gui.neosim.npc.info.home","Home: %s");
+        add("gui.neosim.npc.info.noHome","None");
+        add("gui.neosim.npc.skin.prevPage","Previous");
+        add("gui.neosim.npc.skin.nextPage","Next");
+        add("gui.neosim.npc.skin.openFolder","Add Custom Skin");
+        add("gui.neosim.npc.skin.searchPlayer","Enter Player Name");
+        add("gui.neosim.npc.skin.searchConfirm","OK");
+        add("gui.neosim.npc.skin.searching","Searching...");
+        add("gui.neosim.npc.skin.searchFailed","Failed");
+        add("gui.neosim.npc.info.relationship","Relationship: %s");
+        add("gui.neosim.npc.info.single","Single");
+        add("gui.neosim.npc.info.livingWithSomeone","Living with someone");
+        add("gui.neosim.npc.family.open","Family");
+        add("gui.neosim.npc.family.title","Family: %s");
+        add("gui.neosim.npc.family.father","Father");
+        add("gui.neosim.npc.family.mother","Mother");
+        add("gui.neosim.npc.family.son","Son");
+        add("gui.neosim.npc.family.daughter","Daughter");
+        add("gui.neosim.npc.family.brother","Brother");
+        add("gui.neosim.npc.family.sister","Sister");
+        add("gui.neosim.npc.family.grandfather","Grandfather");
+        add("gui.neosim.npc.family.grandmother","Grandmother");
+        add("gui.neosim.npc.family.partner","Partner");
+        add("gui.neosim.npc.family.noParents","Parents: none");
+        add("gui.neosim.npc.family.noPartner","Partner: none");
+        add("gui.neosim.npc.family.noChildren","Children: none");
+        add("gui.neosim.npc.family.noSiblings","Siblings: none");
+        add("gui.neosim.npc.family.noGrandparents","Grandparents: none");
+
+        add("config.neosim.initialCredit","Initial Credit");
+        add("config.neosim.initialCredit.tooltip","Initial credit points for the city");
+        add("config.neosim.creditsPerBlock","Credits Per Block");
+        add("config.neosim.creditsPerBlock.tooltip","Credit points deducted per block placed (not in Creative mode)");
+        add("config.neosim.maxPopulation","Max Population");
+        add("config.neosim.maxPopulation.tooltip","Maximum population of the city");
+        add("config.neosim.npcMinAge","NPC Min Age");
+        add("config.neosim.npcMinAge.tooltip","Minimum random age of NPCs");
+        add("config.neosim.npcMaxAge","NPC Max Age");
+        add("config.neosim.npcMaxAge.tooltip","Maximum random age of NPCs");
+        add("config.neosim.lifeRentDefault","Residential Rent Default");
+        add("config.neosim.lifeRentDefault.tooltip","Daily rent charged per occupied residential building; fallback for records without volume-based rent");
+        add("config.neosim.lifeRentPerBlock","Rent Per Block");
+        add("config.neosim.lifeRentPerBlock.tooltip","Completed residences charge daily rent = non-air block count × this multiplier");
+        add("config.neosim.lifeAdultAge","Adult Age");
+        add("config.neosim.lifeAdultAge.tooltip","Age at which residents become adults: hireable and leave home (parent home released the day they cross it)");
+        add("config.neosim.lifeMaxAge","Max Age");
+        add("config.neosim.lifeMaxAge.tooltip","Past this age, residents have a 1/10 chance per day to die of old age");
+        add("config.neosim.lifeAgingAdultDay","Adult Aging Day");
+        add("config.neosim.lifeAgingAdultDay.tooltip","Day of week adults age");
+        add("config.neosim.lifeAgingChildDays","Child Aging Days");
+        add("config.neosim.lifeAgingChildDays.tooltip","Days of week children age");
+        add("config.neosim.lifeGenealogyDepth","Genealogy Depth");
+        add("config.neosim.lifeGenealogyDepth.tooltip","Maximum generations traced upward for blood-relation checks");
+        add("config.neosim.lifeMarriageChance","Marriage Chance");
+        add("config.neosim.lifeMarriageChance.tooltip","Chance for maxed BESTFRIENDS couples to marry on coin flip");
+        add("config.neosim.lifePregnancyDays","Pregnancy Days");
+        add("config.neosim.lifePregnancyDays.tooltip","Days from conception to birth");
+        add("config.neosim.lifePregnancyChance","Pregnancy Chance");
+        add("config.neosim.lifePregnancyChance.tooltip","Pregnancy Chance (1/7)");
+
+        add("gui.neosim.npc.info.maternityLeave","On Maternity Leave");
+    }
+}

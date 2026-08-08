@@ -1,12 +1,9 @@
 package com.wenzai.neosim.storage;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+import com.google.gson.*;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
+import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.loading.FMLPaths;
@@ -168,9 +165,7 @@ public class FileCreater
                 try (Writer writer = Files.newBufferedWriter(dataFile))
                 {
                     JsonObject json = new JsonObject();
-                    SimData.DEFAULT.toJson(json);
-                    json.addProperty("runGuiSent", false);
-                    json.add("joinedPlayers", new JsonArray());
+                    SimData.CityData.DEFAULT.toJson(json);
                     GSON.toJson(json, writer);
                     LOGGER.info("NeoSim-createInitialDataJson: Succeed, {}", dataFile.toAbsolutePath());
                 }
@@ -196,6 +191,30 @@ public class FileCreater
         Path gameDir = FMLPaths.GAMEDIR.get();
         Path playerFile = gameDir.resolve("NeoSim").resolve("data").resolve(saveName).resolve(cityName).resolve("player.json");
         return checkPlayerInFile(playerFile, playerName);
+    }
+
+    // 列出所有已有城市
+    public static List<String> listCities(ServerLevel level)
+    {
+        Path dataDir = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
+        if (!level.getServer().isDedicatedServer())
+        {
+            dataDir = dataDir.resolve(level.getServer().getWorldData().getLevelName());
+        }
+        if (!Files.isDirectory(dataDir)) return List.of();
+        try (var entries = Files.list(dataDir))
+        {
+            return entries.filter(Files::isDirectory)
+                    .filter(d -> Files.exists(d.resolve("player.json")))
+                    .map(d -> d.getFileName().toString())
+                    .sorted()
+                    .toList();
+        }
+        catch (IOException e)
+        {
+            LOGGER.error("NeoSim-listCities: Fail, {}", e.getMessage(), e);
+            return List.of();
+        }
     }
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();

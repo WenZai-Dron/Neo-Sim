@@ -4,8 +4,9 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.wenzai.neosim.npc.Manage;
-import com.wenzai.neosim.storage.ModSavedData;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
@@ -14,6 +15,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.CommandEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
+
+import java.util.concurrent.CompletableFuture;
 
 public class Command
 {
@@ -27,25 +30,89 @@ public class Command
                 .then(Commands.literal("credit")
                     .then(Commands.literal("set")
                         .then(Commands.argument("value", DoubleArgumentType.doubleArg(0))
-                            .executes(ctx -> setCredit(ctx, DoubleArgumentType.getDouble(ctx, "value")))
+                            .then(Commands.argument("cityName", StringArgumentType.greedyString())
+                            .suggests(Command::suggestCities)
+                                .executes(ctx -> setCredit(ctx,
+                                        DoubleArgumentType.getDouble(ctx, "value"),
+                                        StringArgumentType.getString(ctx, "cityName")))
+                            )
+                        )
+                    )
+                    .then(Commands.literal("add")
+                        .then(Commands.argument("value", DoubleArgumentType.doubleArg(0))
+                            .then(Commands.argument("cityName", StringArgumentType.greedyString())
+                            .suggests(Command::suggestCities)
+                                .executes(ctx -> addCredit(ctx,
+                                        DoubleArgumentType.getDouble(ctx, "value"),
+                                        StringArgumentType.getString(ctx, "cityName")))
+                            )
                         )
                     )
                 )
                 .then(Commands.literal("npc")
-                    .then(Commands.argument("cityName", StringArgumentType.greedyString())
-                        .executes(ctx -> spawnNpc(ctx, StringArgumentType.getString(ctx, "cityName")))
+                    .then(Commands.literal("spawn")
+                        .then(Commands.argument("cityName", StringArgumentType.greedyString())
+                            .suggests(Command::suggestCities)
+                            .executes(ctx -> spawnNpc(ctx, StringArgumentType.getString(ctx, "cityName")))
+                        )
                     )
                 )
         );
     }
 
-    private static int setCredit(CommandContext<CommandSourceStack> ctx, double value)
+    // Tab补全：列出已有城市名
+    private static <S> CompletableFuture<Suggestions> suggestCities(
+            CommandContext<S> ctx, SuggestionsBuilder builder)
+    {
+        if (ctx.getSource() instanceof net.minecraft.commands.CommandSourceStack source)
+        {
+            for (String city : com.wenzai.neosim.storage.FileCreater.listCities(source.getLevel()))
+            {
+                builder.suggest(city);
+            }
+        }
+        return builder.buildFuture();
+    }
+
+    private static int setCredit(CommandContext<CommandSourceStack> ctx, double value, String cityName)
     {
         ServerLevel level = ctx.getSource().getLevel();
-        ModSavedData data = ModSavedData.get(level);
+
+        // 检查城市是否存在
+        if (!Manage.cityExists(level, cityName))
+        {
+            ctx.getSource().sendFailure(Component.literal("§cCity '" + cityName + "' does not exist"));
+            return 0;
+        }
+
         double rounded = Math.round(value * 100.0) / 100.0;
-        data.setCredit(rounded, level);
-        NeoSim.LOGGER.info("NeoSim-Command: credit={}", rounded);
+        com.wenzai.neosim.storage.SimData.CityData city = com.wenzai.neosim.storage.SimData.CityData.read(level, cityName);
+        com.wenzai.neosim.storage.SimData.CityData.write(level, cityName, city.withCredit(rounded));
+
+        // 同步给该城市在线玩家，HUD刷新
+        com.wenzai.neosim.storage.ModSavedData.get(level).syncCityToClients(level, cityName);
+        NeoSim.LOGGER.info("NeoSim-Command: credit={} city={}", rounded, cityName);
+        return 1;
+    }
+
+    private static int addCredit(CommandContext<CommandSourceStack> ctx, double value, String cityName)
+    {
+        ServerLevel level = ctx.getSource().getLevel();
+
+        // 检查城市是否存在
+        if (!Manage.cityExists(level, cityName))
+        {
+            ctx.getSource().sendFailure(Component.literal("§cCity '" + cityName + "' does not exist"));
+            return 0;
+        }
+
+        com.wenzai.neosim.storage.SimData.CityData city = com.wenzai.neosim.storage.SimData.CityData.read(level, cityName);
+        double rounded = Math.round((city.credit() + value) * 100.0) / 100.0;
+        com.wenzai.neosim.storage.SimData.CityData.write(level, cityName, city.withCredit(rounded));
+
+        // 同步给该城市在线玩家，HUD刷新
+        com.wenzai.neosim.storage.ModSavedData.get(level).syncCityToClients(level, cityName);
+        NeoSim.LOGGER.info("NeoSim-Command: credit +{} city={} now={}", value, cityName, rounded);
         return 1;
     }
 
@@ -62,7 +129,6 @@ public class Command
 
         BlockPos pos = BlockPos.containing(ctx.getSource().getPosition());
         Manage.spawnAt(level, pos, cityName);
-        ctx.getSource().sendSuccess(() -> Component.literal("NPC spawned in city " + cityName), true);
         return 1;
     }
 
