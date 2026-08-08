@@ -2,25 +2,26 @@
 
 # Neo-Sim · 新模拟城市
 
-基于 **NeoForge 1.21.1** 开发的模拟城市类模组，致敬并延续 [Sim-U-Kraft](https://www.mcmod.cn/class/489.html)，并接入 [投影 (Litematica)](https://www.mcmod.cn/class/2261.html)支持的格式
+基于 **NeoForge 1.21.1** 开发的模拟城市类模组，致敬并延续 [Sim-U-Kraft](https://www.mcmod.cn/class/489.html)，并接入 [投影](https://www.mcmod.cn/class/2261.html)支持的格式
 
 ---
 
 ## 特色功能
 
 ### 自动化建筑
-- 保留 **155 项 Sim-U-Kraft 旧版社区建筑**（`.txt` 格式），同时支持 **投影 (Litematica)**（`.litematic`格式）
+- 保留 **155 项 Sim-U-Kraft 旧版社区建筑**
+- 支持 **投影** 文件，导入自定义建筑
 
 ### NPC
-- 多样化 NPC 样貌，支持导入自定义皮肤
-- 支持自定义 NPC 姓名
+- 多样化市民样貌，支持导入自定义皮肤
+- 支持自定义市民姓名
 
 ### 建筑预览
 - 半透明建筑虚影，**移动 / 旋转 / 镜像**自由调整蓝图，支持自由视角鸟瞰
 - **缓存**渲染，再大的建筑也不掉帧
 
 ### 城市与模拟
-- 玩家新建 / 加入城市，NPC 随城市生活
+- 玩家新建 / 加入城市，市民随城市生活
 - **HUD 实时显示**，缺料提醒、完工全城公告
 
 ### 多人游戏
