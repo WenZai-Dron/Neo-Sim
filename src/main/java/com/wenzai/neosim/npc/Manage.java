@@ -221,7 +221,7 @@ public class Manage
         NeoSim.LOGGER.info("NeoSim-restoreAll: Restored {} NPCs for city {}", restored, cityName);
     }
 
-    // 从文件恢复单个NPC（按名恢复）
+    // 从文件恢复单个NPC
     public static Entity spawnSingle(ServerLevel level, String cityName, String npcName)
     {
         return spawnSingle(level, cityName, npcName, null);
