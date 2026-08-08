@@ -384,7 +384,7 @@ public class ConstructionTask
                     level.setBlock(worldPos.below(), lower, Block.UPDATE_ALL);
                 }
 
-                // 双开门：与相邻同朝向门组成对开（铰链取反），复刻原版放置时的自动配对
+                // 双开门
                 fixDoubleDoor(worldPos);
             }
             else if (toPlace.getBlock() instanceof BedBlock)
@@ -695,8 +695,7 @@ public class ConstructionTask
         return state;
     }
 
-    // 双开门：放置门后检查水平相邻的同朝向门，铰链取反组成对开
-    // 直接 setBlock 绕过了原版 DoorBlock 放置时的自动配对，蓝图里两扇门铰链相同时会变成两扇相同的门
+    // 双开门
     private void fixDoubleDoor(BlockPos doorPos)
     {
         // 一律以下半格为准
@@ -711,7 +710,8 @@ public class ConstructionTask
         }
 
         Direction facing = lower.getValue(BlockStateProperties.HORIZONTAL_FACING);
-        // 先查逆时针侧，再查顺时针侧，与原版 DoorBlock 判定顺序一致
+
+        // 先查逆时针侧，再查顺时针侧
         for (Direction side : new Direction[] { facing.getCounterClockWise(), facing.getClockWise() })
         {
             BlockState neighbor = level.getBlockState(lowerPos.relative(side));
@@ -721,15 +721,18 @@ public class ConstructionTask
             {
                 net.minecraft.world.level.block.state.properties.DoorHingeSide neighborHinge =
                         neighbor.getValue(BlockStateProperties.DOOR_HINGE);
-                // 取反铰链，1.21 的 DoorHingeSide 没有 getOpposite()
+
+                // 取反铰链
                 net.minecraft.world.level.block.state.properties.DoorHingeSide opposite =
                         neighborHinge == net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT
                                 ? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
                                 : net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
                 if (lower.getValue(BlockStateProperties.DOOR_HINGE) == opposite)
                 {
-                    return; // 已配对
+                    // 已配对
+                    return;
                 }
+
                 // 本门两格一起改铰链，保持上下一致
                 level.setBlock(lowerPos, lower.setValue(BlockStateProperties.DOOR_HINGE, opposite), Block.UPDATE_ALL);
                 BlockState upper = level.getBlockState(lowerPos.above());
