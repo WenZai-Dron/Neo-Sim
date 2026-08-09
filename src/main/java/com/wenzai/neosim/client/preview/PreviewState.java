@@ -20,7 +20,7 @@ public class PreviewState
     private boolean isActive;
 
     // VBO 缓存：仅在预览状态变化时重建
-    private final GhostBlockRenderer.GhostMeshCache meshCache = new GhostBlockRenderer.GhostMeshCache();
+    private GhostBlockRenderer.GhostMeshCache meshCache;
     private boolean needsRebuild = true;
 
     public PreviewState() {}
@@ -44,11 +44,16 @@ public class PreviewState
     public void setActive(boolean v)
     {
         this.isActive = v;
-        // 预览结束：释放缓存的 GPU 显存
-        if (!v) meshCache.invalidate();
+        // 预览结束：释放缓存的GPU显存
+        if (!v && meshCache != null) meshCache.invalidate();
     }
 
-    public GhostBlockRenderer.GhostMeshCache getMeshCache() { return meshCache; }
+    public GhostBlockRenderer.GhostMeshCache getMeshCache()
+    {
+        // 仅客户端渲染路径调用
+        if (meshCache == null) meshCache = new GhostBlockRenderer.GhostMeshCache();
+        return meshCache;
+    }
 
     public boolean needsRebuild() { return needsRebuild; }
     public void markNeedsRebuild() { this.needsRebuild = true; }
