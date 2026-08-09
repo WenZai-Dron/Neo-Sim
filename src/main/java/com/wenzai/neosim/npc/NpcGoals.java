@@ -244,7 +244,9 @@ public class NpcGoals
         {
             stuckTicks = 0;
             PathNavigation nav = npc.getNavigation();
-            Path path = nav.createPath(target, 0);
+            
+            // 寻路到模盒正上方一格
+            Path path = nav.createPath(target.above(), 0);
             if (path == null || !nav.moveTo(path, speed))
             {
                 nav.moveTo(target.getX() + 0.5, target.getY() + 1, target.getZ() + 0.5, speed);
