@@ -4,11 +4,13 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.BuildingConstructor;
 import com.wenzai.neosim.block.ControlBox;
+import com.wenzai.neosim.client.ClientBlockInteractions;
 import com.wenzai.neosim.npc.Entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import org.slf4j.Logger;
 
@@ -66,7 +68,10 @@ public class BreakHandler
         com.wenzai.neosim.building.ConstructionEngine.saveAllTasks(level);
 
         // 清理已选蓝图缓存
-        com.wenzai.neosim.client.gui.BuildingConstructorGui.clearSelectedAt(pos);
+        if (FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT)
+        {
+            ClientBlockInteractions.clearSelectedAt(pos);
+        }
 
         // 删除控制箱记录：已放置的控制箱方块保留，右键不可交互；居民失去家
         if (task != null)

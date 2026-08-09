@@ -2,6 +2,7 @@ package com.wenzai.neosim.building;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.client.ClientBlockInteractions;
 import com.wenzai.neosim.client.preview.PreviewState;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicRegistry;
@@ -10,6 +11,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -238,7 +240,10 @@ public class ConstructionEngine
                         }
 
                         // GUI已选蓝图缓存清理
-                        com.wenzai.neosim.client.gui.BuildingConstructorGui.clearSelectedAt(conPos);
+                        if (FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT)
+                        {
+                            ClientBlockInteractions.clearSelectedAt(conPos);
+                        }
                     }
                     
                     // 完工：释放加载的区块
