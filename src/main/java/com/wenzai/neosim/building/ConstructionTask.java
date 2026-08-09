@@ -235,6 +235,20 @@ public class ConstructionTask
             }
         }
 
+        // 建造中：实体在场但不在模盒正上方时，等就位
+        resolveBuilderNpc();
+        if (builderNpc != null && builderNpc.getPregnancyStage() <= 0.0F)
+        {
+            BlockPos box = building.getConstructorPos();
+            if (box == null) box = building.getControlBoxPos();
+            if (box != null && !NpcGoals.MoveToSiteGoal.isAboveSite(builderNpc, box))
+            {
+                setBuilderAnim(0.0F);
+                clearBuilderHand();
+                return;
+            }
+        }
+
         // 速度控制+抬手
         long now = System.currentTimeMillis();
         long elapsed = now - animStartTime;
