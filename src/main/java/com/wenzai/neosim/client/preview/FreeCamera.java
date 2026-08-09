@@ -1,6 +1,7 @@
 package com.wenzai.neosim.client.preview;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
 // 开启创造飞行，退出时传送回原位。
@@ -61,6 +62,31 @@ public class FreeCamera
 
         if (savedPos != null)
         {
+            // 重置客户端掉落距离，防止高空坠落
+            mc.player.fallDistance = 0.0F;
+            mc.player.setOnGround(true);
+
+            // 单机：直接走服务端传送，服务端重置掉落并忽略后续移动包，避免坠落判定/回弹
+            if (mc.hasSingleplayerServer() && mc.getSingleplayerServer() != null)
+            {
+                ServerPlayer serverPlayer = mc.getSingleplayerServer()
+                        .getPlayerList().getPlayer(mc.player.getUUID());
+                if (serverPlayer != null)
+                {
+                    serverPlayer.resetFallDistance();
+                    serverPlayer.teleportTo(serverPlayer.serverLevel(),
+                            savedPos.x, savedPos.y, savedPos.z,
+                            java.util.Collections.emptySet(), savedYaw, savedPitch);
+                }
+            }
+            else
+            {
+                // 多人：告知服务端传送回原位置，避免坠落/回弹
+                net.neoforged.neoforge.network.PacketDistributor.sendToServer(
+                        new com.wenzai.neosim.network.ClientToServerPayloads.SoulReturnPayload(
+                                savedPos.x, savedPos.y, savedPos.z, savedYaw, savedPitch));
+            }
+
             mc.player.setPos(savedPos.x, savedPos.y, savedPos.z);
             mc.player.setYRot(savedYaw);
             mc.player.setXRot(savedPitch);
