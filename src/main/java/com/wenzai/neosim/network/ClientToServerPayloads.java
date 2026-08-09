@@ -182,6 +182,60 @@ public class ClientToServerPayloads
         }
     }
 
+    // 灵魂出窍结束，传送回原位置
+    public record SoulReturnPayload(double x, double y, double z, float yaw, float pitch) implements CustomPacketPayload
+    {
+        public static final Type<SoulReturnPayload> TYPE =
+                new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "soul_return"));
+
+        public static final StreamCodec<ByteBuf, SoulReturnPayload> STREAM_CODEC =
+                StreamCodec.ofMember(SoulReturnPayload::write, SoulReturnPayload::new);
+
+        private SoulReturnPayload(ByteBuf buf)
+        {
+            this(buf.readDouble(), buf.readDouble(), buf.readDouble(), buf.readFloat(), buf.readFloat());
+        }
+
+        private void write(ByteBuf buf)
+        {
+            buf.writeDouble(x);
+            buf.writeDouble(y);
+            buf.writeDouble(z);
+            buf.writeFloat(yaw);
+            buf.writeFloat(pitch);
+        }
+
+        public static void handle(SoulReturnPayload payload, IPayloadContext context)
+        {
+            context.enqueueWork(() ->
+            {
+                if (context.player() instanceof ServerPlayer player && player.isAlive())
+                {
+                    // 只允许传送回自己的原位置（距离有上限，防止被恶意利用）（未作明确规定）
+                    double distSqr = player.distanceToSqr(payload.x(), payload.y(), payload.z());
+                    if (distSqr > 512.0 * 512.0) return;
+                    double y = payload.y();
+                    if (y < player.serverLevel().getMinBuildHeight()
+                            || y > player.serverLevel().getMaxBuildHeight()) return;
+
+                    player.resetFallDistance();
+                    player.teleportTo(player.serverLevel(),
+                            payload.x(), payload.y(), payload.z(),
+                            java.util.Collections.emptySet(), payload.yaw(), payload.pitch());
+                }
+            }).exceptionally(e -> {
+                NeoSim.LOGGER.error("NeoSim-SoulReturn: Fail", e);
+                return null;
+            });
+        }
+
+        @Override
+        public @NotNull Type<? extends CustomPacketPayload> type()
+        {
+            return TYPE;
+        }
+    }
+
     // 确认建筑放置
     public record ConfirmPlacementPayload(String schematicName,
                                           BlockPos origin,
