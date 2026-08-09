@@ -1,7 +1,6 @@
 package com.wenzai.neosim.block;
 
-import com.wenzai.neosim.client.gui.ControlBoxGui;
-import net.minecraft.client.Minecraft;
+import com.wenzai.neosim.client.ClientBlockInteractions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -9,6 +8,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 public class ControlBox extends Block
 {
@@ -24,7 +24,8 @@ public class ControlBox extends Block
         boolean interactive = isInteractive(pos);
         if (interactive && level.isClientSide)
         {
-            Minecraft.getInstance().setScreen(new ControlBoxGui(pos));
+            // 客户端逻辑：专用服务器此分支永不执行，不加载任何客户端类
+            ClientBlockInteractions.openControlBox(pos);
         }
 
         return interactive ? InteractionResult.sidedSuccess(level.isClientSide())
@@ -35,6 +36,7 @@ public class ControlBox extends Block
     private boolean isInteractive(BlockPos pos)
     {
         if (com.wenzai.neosim.building.ConstructionEngine.findTask(pos) != null) return false;
-        return ControlBoxGui.hasRecord(pos);
+        if (FMLEnvironment.dist != net.neoforged.api.distmarker.Dist.CLIENT) return false;
+        return ClientBlockInteractions.hasControlBoxRecord(pos);
     }
 }

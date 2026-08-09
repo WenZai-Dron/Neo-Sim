@@ -1,7 +1,6 @@
 package com.wenzai.neosim.block;
 
-import com.wenzai.neosim.client.gui.BuildingConstructorGui;
-import net.minecraft.client.Minecraft;
+import com.wenzai.neosim.client.ClientBlockInteractions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -22,7 +21,8 @@ public class  BuildingConstructor extends Block
     {
         if (level.isClientSide)
         {
-            Minecraft.getInstance().setScreen(new BuildingConstructorGui(pos));
+            // 客户端逻辑：专用服务器此分支永不执行，不加载任何客户端类
+            ClientBlockInteractions.openBuildingConstructor(pos);
         }
 
         return InteractionResult.sidedSuccess(level.isClientSide());
