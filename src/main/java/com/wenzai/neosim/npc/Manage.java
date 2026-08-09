@@ -9,6 +9,7 @@ import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.storage.ModSavedData;
 import com.wenzai.neosim.storage.NpcData;
+import com.wenzai.neosim.util.SafeJson;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -242,83 +243,94 @@ public class Manage
 
         // 恢复姓名
         CompoundTag tag = npc.getPersistentData();
-        if (json.has("surname")) tag.putString(Entity.KEY_SURNAME, json.get("surname").getAsString());
-        if (json.has("givenName")) tag.putString(Entity.KEY_GIVEN_NAME, json.get("givenName").getAsString());
-        if (json.has("name")) tag.putString(Entity.KEY_FULL_NAME, json.get("name").getAsString());
-        npc.setNpcName(json.has("name") ? json.get("name").getAsString() : "");
+        String surname = SafeJson.getString(json, "surname", null);
+        if (surname != null) tag.putString(Entity.KEY_SURNAME, surname);
+        String givenName = SafeJson.getString(json, "givenName", null);
+        if (givenName != null) tag.putString(Entity.KEY_GIVEN_NAME, givenName);
+        String fullName = SafeJson.getString(json, "name", null);
+        if (fullName != null) tag.putString(Entity.KEY_FULL_NAME, fullName);
+        npc.setNpcName(SafeJson.getString(json, "name", ""));
 
         // 记录所属城市，用于死亡时删除文件
         npc.setCityName(cityName);
 
         // 恢复性别
-        if (json.has("sex")) npc.setSex(json.get("sex").getAsString());
+        String sex = SafeJson.getString(json, "sex", null);
+        if (sex != null) npc.setSex(sex);
 
         // 恢复皮肤
-        if (json.has("skin")) npc.setSkin(json.get("skin").getAsString());
+        String skin = SafeJson.getString(json, "skin", null);
+        if (skin != null) npc.setSkin(skin);
 
         // 恢复位置
         if (atPos != null)
         {
             npc.moveTo(atPos.getX() + 0.5D, atPos.getY() + 1.0D, atPos.getZ() + 0.5D, 0.0F, 0.0F);
         }
-        else if (json.has("position"))
+        else
         {
-            JsonObject pos = json.getAsJsonObject("position");
-            double x = pos.has("x") ? pos.get("x").getAsDouble() : 0;
-            double y = pos.has("y") ? pos.get("y").getAsDouble() : 64;
-            double z = pos.has("z") ? pos.get("z").getAsDouble() : 0;
-            float yaw = json.has("yaw") ? json.get("yaw").getAsFloat() : 0F;
-            float pitch = json.has("pitch") ? json.get("pitch").getAsFloat() : 0F;
-            npc.moveTo(x, y, z, yaw, pitch);
+            JsonObject pos = SafeJson.getObject(json, "position");
+            if (pos != null)
+            {
+                double x = SafeJson.getDouble(pos, "x", 0);
+                double y = SafeJson.getDouble(pos, "y", 64);
+                double z = SafeJson.getDouble(pos, "z", 0);
+                float yaw = SafeJson.getFloat(json, "yaw", 0F);
+                float pitch = SafeJson.getFloat(json, "pitch", 0F);
+                npc.moveTo(x, y, z, yaw, pitch);
+            }
         }
 
         // 恢复生命值
         if (json.has("health"))
         {
-            npc.setHealth(json.get("health").getAsFloat());
+            npc.setHealth(SafeJson.getFloat(json, "health", npc.getMaxHealth()));
         }
 
         // 恢复年龄
-        if (json.has("age")) npc.setAge(json.get("age").getAsShort());
+        if (json.has("age")) npc.setAge(SafeJson.getShort(json, "age", (short) 18));
 
         // 恢复职业等级
-        if (json.has("job"))
+        JsonObject job = SafeJson.getObject(json, "job");
+        if (job != null)
         {
-            JsonObject job = json.getAsJsonObject("job");
-            if (job.has("architect")) npc.setJobArchitect(job.get("architect").getAsByte());
-            if (job.has("farmer")) npc.setJobFarmer(job.get("farmer").getAsByte());
-            if (job.has("miner")) npc.setJobMiner(job.get("miner").getAsByte());
-            if (job.has("courier")) npc.setJobCourier(job.get("courier").getAsByte());
+            if (job.has("architect")) npc.setJobArchitect(SafeJson.getByte(job, "architect", (byte) 1));
+            if (job.has("farmer")) npc.setJobFarmer(SafeJson.getByte(job, "farmer", (byte) 1));
+            if (job.has("miner")) npc.setJobMiner(SafeJson.getByte(job, "miner", (byte) 1));
+            if (job.has("courier")) npc.setJobCourier(SafeJson.getByte(job, "courier", (byte) 1));
         }
 
         // 恢复生活点
-        if (json.has("home"))
+        JsonObject home = SafeJson.getObject(json, "home");
+        if (home != null)
         {
-            JsonObject home = json.getAsJsonObject("home");
             BlockPos homePos = new BlockPos(
-                    home.get("x").getAsInt(), home.get("y").getAsInt(), home.get("z").getAsInt());
-            String homeBuilding = json.has("homeBuilding")
-                    ? json.get("homeBuilding").getAsString() : "";
+                    SafeJson.getInt(home, "x", 0), SafeJson.getInt(home, "y", 0), SafeJson.getInt(home, "z", 0));
+            String homeBuilding = SafeJson.getString(json, "homeBuilding", "");
             npc.setHome(homePos, homeBuilding);
         }
 
         // 恢复孕期进度
-        if (json.has("pregnancy")) npc.setPregnancyStage(json.get("pregnancy").getAsFloat());
+        if (json.has("pregnancy")) npc.setPregnancyStage(SafeJson.getFloat(json, "pregnancy", 0F));
 
         // 恢复关系与族谱
-        if (json.has("partner")) npc.setPartner(json.get("partner").getAsString());
+        String partner = SafeJson.getString(json, "partner", null);
+        if (partner != null) npc.setPartner(partner);
         if (json.has("parents"))
         {
-            JsonArray parents = json.getAsJsonArray("parents");
-            String p1 = parents.size() > 0 ? parents.get(0).getAsString() : "";
-            String p2 = parents.size() > 1 ? parents.get(1).getAsString() : "";
+            JsonArray parents = SafeJson.getArray(json, "parents");
+            String p1 = parents.size() > 0 && parents.get(0).isJsonPrimitive() ? parents.get(0).getAsString() : "";
+            String p2 = parents.size() > 1 && parents.get(1).isJsonPrimitive() ? parents.get(1).getAsString() : "";
             npc.setParents(p1, p2);
         }
         if (json.has("children"))
         {
-            JsonArray children = json.getAsJsonArray("children");
+            JsonArray children = SafeJson.getArray(json, "children");
             List<String> childList = new java.util.ArrayList<>();
-            for (JsonElement e : children) childList.add(e.getAsString());
+            for (JsonElement e : children)
+            {
+                if (e.isJsonPrimitive()) childList.add(e.getAsString());
+            }
             npc.setChildren(childList);
         }
 

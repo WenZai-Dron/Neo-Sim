@@ -1,19 +1,16 @@
 package com.wenzai.neosim.storage;
 
 import com.wenzai.neosim.npc.Entity;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
+import com.wenzai.neosim.util.SafeJson;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,7 +20,6 @@ import java.util.stream.Stream;
 public class NpcData
 {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private NpcData() {}
 
@@ -105,43 +101,39 @@ public class NpcData
         Path npcFile = npcDir.resolve(npcName + ".json");
         if (!Files.exists(npcFile)) return;
 
-        try (Reader reader = Files.newBufferedReader(npcFile))
+        JsonObject json = SafeJson.readObject(npcFile);
+        if (json == null)
         {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null) return;
-
-            JsonArray parentsArr = new JsonArray();
-            if (parents != null)
-            {
-                for (String p : parents)
-                {
-                    if (p != null && !p.isEmpty()) parentsArr.add(p);
-                }
-            }
-            if (parentsArr.size() > 0) json.add("parents", parentsArr);
-            else json.remove("parents");
-
-            JsonArray childrenArr = new JsonArray();
-            if (children != null)
-            {
-                for (String c : children)
-                {
-                    if (c != null && !c.isEmpty()) childrenArr.add(c);
-                }
-            }
-            if (childrenArr.size() > 0) json.add("children", childrenArr);
-            else json.remove("children");
-
-            try (Writer writer = Files.newBufferedWriter(npcFile))
-            {
-                GSON.toJson(json, writer);
-            }
-            LOGGER.info("npcData.patchGenealogy: Succeed, {}", npcFile.toAbsolutePath());
+            // 内容被篡改：备份后跳过（该NPC数据视为无效）
+            SafeJson.backupCorrupted(npcFile);
+            LOGGER.warn("npcData.patchGenealogy: corrupted file skipped, {}", npcFile.toAbsolutePath());
+            return;
         }
-        catch (IOException e)
+
+        JsonArray parentsArr = new JsonArray();
+        if (parents != null)
         {
-            LOGGER.error("npcData.patchGenealogy: Fail, path={}, error={}", npcFile.toAbsolutePath(), e.getMessage(), e);
+            for (String p : parents)
+            {
+                if (p != null && !p.isEmpty()) parentsArr.add(p);
+            }
         }
+        if (parentsArr.size() > 0) json.add("parents", parentsArr);
+        else json.remove("parents");
+
+        JsonArray childrenArr = new JsonArray();
+        if (children != null)
+        {
+            for (String c : children)
+            {
+                if (c != null && !c.isEmpty()) childrenArr.add(c);
+            }
+        }
+        if (childrenArr.size() > 0) json.add("children", childrenArr);
+        else json.remove("children");
+
+        SafeJson.write(npcFile, json);
+        LOGGER.info("npcData.patchGenealogy: Succeed, {}", npcFile.toAbsolutePath());
     }
 
     // 直接改写某NPC文件的伴侣字段（伴侣死亡时清理未加载的一方）
@@ -158,24 +150,20 @@ public class NpcData
         Path npcFile = npcDir.resolve(npcName + ".json");
         if (!Files.exists(npcFile)) return;
 
-        try (Reader reader = Files.newBufferedReader(npcFile))
+        JsonObject json = SafeJson.readObject(npcFile);
+        if (json == null)
         {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null) return;
-
-            if (partner == null || partner.isEmpty()) json.remove("partner");
-            else json.addProperty("partner", partner);
-
-            try (Writer writer = Files.newBufferedWriter(npcFile))
-            {
-                GSON.toJson(json, writer);
-            }
-            LOGGER.info("npcData.patchPartner: Succeed, {}", npcFile.toAbsolutePath());
+            // 内容被篡改：备份后跳过（该NPC数据视为无效）
+            SafeJson.backupCorrupted(npcFile);
+            LOGGER.warn("npcData.patchPartner: corrupted file skipped, {}", npcFile.toAbsolutePath());
+            return;
         }
-        catch (IOException e)
-        {
-            LOGGER.error("npcData.patchPartner: Fail, path={}, error={}", npcFile.toAbsolutePath(), e.getMessage(), e);
-        }
+
+        if (partner == null || partner.isEmpty()) json.remove("partner");
+        else json.addProperty("partner", partner);
+
+        SafeJson.write(npcFile, json);
+        LOGGER.info("npcData.patchPartner: Succeed, {}", npcFile.toAbsolutePath());
     }
 
     // 修改某未加载NPC的年龄
@@ -220,23 +208,19 @@ public class NpcData
         Path npcFile = npcDir.resolve(npcName + ".json");
         if (!Files.exists(npcFile)) return;
 
-        try (Reader reader = Files.newBufferedReader(npcFile))
+        JsonObject json = SafeJson.readObject(npcFile);
+        if (json == null)
         {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null) return;
-
-            editor.accept(json);
-
-            try (Writer writer = Files.newBufferedWriter(npcFile))
-            {
-                GSON.toJson(json, writer);
-            }
-            LOGGER.info("npcData.patchJson: Succeed, {}", npcFile.toAbsolutePath());
+            // 内容被篡改：备份后跳过（该NPC数据视为无效）
+            SafeJson.backupCorrupted(npcFile);
+            LOGGER.warn("npcData.patchJson: corrupted file skipped, {}", npcFile.toAbsolutePath());
+            return;
         }
-        catch (IOException e)
-        {
-            LOGGER.error("npcData.patchJson: Fail, path={}, error={}", npcFile.toAbsolutePath(), e.getMessage(), e);
-        }
+
+        editor.accept(json);
+
+        SafeJson.write(npcFile, json);
+        LOGGER.info("npcData.patchJson: Succeed, {}", npcFile.toAbsolutePath());
     }
 
     // 列出某城市所有已保存的NPC
@@ -344,7 +328,6 @@ public class NpcData
         {
             Files.createDirectories(npcDir);
 
-            try (Writer writer = Files.newBufferedWriter(npcFile))
             {
                 JsonObject json = new JsonObject();
 
@@ -426,7 +409,7 @@ public class NpcData
                     json.add("children", childrenArr);
                 }
 
-                GSON.toJson(json, writer);
+                SafeJson.write(npcFile, json);
                 LOGGER.info("npcData.save: Succeed, {}", npcFile.toAbsolutePath());
             }
         }
@@ -445,16 +428,24 @@ public class NpcData
             return null;
         }
 
-        try (Reader reader = Files.newBufferedReader(npcFile))
+        JsonObject json = SafeJson.readObject(npcFile);
+        if (json == null)
         {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            LOGGER.info("npcData.load: Succeed, {}", npcFile.toAbsolutePath());
-            return json;
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("npcData.load: Fail, path={}, error={}", npcFile.toAbsolutePath(), e.getMessage(), e);
+            // 内容被篡改/清空：备份.bak后删除原文件，该NPC数据视为不存在，游戏继续运行
+            SafeJson.backupCorrupted(npcFile);
+            try
+            {
+                Files.deleteIfExists(npcFile);
+                LOGGER.warn("npcData.load: corrupted, backed up and removed, {}", npcFile.toAbsolutePath());
+            }
+            catch (IOException e)
+            {
+                LOGGER.error("npcData.load: corrupted file removal fail, path={}, error={}",
+                        npcFile.toAbsolutePath(), e.getMessage(), e);
+            }
             return null;
         }
+        LOGGER.info("npcData.load: Succeed, {}", npcFile.toAbsolutePath());
+        return json;
     }
 }

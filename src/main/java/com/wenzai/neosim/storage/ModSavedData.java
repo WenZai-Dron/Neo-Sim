@@ -1,18 +1,18 @@
 package com.wenzai.neosim.storage;
 
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.network.ServerToClientPayloads;
+import com.wenzai.neosim.util.SafeJson;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.storage.LevelResource;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -21,7 +21,6 @@ import java.util.UUID;
 
 public class ModSavedData
 {
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Path DATA_DIR = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
 
     private static ModSavedData INSTANCE;
@@ -66,27 +65,24 @@ public class ModSavedData
     {
         if (Files.exists(dataFile))
         {
-            try (Reader reader = Files.newBufferedReader(dataFile))
+            JsonObject json = SafeJson.readObject(dataFile);
+            if (json == null)
             {
-                JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                data = SimData.DEFAULT;
-                if (json.has("mode")) data = data.withMode(json.get("mode").getAsByte());
-                if (json.has("dayOfWeek")) data = data.withDayOfWeek(json.get("dayOfWeek").getAsInt());
-                runGuiSent = json.has("runGuiSent") && json.get("runGuiSent").getAsBoolean();
-                if (json.has("joinedPlayers"))
-                {
-                    JsonArray arr = json.getAsJsonArray("joinedPlayers");
-                    for (JsonElement e : arr)
-                    {
-                        joinedPlayers.add(e.getAsString());
-                    }
-                }
-                NeoSim.LOGGER.info("NeoSim-loadFromFile: {}", dataFile);
+                // 内容被篡改/清空：备份.bak后按默认值重建
+                SafeJson.backupCorrupted(dataFile);
+                saveToFile();
+                NeoSim.LOGGER.warn("NeoSim-loadFromFile: corrupted, backed up and rebuilt: {}", dataFile);
+                return;
             }
-            catch (IOException e)
+            data = SimData.DEFAULT;
+            data = data.withMode(SafeJson.getByte(json, "mode", data.mode()));
+            data = data.withDayOfWeek(SafeJson.getInt(json, "dayOfWeek", data.dayOfWeek()));
+            runGuiSent = SafeJson.getBoolean(json, "runGuiSent", false);
+            for (JsonElement e : SafeJson.getArray(json, "joinedPlayers"))
             {
-                NeoSim.LOGGER.error("NeoSim-loadFromFile: {}", e.getMessage(), e);
+                if (e.isJsonPrimitive()) joinedPlayers.add(e.getAsString());
             }
+            NeoSim.LOGGER.info("NeoSim-loadFromFile: {}", dataFile);
         }
         else
         {
@@ -96,29 +92,18 @@ public class ModSavedData
 
     private void saveToFile()
     {
-        try
+        JsonObject json = new JsonObject();
+        json.addProperty("mode", data.mode());
+        json.addProperty("dayOfWeek", data.dayOfWeek());
+        json.addProperty("runGuiSent", runGuiSent);
+        JsonArray arr = new JsonArray();
+        for (String uuid : joinedPlayers)
         {
-            Files.createDirectories(dataFile.getParent());
-            try (Writer writer = Files.newBufferedWriter(dataFile))
-            {
-                JsonObject json = new JsonObject();
-                json.addProperty("mode", data.mode());
-                json.addProperty("dayOfWeek", data.dayOfWeek());
-                json.addProperty("runGuiSent", runGuiSent);
-                JsonArray arr = new JsonArray();
-                for (String uuid : joinedPlayers)
-                {
-                    arr.add(uuid);
-                }
-                json.add("joinedPlayers", arr);
-                GSON.toJson(json, writer);
-                NeoSim.LOGGER.info("NeoSim-saveToFile: {}", dataFile);
-            }
+            arr.add(uuid);
         }
-        catch (IOException e)
-        {
-            NeoSim.LOGGER.error("NeoSim-saveToFile: {}", e.getMessage(), e);
-        }
+        json.add("joinedPlayers", arr);
+        SafeJson.write(dataFile, json);
+        NeoSim.LOGGER.info("NeoSim-saveToFile: {}", dataFile);
     }
 
     // 网络同步：仅同步给player.json中含有的玩家vbb

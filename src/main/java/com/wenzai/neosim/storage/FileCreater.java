@@ -1,8 +1,11 @@
 package com.wenzai.neosim.storage;
 
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.util.SafeJson;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -11,8 +14,6 @@ import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -159,21 +160,10 @@ public class FileCreater
         Path dataFile = cityDir.resolve("data.json");
         if (!Files.exists(dataFile))
         {
-            try
-            {
-                Files.createDirectories(cityDir);
-                try (Writer writer = Files.newBufferedWriter(dataFile))
-                {
-                    JsonObject json = new JsonObject();
-                    SimData.CityData.DEFAULT.toJson(json);
-                    GSON.toJson(json, writer);
-                    LOGGER.info("NeoSim-createInitialDataJson: Succeed, {}", dataFile.toAbsolutePath());
-                }
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("NeoSim-createInitialDataJson: Fail, {}", e.getMessage(), e);
-            }
+            JsonObject json = new JsonObject();
+            SimData.CityData.DEFAULT.toJson(json);
+            SafeJson.write(dataFile, json);
+            LOGGER.info("NeoSim-createInitialDataJson: Succeed, {}", dataFile.toAbsolutePath());
         }
     }
 
@@ -217,7 +207,15 @@ public class FileCreater
         }
     }
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    // 玩家列表文件损坏：备份.bak 后重建默认
+    private static void repairCorruptedPlayerJson(Path playerFile)
+    {
+        SafeJson.backupCorrupted(playerFile);
+        JsonObject json = new JsonObject();
+        json.add("players", new JsonArray());
+        SafeJson.write(playerFile, json);
+        LOGGER.warn("NeoSim-player.json corrupted, backed up and rebuilt: {}", playerFile.toAbsolutePath());
+    }
 
     private static boolean checkPlayerInFile(Path playerFile, String playerName)
     {
@@ -225,21 +223,19 @@ public class FileCreater
         {
             return false;
         }
-        try (Reader reader = Files.newBufferedReader(playerFile))
+        JsonObject json = SafeJson.readObject(playerFile);
+        if (json == null)
         {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            JsonArray arr = json.getAsJsonArray("players");
-            for (JsonElement e : arr)
-            {
-                if (e.getAsString().equals(playerName))
-                {
-                    return true;
-                }
-            }
+            // 内容被篡改/清空：备份重建后按"不在列表"处理
+            repairCorruptedPlayerJson(playerFile);
+            return false;
         }
-        catch (IOException e)
+        for (JsonElement e : SafeJson.getArray(json, "players"))
         {
-            LOGGER.error("NeoSim-checkPlayerInFile: Fail, {}", e.getMessage(), e);
+            if (e.isJsonPrimitive() && e.getAsString().equals(playerName))
+            {
+                return true;
+            }
         }
         return false;
     }
@@ -251,18 +247,17 @@ public class FileCreater
         // 读取玩家列表
         if (Files.exists(playerFile))
         {
-            try (Reader reader = Files.newBufferedReader(playerFile))
+            JsonObject json = SafeJson.readObject(playerFile);
+            if (json == null)
             {
-                JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                JsonArray arr = json.getAsJsonArray("players");
-                for (JsonElement e : arr)
-                {
-                    players.add(e.getAsString());
-                }
+                repairCorruptedPlayerJson(playerFile);
             }
-            catch (IOException e)
+            else
             {
-                LOGGER.error("NeoSim-writePlayerJson(read): Fail, {}", e.getMessage(), e);
+                for (JsonElement e : SafeJson.getArray(json, "players"))
+                {
+                    if (e.isJsonPrimitive()) players.add(e.getAsString());
+                }
             }
         }
 
@@ -273,26 +268,15 @@ public class FileCreater
         }
 
         // 写入
-        try
+        JsonObject json = new JsonObject();
+        JsonArray arr = new JsonArray();
+        for (String p : players)
         {
-            Files.createDirectories(playerFile.getParent());
-            try (Writer writer = Files.newBufferedWriter(playerFile))
-            {
-                JsonObject json = new JsonObject();
-                JsonArray arr = new JsonArray();
-                for (String p : players)
-                {
-                    arr.add(p);
-                }
-                json.add("players", arr);
-                GSON.toJson(json, writer);
-                LOGGER.info("NeoSim-writePlayerJson: Succeed, {}", playerFile.toAbsolutePath());
-            }
+            arr.add(p);
         }
-        catch (IOException e)
-        {
-            LOGGER.error("NeoSim-writePlayerJson(write): Fail, {}", e.getMessage(), e);
-        }
+        json.add("players", arr);
+        SafeJson.write(playerFile, json);
+        LOGGER.info("NeoSim-writePlayerJson: Succeed, {}", playerFile.toAbsolutePath());
     }
 
     // 服务端：查找玩家所属城市

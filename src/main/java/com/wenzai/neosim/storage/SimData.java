@@ -2,18 +2,14 @@
 
 package com.wenzai.neosim.storage;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
+import com.wenzai.neosim.util.SafeJson;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -55,7 +51,6 @@ public record SimData(byte mode, short population, int dayOfWeek, int day, doubl
     public record CityData(short population, int day, double credit)
     {
         private static final Logger LOGGER = LogUtils.getLogger();
-        private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
         public static final CityData DEFAULT = new CityData((short) 0, 1, Config.INITIAL_CREDIT.get());
 
@@ -80,44 +75,32 @@ public record SimData(byte mode, short population, int dayOfWeek, int day, doubl
         {
             Path file = resolvePath(level, cityName);
             if (!Files.exists(file)) return DEFAULT;
-            try (Reader reader = Files.newBufferedReader(file))
+            JsonObject json = SafeJson.readObject(file);
+            if (json == null)
             {
-                JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                if (json == null) return DEFAULT;
-                return fromJson(json);
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("NeoSim-CityData: read fail, {}", e.getMessage(), e);
+                // 内容被篡改/清空：备份.bak后重建默认值，游戏自动恢复
+                SafeJson.backupCorrupted(file);
+                write(level, cityName, DEFAULT);
+                LOGGER.warn("NeoSim-CityData: corrupted, backed up and rebuilt: {}", file);
                 return DEFAULT;
             }
+            return fromJson(json);
         }
 
         public static void write(ServerLevel level, String cityName, CityData data)
         {
             Path file = resolvePath(level, cityName);
-            try
-            {
-                Files.createDirectories(file.getParent());
-                JsonObject json = new JsonObject();
-                data.toJson(json);
-                try (Writer writer = Files.newBufferedWriter(file))
-                {
-                    GSON.toJson(json, writer);
-                }
-                LOGGER.info("NeoSim-CityData: saved {}", file);
-            }
-            catch (IOException e)
-            {
-                LOGGER.error("NeoSim-CityData: write fail, {}", e.getMessage(), e);
-            }
+            JsonObject json = new JsonObject();
+            data.toJson(json);
+            SafeJson.write(file, json);
+            LOGGER.info("NeoSim-CityData: saved {}", file);
         }
 
         public static CityData fromJson(JsonObject json)
         {
-            short population = json.has("population") ? json.get("population").getAsShort() : (short) 0;
-            int day = json.has("day") ? json.get("day").getAsInt() : 1;
-            double credit = json.has("credit") ? json.get("credit").getAsDouble() : Config.INITIAL_CREDIT.get();
+            short population = SafeJson.getShort(json, "population", (short) 0);
+            int day = SafeJson.getInt(json, "day", 1);
+            double credit = SafeJson.getDouble(json, "credit", Config.INITIAL_CREDIT.get());
             return new CityData(population, day, credit);
         }
 

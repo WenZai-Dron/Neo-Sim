@@ -92,7 +92,21 @@ public class NeoSim
     {
         if (event.getEntity() instanceof ServerPlayer player)
         {
-            ModSavedData data = ModSavedData.get(player.serverLevel());
+            try
+            {
+                handlePlayerJoin(player);
+            }
+            catch (Exception e)
+            {
+                // 文件被删改导致的任何遗漏异常都不允许阻止玩家登录
+                NeoSim.LOGGER.error("NeoSim-onPlayerJoin: unhandled error for {}, skipped", player.getName().getString(), e);
+            }
+        }
+    }
+
+    private void handlePlayerJoin(ServerPlayer player)
+    {
+        ModSavedData data = ModSavedData.get(player.serverLevel());
             String playerName = player.getName().getString();
             String cityName = ModSavedData.getActiveCityName();
 
@@ -163,7 +177,6 @@ public class NeoSim
                 PacketDistributor.sendToPlayer(player, new ServerToClientPayloads.OpenGuiPayload(ServerToClientPayloads.OpenGuiPayload.GuiType.CITY));
                 NeoSim.LOGGER.info("NeoSim-onPlayerJoin: open City for {}", playerName);
             }
-        }
     }
 
     // 玩家断线时清理其打开的NPC-GUI，防止NPC永久冻结
@@ -194,6 +207,19 @@ public class NeoSim
     // day++和dayOfWeek++
     @SubscribeEvent
     public void onServerTick(ServerTickEvent.Post event)
+    {
+        try
+        {
+            tickServer(event);
+        }
+        catch (Exception e)
+        {
+            // 文件被删改导致的任何遗漏异常都不允许崩溃服务端，记日志后继续下一tick
+            NeoSim.LOGGER.error("NeoSim-onServerTick: unhandled error, skipped tick", e);
+        }
+    }
+
+    private void tickServer(ServerTickEvent.Post event)
     {
         // 定期清理因玩家非正常退出（崩溃、断线）而永久冻结的NPC
         frozenCleanupTimer++;
@@ -288,6 +314,13 @@ public class NeoSim
                 ClientToServerPayloads.ConfirmPlacementPayload::handle
         );
 
+        // 灵魂出窍结束，传送回原位置
+        registrar.playToServer(
+                ClientToServerPayloads.SoulReturnPayload.TYPE,
+                ClientToServerPayloads.SoulReturnPayload.STREAM_CODEC,
+                ClientToServerPayloads.SoulReturnPayload::handle
+        );
+
     }
 
     private void commonSetup(FMLCommonSetupEvent event)
@@ -315,6 +348,9 @@ public class NeoSim
     {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+
+        // 服务器初始化蓝图
+        com.wenzai.neosim.schematic.SchematicRegistry.getInstance().initializeAsync();
     }
 
     // 服务端停止时重置静态变量，防止下一个存档读到残留数据

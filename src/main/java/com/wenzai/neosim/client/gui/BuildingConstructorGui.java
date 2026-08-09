@@ -915,16 +915,31 @@ public class BuildingConstructorGui extends Screen
             {
                 net.minecraft.server.level.ServerLevel serverLevel = server.overworld();
                 String cityName = com.wenzai.neosim.storage.ModSavedData.getActiveCityName();
-                if (cityName.isEmpty()) return;
+                if (cityName.isEmpty())
+                {
+                    // 保底：恢复失败时清掉雇佣记录，任务回到等待工人，避免永久卡住
+                    com.wenzai.neosim.NeoSim.WORKER_MAP.remove(constructorPos);
+                    com.mojang.logging.LogUtils.getLogger().warn(
+                            "NeoSim-GUI: hire '{}' cancelled — no active city", npcName);
+                    return;
+                }
 
                 com.google.gson.JsonObject json =
                         com.wenzai.neosim.storage.NpcData.load(serverLevel, cityName, npcName);
-                if (json == null) return;
+                if (json == null)
+                {
+                    // 保底：档案不存在（可能刚死亡被删档），清掉雇佣记录
+                    com.wenzai.neosim.NeoSim.WORKER_MAP.remove(constructorPos);
+                    com.mojang.logging.LogUtils.getLogger().warn(
+                            "NeoSim-GUI: hire '{}' cancelled — npc file missing", npcName);
+                    return;
+                }
 
                 // 档案校验：未成年不可雇佣
                 if (json.has("age")
                         && json.get("age").getAsInt() < com.wenzai.neosim.Config.LIFE_ADULT_AGE.get())
                 {
+                    com.wenzai.neosim.NeoSim.WORKER_MAP.remove(constructorPos);
                     com.mojang.logging.LogUtils.getLogger().warn(
                             "NeoSim-GUI: NPC '{}' is underage (age={}), hire refused",
                             npcName, json.get("age").getAsInt());
@@ -934,6 +949,7 @@ public class BuildingConstructorGui extends Screen
                 // 档案校验：产假中不可雇佣
                 if (json.has("pregnancy") && json.get("pregnancy").getAsFloat() > 0.0F)
                 {
+                    com.wenzai.neosim.NeoSim.WORKER_MAP.remove(constructorPos);
                     com.mojang.logging.LogUtils.getLogger().warn(
                             "NeoSim-GUI: NPC '{}' is on maternity leave, hire refused",
                             npcName);
@@ -949,6 +965,13 @@ public class BuildingConstructorGui extends Screen
 
                     // 雇佣后立即保存
                     com.wenzai.neosim.building.ConstructionEngine.saveAllTasks(serverLevel);
+                }
+                else
+                {
+                    // 保底：实体创建失败，清掉雇佣记录
+                    com.wenzai.neosim.NeoSim.WORKER_MAP.remove(constructorPos);
+                    com.mojang.logging.LogUtils.getLogger().warn(
+                            "NeoSim-GUI: hire '{}' cancelled — failed to spawn NPC", npcName);
                 }
             });
             return;

@@ -38,6 +38,24 @@ public class SimUKraftSchematicReader implements ISchematicReader
     @Override
     public SchematicData read(Path filePath) throws IOException
     {
+        try
+        {
+            return readInternal(filePath);
+        }
+        catch (IOException e)
+        {
+            throw e;
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("NeoSim-SimUKraftSchematicReader: {} when reading {}: {}",
+                    e.getClass().getSimpleName(), filePath, e.getMessage(), e);
+            throw new IOException("Failed to read SimU-Kraft txt: " + filePath, e);
+        }
+    }
+
+    private SchematicData readInternal(Path filePath) throws IOException
+    {
         List<String> lines;
         try (BufferedReader reader = Files.newBufferedReader(filePath))
         {

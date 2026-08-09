@@ -11,8 +11,12 @@ import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemAlreadyExistsException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -39,6 +43,9 @@ public class SchematicRegistry
 
     private volatile boolean loaded = false;
 
+    // 只允许一个端加载线程
+    private final java.util.concurrent.atomic.AtomicBoolean initStarted = new java.util.concurrent.atomic.AtomicBoolean();
+
     private SchematicRegistry()
     {
         for (BuildingType type : BuildingType.values())
@@ -52,6 +59,7 @@ public class SchematicRegistry
     // 异步加载资源中的蓝图
     public void initializeAsync()
     {
+        if (!initStarted.compareAndSet(false, true)) return;
         blockIdMapping.loadBuiltin();
         Path externalMapping = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("block_id_mapping.json");
         if (Files.exists(externalMapping))
@@ -100,11 +108,12 @@ public class SchematicRegistry
         {
             try
             {
-                loaded = loadDir(Path.of(url.toURI()), reader, type);
+                loaded = loadDir(classpathDirPath(url), reader, type);
             }
-            catch (URISyntaxException e)
+            catch (Exception e)
             {
-                LOGGER.error("NeoSim-SchematicRegistry: bad URI — {}", classpathDir);
+                // 资源目录读取失败只跳过该目录，不杀死加载线程
+                LOGGER.error("NeoSim-SchematicRegistry: bad resource — {}, {}", classpathDir, e.getMessage(), e);
             }
         }
 
@@ -116,6 +125,26 @@ public class SchematicRegistry
                 loadDir(devDir, reader, type);
             }
         }
+    }
+
+    private static Path classpathDirPath(URL url) throws URISyntaxException, IOException
+    {
+        if ("jar".equals(url.getProtocol()))
+        {
+            String spec = url.toExternalForm();
+            URI jarUri = URI.create(spec.substring(0, spec.indexOf('!')));
+            FileSystem fs;
+            try
+            {
+                fs = FileSystems.newFileSystem(jarUri, Map.of());
+            }
+            catch (FileSystemAlreadyExistsException e)
+            {
+                fs = FileSystems.getFileSystem(jarUri);
+            }
+            return fs.getPath(spec.substring(spec.indexOf('!') + 1));
+        }
+        return Path.of(url.toURI());
     }
 
     // 返回 true表示成功加载到了文件
@@ -155,9 +184,10 @@ public class SchematicRegistry
                     loadedSchematics.put(typed.getName(), typed);
                     byType.get(type).add(typed);
                 }
-                catch (IOException e)
+                catch (Exception e)
                 {
-                    LOGGER.error("NeoSim-SchematicRegistry: failed {}, {}", file.getFileName(), e.getMessage());
+                    // 单个文件损坏只跳过该文件，不影响其余蓝图
+                    LOGGER.error("NeoSim-SchematicRegistry: failed {}, {}", file.getFileName(), e.getMessage(), e);
                 }
             }
             return !fileList.isEmpty();
@@ -230,9 +260,10 @@ public class SchematicRegistry
                 loadedSchematics.put(typed.getName(), typed);
                 customList.add(typed);
             }
-            catch (IOException e)
+            catch (Exception e)
             {
-                LOGGER.error("NeoSim-SchematicRegistry: custom failed {}, {}", file.getFileName(), e.getMessage());
+                // 单个自定义文件损坏只跳过该文件
+                LOGGER.error("NeoSim-SchematicRegistry: custom failed {}, {}", file.getFileName(), e.getMessage(), e);
             }
         }
         LOGGER.info("NeoSim-SchematicRegistry: custom '{}' — {} blueprints", dir, customList.size());

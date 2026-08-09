@@ -2,17 +2,14 @@
 
 package com.wenzai.neosim.life;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
+import com.wenzai.neosim.util.SafeJson;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,7 +19,6 @@ import java.util.List;
 public class RelationshipPersistence
 {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     private RelationshipPersistence() {}
 
@@ -45,17 +41,15 @@ public class RelationshipPersistence
         Path file = dir.resolve(fileName(a, b));
         if (!Files.exists(file)) return null;
 
-        try (Reader reader = Files.newBufferedReader(file))
+        JsonObject json = SafeJson.readObject(file);
+        if (json == null)
         {
-            JsonObject json = GSON.fromJson(reader, JsonObject.class);
-            if (json == null) return null;
-            return parsePair(json, a, b);
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("NeoSim-RelationshipPersistence: load failed, file={}, error={}", file, e.getMessage(), e);
+            // 内容被篡改：备份后跳过，该关系视为不存在
+            SafeJson.backupCorrupted(file);
+            LOGGER.warn("NeoSim-RelationshipPersistence: corrupted file skipped, {}", file);
             return null;
         }
+        return parsePair(json, a, b);
     }
 
     // 读取某城市全部关系（婚姻扫描）
@@ -70,14 +64,19 @@ public class RelationshipPersistence
             for (Path file : stream)
             {
                 if (!file.getFileName().toString().endsWith(".json")) continue;
-                try (Reader reader = Files.newBufferedReader(file))
+                JsonObject json = SafeJson.readObject(file);
+                if (json == null)
                 {
-                    JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                    if (json == null) continue;
+                    SafeJson.backupCorrupted(file);
+                    LOGGER.warn("NeoSim-RelationshipPersistence: corrupted file skipped, {}", file);
+                    continue;
+                }
+                try
+                {
                     Relationship.RelationshipData rel = parsePair(json, "", "");
                     if (rel != null) all.add(rel);
                 }
-                catch (IOException e)
+                catch (Exception e)
                 {
                     LOGGER.error("NeoSim-RelationshipPersistence: loadAll failed, file={}, error={}",
                             file, e.getMessage(), e);
@@ -106,19 +105,24 @@ public class RelationshipPersistence
                 boolean references = fileName.startsWith(oldName + "_") || fileName.endsWith("_" + oldName + ".json");
                 if (!references) continue;
 
-                try (Reader reader = Files.newBufferedReader(file))
+                JsonObject json = SafeJson.readObject(file);
+                if (json == null)
                 {
-                    JsonObject json = GSON.fromJson(reader, JsonObject.class);
-                    if (json == null) continue;
-                    String f1 = json.has("folk1") ? json.get("folk1").getAsString() : "";
-                    String f2 = json.has("folk2") ? json.get("folk2").getAsString() : "";
+                    SafeJson.backupCorrupted(file);
+                    LOGGER.warn("NeoSim-RelationshipPersistence: corrupted file skipped, {}", file);
+                    continue;
+                }
+                try
+                {
+                    String f1 = SafeJson.getString(json, "folk1", "");
+                    String f2 = SafeJson.getString(json, "folk2", "");
                     if (f1.isEmpty() || f2.isEmpty()) continue;
                     if (f1.equals(oldName)) f1 = newName;
                     if (f2.equals(oldName)) f2 = newName;
                     Files.deleteIfExists(file);
                     save(level, city, parsePair(json, f1, f2));
                 }
-                catch (IOException e)
+                catch (Exception e)
                 {
                     LOGGER.error("NeoSim-RelationshipPersistence: renameAllFor failed, file={}, error={}",
                             file, e.getMessage(), e);
@@ -134,10 +138,10 @@ public class RelationshipPersistence
     // 解析一对关系
     private static Relationship.RelationshipData parsePair(JsonObject json, String fallback1, String fallback2)
     {
-        String f1 = json.has("folk1") ? json.get("folk1").getAsString() : fallback1;
-        String f2 = json.has("folk2") ? json.get("folk2").getAsString() : fallback2;
+        String f1 = SafeJson.getString(json, "folk1", fallback1);
+        String f2 = SafeJson.getString(json, "folk2", fallback2);
         if (f1.isEmpty() || f2.isEmpty()) return null;
-        int sub = json.has("subLevel") ? json.get("subLevel").getAsInt() : 0;
+        int sub = SafeJson.getInt(json, "subLevel", 0);
         return new Relationship.RelationshipData(f1, f2, parseLevel(json), sub);
     }
 
@@ -146,24 +150,12 @@ public class RelationshipPersistence
     {
         Path dir = relationshipsDir(level, city);
         if (dir == null || rel == null) return;
-        try
-        {
-            Files.createDirectories(dir);
-            Path file = dir.resolve(fileName(rel.folk1(), rel.folk2()));
-            JsonObject json = new JsonObject();
-            json.addProperty("folk1", rel.folk1());
-            json.addProperty("folk2", rel.folk2());
-            json.addProperty("level", rel.level().name());
-            json.addProperty("subLevel", rel.subLevel());
-            try (Writer writer = Files.newBufferedWriter(file))
-            {
-                GSON.toJson(json, writer);
-            }
-        }
-        catch (IOException e)
-        {
-            LOGGER.error("NeoSim-RelationshipPersistence: save failed, error={}", e.getMessage(), e);
-        }
+        JsonObject json = new JsonObject();
+        json.addProperty("folk1", rel.folk1());
+        json.addProperty("folk2", rel.folk2());
+        json.addProperty("level", rel.level().name());
+        json.addProperty("subLevel", rel.subLevel());
+        SafeJson.write(dir.resolve(fileName(rel.folk1(), rel.folk2())), json);
     }
 
     public static void removePair(ServerLevel level, String city, String a, String b)

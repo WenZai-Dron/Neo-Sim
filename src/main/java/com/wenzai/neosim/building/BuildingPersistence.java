@@ -2,9 +2,12 @@
 
 package com.wenzai.neosim.building;
 
-import com.google.gson.*;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.schematic.SchematicRegistry;
+import com.wenzai.neosim.util.SafeJson;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.block.Mirror;
@@ -12,8 +15,6 @@ import net.minecraft.world.level.block.Rotation;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -23,7 +24,6 @@ import java.util.UUID;
 public class BuildingPersistence
 {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     // 新格式：player.json 同目录下的 BuildingConstructor.json（按城市）
     private static Path getCityPath(ServerLevel level, String cityName)
@@ -53,24 +53,13 @@ public class BuildingPersistence
 
     private static void writeBuildings(Path file, List<BuildingInstance> buildings)
     {
-        try
+        JsonArray arr = new JsonArray();
+        for (BuildingInstance b : buildings)
         {
-            Files.createDirectories(file.getParent());
-            JsonArray arr = new JsonArray();
-            for (BuildingInstance b : buildings)
-            {
-                arr.add(buildingToJson(b));
-            }
-            try (Writer w = Files.newBufferedWriter(file))
-            {
-                GSON.toJson(arr, w);
-            }
-            LOGGER.info("NeoSim-BuildingPersistence: saved {} buildings to {}", buildings.size(), file);
+            arr.add(buildingToJson(b));
         }
-        catch (Exception e)
-        {
-            LOGGER.error("NeoSim-BuildingPersistence: save failed", e);
-        }
+        SafeJson.write(file, arr);
+        LOGGER.info("NeoSim-BuildingPersistence: saved {} buildings to {}", buildings.size(), file);
     }
 
     private static List<BuildingInstance> readBuildings(Path file)
@@ -78,21 +67,24 @@ public class BuildingPersistence
         List<BuildingInstance> buildings = new ArrayList<>();
         if (!Files.exists(file)) return buildings;
 
-        try (Reader r = Files.newBufferedReader(file))
+        JsonArray arr = SafeJson.readArray(file);
+        if (arr == null) return buildings;
+        
+        // 逐条隔离：单条记录损坏只跳过该条，不影响其余建筑恢复
+        for (JsonElement e : arr)
         {
-            JsonArray arr = GSON.fromJson(r, JsonArray.class);
-            if (arr == null) return buildings;
-            for (JsonElement e : arr)
+            try
             {
+                if (!e.isJsonObject()) continue;
                 BuildingInstance b = buildingFromJson(e.getAsJsonObject());
                 if (b != null) buildings.add(b);
             }
-            LOGGER.info("NeoSim-BuildingPersistence: loaded {} buildings from {}", buildings.size(), file);
+            catch (Exception ex)
+            {
+                LOGGER.error("NeoSim-BuildingPersistence: skip bad building record, error={}", ex.getMessage(), ex);
+            }
         }
-        catch (Exception ex)
-        {
-            LOGGER.error("NeoSim-BuildingPersistence: load failed", ex);
-        }
+        LOGGER.info("NeoSim-BuildingPersistence: loaded {} buildings from {}", buildings.size(), file);
         return buildings;
     }
 
@@ -188,16 +180,16 @@ public class BuildingPersistence
 
     private static String getStr(JsonObject o, String k, String def)
     {
-        return o.has(k) && !o.get(k).isJsonNull() ? o.get(k).getAsString() : def;
+        return SafeJson.getString(o, k, def);
     }
 
     private static int getInt(JsonObject o, String k, int def)
     {
-        return o.has(k) ? o.get(k).getAsInt() : def;
+        return SafeJson.getInt(o, k, def);
     }
 
     private static boolean getBool(JsonObject o, String k, boolean def)
     {
-        return o.has(k) ? o.get(k).getAsBoolean() : def;
+        return SafeJson.getBoolean(o, k, def);
     }
 }
