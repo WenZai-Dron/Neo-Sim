@@ -10,6 +10,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -116,10 +117,11 @@ public class PreviewAdjustGui extends Screen
                     BlockPos worldPos = state.blueprintToWorld(x, y, z);
                     BlockState worldBlock = mc.level.getBlockState(worldPos);
                     
-                    // 植被/雪层视为空气，不阻碍放置
+                    // 植被/雪层/水视为空气，不阻碍放置
                     if (!worldBlock.isAir()
                             && !(worldBlock.getBlock() instanceof BushBlock)
-                            && !(worldBlock.getBlock() instanceof SnowLayerBlock))
+                            && !(worldBlock.getBlock() instanceof SnowLayerBlock)
+                            && worldBlock.getBlock() != Blocks.WATER)
                     {
                         hasCollision = true;
                         break outer;
