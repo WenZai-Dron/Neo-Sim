@@ -153,6 +153,10 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.npc.info.age","年龄: %d");
         add("gui.neosim.npc.info.home","家: %s");
         add("gui.neosim.npc.info.noHome","无");
+        add("gui.neosim.npc.info.relationship","关系: %s");
+        add("gui.neosim.npc.info.single","单身");
+        add("gui.neosim.npc.info.livingWithSomeone","与他人同居");
+        add("gui.neosim.npc.info.maternityLeave","产假中");
         add("gui.neosim.npc.skin.prevPage","上一页");
         add("gui.neosim.npc.skin.nextPage","下一页");
         add("gui.neosim.npc.skin.openFolder","添加自定义皮肤");
@@ -160,9 +164,6 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.npc.skin.searchConfirm","确定");
         add("gui.neosim.npc.skin.searching","正在搜索...");
         add("gui.neosim.npc.skin.searchFailed","失败");
-        add("gui.neosim.npc.info.relationship","关系: %s");
-        add("gui.neosim.npc.info.single","单身");
-        add("gui.neosim.npc.info.livingWithSomeone","与他人同居");
         add("gui.neosim.npc.family.open","族谱");
         add("gui.neosim.npc.family.title","族谱：%s");
         add("gui.neosim.npc.family.father","父亲");
@@ -227,7 +228,6 @@ public class LangZhCn extends LanguageProvider
         add("config.neosim.lifeMarriageSubLevel","结婚所需关系度");
         add("config.neosim.lifeMarriageSubLevel.tooltip","BESTFRIENDS 关系达到该子等级后才会触发结婚判定");
 
-        // NeoForge 配置界面（ConfigurationScreen）分类/按钮/标题翻译
         add("neo_sim.configuration.title","%s 配置");
         add("neo_sim.configuration.section.neo.sim.toml.title","%s 通用配置");
         add("neo_sim.configuration.section.neo.sim.toml","%s 配置");
@@ -261,7 +261,5 @@ public class LangZhCn extends LanguageProvider
         add("neo_sim.configuration.marriage","婚姻");
         add("neo_sim.configuration.marriage.button","婚姻");
         add("neo_sim.configuration.marriage.tooltip","结婚概率与结婚所需关系度");
-
-        add("gui.neosim.npc.info.maternityLeave","产假中");
     }
 }

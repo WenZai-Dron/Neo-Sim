@@ -153,6 +153,10 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.npc.info.age","Age: %d");
         add("gui.neosim.npc.info.home","Home: %s");
         add("gui.neosim.npc.info.noHome","None");
+        add("gui.neosim.npc.info.relationship","Relationship: %s");
+        add("gui.neosim.npc.info.single","Single");
+        add("gui.neosim.npc.info.livingWithSomeone","Living with someone");
+        add("gui.neosim.npc.info.maternityLeave","On Maternity Leave");
         add("gui.neosim.npc.skin.prevPage","Previous");
         add("gui.neosim.npc.skin.nextPage","Next");
         add("gui.neosim.npc.skin.openFolder","Add Custom Skin");
@@ -160,9 +164,6 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.npc.skin.searchConfirm","OK");
         add("gui.neosim.npc.skin.searching","Searching...");
         add("gui.neosim.npc.skin.searchFailed","Failed");
-        add("gui.neosim.npc.info.relationship","Relationship: %s");
-        add("gui.neosim.npc.info.single","Single");
-        add("gui.neosim.npc.info.livingWithSomeone","Living with someone");
         add("gui.neosim.npc.family.open","Family");
         add("gui.neosim.npc.family.title","Family: %s");
         add("gui.neosim.npc.family.father","Father");
@@ -227,7 +228,6 @@ public class LangEnUs extends LanguageProvider
         add("config.neosim.lifeMarriageSubLevel","Marriage Sub-level");
         add("config.neosim.lifeMarriageSubLevel.tooltip","Sub-level a BESTFRIENDS relationship must reach before marriage can be triggered");
 
-        // NeoForge ConfigurationScreen category/button/title translations
         add("neo_sim.configuration.title","%s Configuration");
         add("neo_sim.configuration.section.neo.sim.toml.title","%s Common Configuration");
         add("neo_sim.configuration.section.neo.sim.toml","%s Configuration");
@@ -261,7 +261,5 @@ public class LangEnUs extends LanguageProvider
         add("neo_sim.configuration.marriage","Marriage");
         add("neo_sim.configuration.marriage.button","Marriage");
         add("neo_sim.configuration.marriage.tooltip","Marriage chance and required relationship sub-level");
-
-        add("gui.neosim.npc.info.maternityLeave","On Maternity Leave");
     }
 }
