@@ -120,6 +120,12 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.BuildingConstructor.filterAll","全部格式");
         add("gui.neosim.BuildingConstructor.filterTxt","旧格式");
         add("gui.neosim.BuildingConstructor.filterLitematic","新格式");
+        add("gui.neosim.BuildingConstructor.sortNameAsc","名称 ↑");
+        add("gui.neosim.BuildingConstructor.sortNameDesc","名称 ↓");
+        add("gui.neosim.BuildingConstructor.sortCostAsc","造价 ↑");
+        add("gui.neosim.BuildingConstructor.sortCostDesc","造价 ↓");
+        add("gui.neosim.BuildingConstructor.sortAuthorAsc","作者 ↑");
+        add("gui.neosim.BuildingConstructor.sortAuthorDesc","作者 ↓");
 
         add("gui.neosim.ControlBox.title","控制箱");
         add("gui.neosim.ControlBox.building","建筑: %s");

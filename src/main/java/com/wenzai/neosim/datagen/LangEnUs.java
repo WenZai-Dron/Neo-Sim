@@ -120,6 +120,12 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.BuildingConstructor.filterAll","All Formats");
         add("gui.neosim.BuildingConstructor.filterTxt","Old Format");
         add("gui.neosim.BuildingConstructor.filterLitematic","New Format");
+        add("gui.neosim.BuildingConstructor.sortNameAsc","Name ↑");
+        add("gui.neosim.BuildingConstructor.sortNameDesc","Name ↓");
+        add("gui.neosim.BuildingConstructor.sortCostAsc","Cost ↑");
+        add("gui.neosim.BuildingConstructor.sortCostDesc","Cost ↓");
+        add("gui.neosim.BuildingConstructor.sortAuthorAsc","Author ↑");
+        add("gui.neosim.BuildingConstructor.sortAuthorDesc","Author ↓");
 
         add("gui.neosim.ControlBox.title","Control Box");
         add("gui.neosim.ControlBox.building","Building: %s");
