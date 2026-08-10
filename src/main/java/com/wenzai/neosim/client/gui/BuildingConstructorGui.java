@@ -13,6 +13,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 
+import java.util.Comparator;
 import java.util.List;
 
 public class BuildingConstructorGui extends Screen
@@ -59,6 +60,17 @@ public class BuildingConstructorGui extends Screen
 
     // 搜索模式：false=按建筑名搜索，true=按作者搜索
     private boolean searchByAuthor;
+
+    // 排序
+    private static final int SORT_DIMS = 3;
+    private static final String[] SORT_ASC_KEYS = {
+            P + "sortNameAsc", P + "sortCostAsc", P + "sortAuthorAsc"
+    };
+    private static final String[] SORT_DESC_KEYS = {
+            P + "sortNameDesc", P + "sortCostDesc", P + "sortAuthorDesc"
+    };
+    private int sortIndex = 0;
+    private boolean sortAscending = true;
 
     public BuildingConstructorGui(BlockPos constructorPos)
     {
@@ -353,6 +365,9 @@ public class BuildingConstructorGui extends Screen
                 Component.translatable(P + (searchByAuthor ? "searchModeAuthor" : "searchModeBuilding")),
                 b -> { searchByAuthor = !searchByAuthor; refreshBlueprintButtons(); });
 
+        // 排序按钮
+        addSortButton();
+
         // 翻页/返回后不丢失已有搜索词
         String existing = searchField != null ? searchField.getValue() : "";
         searchField = new EditBox(font, width / 2 - 75, height - 40, 150, 20,
@@ -414,15 +429,41 @@ public class BuildingConstructorGui extends Screen
         searchField = new EditBox(font, width / 2 - 75, height - 40, 150, 20,
                 Component.translatable(P + "search"));
         searchField.setMaxLength(20);
-        
+
         searchField.setValue(text);
         searchField.setFocused(focused);
         searchField.setResponder(t -> refreshBlueprintButtons());
         addRenderableWidget(searchField);
 
+        addSortButton();
+
         buildBlueprintButtons();
 
         buildFormatButtons();
+    }
+
+    // 排序按钮
+    private void addSortButton()
+    {
+        addButton(605, 5, 40, 70, 20,
+                Component.translatable(sortAscending ? SORT_ASC_KEYS[sortIndex] : SORT_DESC_KEYS[sortIndex]),
+                b -> cycleSort());
+    }
+
+    // 点击
+    private void cycleSort()
+    {
+        if (sortAscending)
+        {
+            sortAscending = false;
+        }
+        else
+        {
+            sortAscending = true;
+            sortIndex = (sortIndex + 1) % SORT_DIMS;
+        }
+        buildingOffset = 0;
+        showPage();
     }
 
     private void buildBlueprintButtons()
@@ -457,7 +498,22 @@ public class BuildingConstructorGui extends Screen
                     .toList();
         }
 
+        // 排序名称
+        Comparator<SchematicData> cmp = switch (sortIndex)
+        {
+            case 1 -> Comparator.comparingDouble(d ->
+                    d.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get());
+            case 2 -> Comparator.comparing(SchematicData::getAuthor, String.CASE_INSENSITIVE_ORDER);
+            default -> Comparator.comparing(d -> BuildingNameLocalizer.localize(d.getName()),
+                    String.CASE_INSENSITIVE_ORDER);
+        };
+        if (!sortAscending) cmp = cmp.reversed();
+        List<SchematicData> sorted = new java.util.ArrayList<>(currentBlueprints);
+        sorted.sort(cmp);
+        currentBlueprints = sorted;
+
         int colW = (width - 20) / COLS;
+
         int x = 5, y = 60, idx = 1;
         int perRow = 0;
         buildingsOnPage = 0;
