@@ -116,7 +116,6 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.BuildingConstructor.dirEast","E");
         add("gui.neosim.BuildingConstructor.searchModeBuilding","Building");
         add("gui.neosim.BuildingConstructor.searchModeAuthor","Author");
-        add("gui.neosim.BuildingConstructor.filterSpecific","Specific Format");
         add("gui.neosim.BuildingConstructor.filterAll","All Formats");
         add("gui.neosim.BuildingConstructor.filterTxt","Old Format");
         add("gui.neosim.BuildingConstructor.filterLitematic","New Format");

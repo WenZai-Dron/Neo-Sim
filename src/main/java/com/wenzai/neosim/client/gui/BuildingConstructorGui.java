@@ -54,9 +54,7 @@ public class BuildingConstructorGui extends Screen
     
     // 格式筛选
     private com.wenzai.neosim.schematic.SchematicFormat selectedFormat;
-
-    // "特定格式"展开状态
-    private boolean formatFilterExpanded;
+    private int formatCycleIndex = 0;
 
     // 搜索模式：false=按建筑名搜索，true=按作者搜索
     private boolean searchByAuthor;
@@ -390,30 +388,21 @@ public class BuildingConstructorGui extends Screen
         int fx = width / 2 + 80;
         int bw = 70;
 
-        // 展开时隐藏"特定格式"按钮
-        if (!formatFilterExpanded)
-        {
-            addButton(600, fx, fy, bw, 20,
-                    Component.translatable(P + "filterSpecific"),
-                    b -> { formatFilterExpanded = true; showPage(); });
-        }
-        else
-        {
-            Button all = addButton(601, fx, fy, bw, 20,
-                    Component.translatable(P + "filterAll"),
-                    b -> { selectedFormat = null; formatFilterExpanded = false; showPage(); });
-            all.active = selectedFormat != null;
-
-            Button txt = addButton(602, fx, fy - 22, bw, 20,
-                    Component.translatable(P + "filterTxt"),
-                    b -> { selectedFormat = com.wenzai.neosim.schematic.SchematicFormat.SIM_UKRAFT_TXT; formatFilterExpanded = false; showPage(); });
-            txt.active = selectedFormat != com.wenzai.neosim.schematic.SchematicFormat.SIM_UKRAFT_TXT;
-
-            Button lit = addButton(603, fx, fy - 44, bw, 20,
-                    Component.translatable(P + "filterLitematic"),
-                    b -> { selectedFormat = com.wenzai.neosim.schematic.SchematicFormat.LITEMATICA; formatFilterExpanded = false; showPage(); });
-            lit.active = selectedFormat != com.wenzai.neosim.schematic.SchematicFormat.LITEMATICA;
-        }
+        // 切换格式筛选
+        addButton(600, fx, fy, bw, 20,
+                Component.translatable(P + (formatCycleIndex == 0 ? "filterAll"
+                        : formatCycleIndex == 1 ? "filterTxt" : "filterLitematic")),
+                b ->
+                {
+                    formatCycleIndex = (formatCycleIndex + 1) % 3;
+                    selectedFormat = switch (formatCycleIndex)
+                    {
+                        case 1 -> com.wenzai.neosim.schematic.SchematicFormat.SIM_UKRAFT_TXT;
+                        case 2 -> com.wenzai.neosim.schematic.SchematicFormat.LITEMATICA;
+                        default -> null;
+                    };
+                    showPage();
+                });
     }
 
     private void refreshBlueprintButtons()

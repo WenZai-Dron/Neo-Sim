@@ -116,7 +116,6 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.BuildingConstructor.dirEast","E");
         add("gui.neosim.BuildingConstructor.searchModeBuilding","建筑");
         add("gui.neosim.BuildingConstructor.searchModeAuthor","作者");
-        add("gui.neosim.BuildingConstructor.filterSpecific","特定格式");
         add("gui.neosim.BuildingConstructor.filterAll","全部格式");
         add("gui.neosim.BuildingConstructor.filterTxt","旧格式");
         add("gui.neosim.BuildingConstructor.filterLitematic","新格式");
