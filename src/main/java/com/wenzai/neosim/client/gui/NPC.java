@@ -445,42 +445,33 @@ public class NPC extends Screen
     private void renderNpcInfo(GuiGraphics guiGraphics)
     {
         int leftX = this.width / 12;
+        int col2X = leftX + this.width / 5;
         int startY = this.height / 8;
         int lineH = (int)(this.height / 14 * 1.2f);
         int color = 0xFFFFFF;
 
         // 姓名（金色）
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(leftX, startY, 0);
-        guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
-        guiGraphics.drawString(this.font, Component.literal(npc.getNpcName()), 0, 0, 0xFFD700);
-        guiGraphics.pose().popPose();
+        drawInfoLine(guiGraphics, leftX, startY, Component.literal(npc.getNpcName()), 0xFFD700);
 
         // 性别
         String sexDisplay = "male".equals(npc.getSex())
                 ? Component.translatable("gui.neosim.npc.info.male").getString()
                 : Component.translatable("gui.neosim.npc.info.female").getString();
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(leftX, startY + lineH, 0);
-        guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
-        guiGraphics.drawString(this.font, Component.translatable("gui.neosim.npc.info.sex", sexDisplay), 0, 0, color);
-        guiGraphics.pose().popPose();
+        drawInfoLine(guiGraphics, leftX, startY + lineH, Component.translatable("gui.neosim.npc.info.sex", sexDisplay), color);
+
+        // 年龄
+        drawInfoLine(guiGraphics, col2X, startY + lineH, Component.translatable("gui.neosim.npc.info.age", npc.getAge()), color);
 
         // 城市
         String city = npc.getCityName();
         if (city.isEmpty()) city = Component.translatable("gui.neosim.npc.info.noCity").getString();
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(leftX, startY + lineH * 2, 0);
-        guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
-        guiGraphics.drawString(this.font, Component.translatable("gui.neosim.npc.info.city", city), 0, 0, color);
-        guiGraphics.pose().popPose();
+        drawInfoLine(guiGraphics, leftX, startY + lineH * 2, Component.translatable("gui.neosim.npc.info.city", city), color);
 
-        // 年龄
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(leftX, startY + lineH * 3, 0);
-        guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
-        guiGraphics.drawString(this.font, Component.translatable("gui.neosim.npc.info.age", npc.getAge()), 0, 0, color);
-        guiGraphics.pose().popPose();
+        // 关系
+        String relationship = npc.getPartner().isEmpty()
+                ? Component.translatable("gui.neosim.npc.info.single").getString()
+                : Component.translatable("gui.neosim.npc.info.livingWithSomeone").getString();
+        drawInfoLine(guiGraphics, col2X, startY + lineH * 2, Component.translatable("gui.neosim.npc.info.relationship", relationship), color);
 
         // 生活点所在建筑
         String homeBuilding = npc.getHomeBuilding();
@@ -492,31 +483,23 @@ public class NPC extends Screen
         {
             homeBuilding = Component.translatable("gui.neosim.npc.info.noHome").getString();
         }
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(leftX, startY + lineH * 4, 0);
-        guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
-        guiGraphics.drawString(this.font, Component.translatable("gui.neosim.npc.info.home", homeBuilding), 0, 0, color);
-        guiGraphics.pose().popPose();
-
-        // 关系
-        String relationship = npc.getPartner().isEmpty()
-                ? Component.translatable("gui.neosim.npc.info.single").getString()
-                : Component.translatable("gui.neosim.npc.info.livingWithSomeone").getString();
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(leftX, startY + lineH * 5, 0);
-        guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
-        guiGraphics.drawString(this.font, Component.translatable("gui.neosim.npc.info.relationship", relationship), 0, 0, color);
-        guiGraphics.pose().popPose();
+        drawInfoLine(guiGraphics, leftX, startY + lineH * 3, Component.translatable("gui.neosim.npc.info.home", homeBuilding), color);
 
         // 产假状态
         if (npc.getPregnancyStage() > 0.0F)
         {
-            guiGraphics.pose().pushPose();
-            guiGraphics.pose().translate(leftX, startY + lineH * 6, 0);
-            guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
-            guiGraphics.drawString(this.font, Component.translatable("gui.neosim.npc.info.maternityLeave"), 0, 0, color);
-            guiGraphics.pose().popPose();
+            drawInfoLine(guiGraphics, col2X, startY + lineH * 3, Component.translatable("gui.neosim.npc.info.maternityLeave"), color);
         }
+    }
+
+    // 绘制一行信息（1.2倍放大）
+    private void drawInfoLine(GuiGraphics guiGraphics, int x, int y, Component text, int color)
+    {
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(x, y, 0);
+        guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
+        guiGraphics.drawString(this.font, text, 0, 0, color);
+        guiGraphics.pose().popPose();
     }
 
     // 族谱面板
