@@ -86,6 +86,7 @@ public class LangEnUs extends LanguageProvider
         add("gui.neosim.BuildingConstructor.totalBlocks","Total blocks: %s");
         add("gui.neosim.BuildingConstructor.blocks","%s blocks");
         add("gui.neosim.BuildingConstructor.noMaterials","No materials required (empty building)");
+        add("gui.neosim.BuildingConstructor.noMaterialsCreative","Creative mode: all blocks free, no materials required");
         add("gui.neosim.BuildingConstructor.materials","Materials: %s block types");
         add("gui.neosim.BuildingConstructor.moreTypes","  ...and %s more types");
         add("gui.neosim.BuildingConstructor.unknownAuthor","Unknown");

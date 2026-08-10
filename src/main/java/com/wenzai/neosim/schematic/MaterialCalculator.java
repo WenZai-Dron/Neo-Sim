@@ -51,21 +51,63 @@ public class MaterialCalculator
         if (block instanceof StainedGlassPaneBlock) return true;    // 玻璃板
         return false;
     }
-    public static boolean requiresMaterial(BlockState state)
+    // 方块注册名
+    private static String blockName(BlockState state)
+    {
+        return state.getBlock().builtInRegistryHolder().key().location().getPath();
+    }
+
+    // 普通模式
+    private static boolean isNormalRequired(BlockState state)
+    {
+        String name = blockName(state);
+        if (name.contains("planks")) return true;
+        if (name.contains("wool")) return true;
+        if (name.equals("cobblestone")
+                || name.equals("glass")
+                || name.equals("bricks")
+                || name.equals("dirt") || name.equals("coarse_dirt")
+                || name.equals("stone"))
+            return true;
+        if (name.contains("stone_bricks")) return true;
+        if (name.contains("fence")) return true;
+        if (name.contains("wood") || name.contains("log")
+                || name.contains("stem") || name.contains("hyphae"))
+        {
+            // 排除衍生方块
+            if (name.contains("slab") || name.contains("door") || name.contains("stairs")
+                    || name.contains("grass") || name.contains("gate"))
+                return false;
+            return true;
+        }
+        return false;
+    }
+
+    // 困难模式
+    private static boolean isHardcoreFree(BlockState state)
+    {
+        // 免费清单
+        String name = blockName(state);
+        return name.contains("water") || name.contains("lava")
+                || name.contains("grass") || name.contains("bed") || name.contains("sign")
+                || name.contains("cake") || name.contains("door") || name.contains("slab")
+                || name.contains("farmland");
+    }
+
+    // 按运行模式判断该方块是否需要
+    public static boolean requiresMaterial(BlockState state, byte mode)
     {
         if (state.isAir()) return false;
-
-        // 免费清单：水、岩浆、草、火
-        String name = state.getBlock().builtInRegistryHolder().key().location().getPath();
-        if (name.contains("grass") || name.contains("bed") || name.contains("sign")
-                || name.contains("cake") || name.contains("door") || name.contains("slab")
-                || name.contains("farmland"))
-            return false;
-        return true;
+        return switch (mode)
+        {
+            case 2 -> false;
+            case 3 -> !isHardcoreFree(state);
+            default -> isNormalRequired(state);
+        };
     }
 
     // 按数量降序排列的材料清单条目
-    public static List<MaterialEntry> calculate(SchematicData schematic)
+    public static List<MaterialEntry> calculate(SchematicData schematic, byte mode)
     {
         LightweightBlockContainer container = schematic.getBlockContainer();
         Map<Item, Integer> counts = new LinkedHashMap<>();
@@ -78,6 +120,7 @@ public class MaterialCalculator
                 {
                     BlockState state = container.get(x, y, z);
                     if (state.isAir()) continue;
+                    if (!requiresMaterial(state, mode)) continue;
 
                     Item item = state.getBlock().asItem();
                     counts.merge(item, 1, Integer::sum);

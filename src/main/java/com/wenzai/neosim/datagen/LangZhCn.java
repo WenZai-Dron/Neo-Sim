@@ -86,6 +86,7 @@ public class LangZhCn extends LanguageProvider
         add("gui.neosim.BuildingConstructor.totalBlocks","方块总数: %s");
         add("gui.neosim.BuildingConstructor.blocks","%s 个方块");
         add("gui.neosim.BuildingConstructor.noMaterials","无需材料 (空建筑)");
+        add("gui.neosim.BuildingConstructor.noMaterialsCreative","创造模式：全部方块免费，无需材料");
         add("gui.neosim.BuildingConstructor.materials","材料: %s 种方块");
         add("gui.neosim.BuildingConstructor.moreTypes","  ...还有 %s 种");
         add("gui.neosim.BuildingConstructor.unknownAuthor","未知");

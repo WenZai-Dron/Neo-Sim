@@ -33,6 +33,10 @@ public class BuildingConstructorGui extends Screen
     private int buildingOffset = 0;
     private int buildingsOnPage = 0;
 
+    // 材料需求分页
+    private int materialOffset = 0;
+    private static final int MAT_COLS = 2;
+
     private final BlockPos constructorPos;
     private static final java.util.Map<BlockPos, String> WORKER_MAP = com.wenzai.neosim.NeoSim.WORKER_MAP;
     
@@ -75,6 +79,7 @@ public class BuildingConstructorGui extends Screen
     {
         this(constructorPos);
         this.selectedBuilding = building;
+        this.materialOffset = 0;
         this.currentPage = 6;
         this.previousPage = 2;
     }
@@ -528,6 +533,7 @@ public class BuildingConstructorGui extends Screen
         previousPage = currentPage;
         selectedBuilding = data;
         SELECTED_BUILDING.put(constructorPos, data.getName());
+        materialOffset = 0;
         currentPage = 6;
         showPage();
     }
@@ -584,6 +590,37 @@ public class BuildingConstructorGui extends Screen
         addButton(1000, width / 2, height - 25, 100, 20,
                 Component.translatable(P + "preview"),
                 b -> onPreview());
+
+        // 材料类型超过一页时显示上一页/下一页
+        List<MaterialCalculator.MaterialEntry> materials = MaterialCalculator.calculate(selectedBuilding,
+                com.wenzai.neosim.client.ClientDataHolder.getInstance().getMode());
+        int perPage = materialRowsPerPage() * MAT_COLS;
+        if (perPage < materials.size())
+        {
+            int maxOffset = Math.max(0, ((materials.size() - 1) / perPage) * perPage);
+            materialOffset = Math.max(0, Math.min(materialOffset, maxOffset));
+
+            if (materialOffset > 0)
+            {
+                addButton(1200, 5, height - 25, 75, 20,
+                        Component.translatable(P + "prevPage"),
+                        b ->
+                        {
+                            materialOffset = Math.max(0, materialOffset - perPage);
+                            showPage();
+                        });
+            }
+            if (materialOffset + perPage < materials.size())
+            {
+                addButton(1201, width - 80, height - 25, 75, 20,
+                        Component.translatable(P + "nextPage"),
+                        b ->
+                        {
+                            materialOffset += perPage;
+                            showPage();
+                        });
+            }
+        }
     }
 
     private void showStatusPage()
@@ -696,6 +733,13 @@ public class BuildingConstructorGui extends Screen
         }
     }
 
+    // 材料列表每页行数
+    private int materialRowsPerPage()
+    {
+        int available = Math.max(40, height - 116 - 30);
+        return Math.max(4, available / 13);
+    }
+
     private void drawRequirements(GuiGraphics gfx)
     {
         SchematicData data = selectedBuilding;
@@ -703,46 +747,56 @@ public class BuildingConstructorGui extends Screen
 
         int x = 10;
         int y = 60;
+
+        // 左上角信息块
+        double cost = data.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get();
         gfx.drawString(font, Component.translatable(P + "dimensions", data.getDimensionString()),
                 x, y, 0xFFFFFF);
         y += 14;
-
-        // 费用
-        double cost = data.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get();
         gfx.drawString(font, Component.translatable(P + "cost", String.format("%.2f", cost)),
                 x, y, 0xFFFFFF);
         y += 14;
         gfx.drawString(font, Component.translatable(P + "totalBlocks", data.getTotalSolidBlocks()),
                 x, y, 0xFFFFFF);
-        y += 20;
+        y += 14;
 
         // 材料需求
-        List<MaterialCalculator.MaterialEntry> materials = MaterialCalculator.calculate(data);
+        List<MaterialCalculator.MaterialEntry> materials = MaterialCalculator.calculate(data,
+                com.wenzai.neosim.client.ClientDataHolder.getInstance().getMode());
         if (materials.isEmpty())
         {
-            gfx.drawString(font, Component.translatable(P + "noMaterials"), x, y, 0xAAAAAA);
+            String key = com.wenzai.neosim.client.ClientDataHolder.getInstance().getMode() == 2
+                    ? P + "noMaterialsCreative" : P + "noMaterials";
+            gfx.drawString(font, Component.translatable(key), x, y, 0xAAAAAA);
+            return;
         }
-        else
-        {
-            gfx.drawString(font, Component.translatable(P + "materials", materials.size()),
-                    x, y, 0xFFFFFF);
-            y += 14;
 
-            int maxShow = (height - y - 100) / 13;
-            for (int i = 0; i < Math.min(materials.size(), maxShow); i++)
-            {
-                MaterialCalculator.MaterialEntry e = materials.get(i);
-                String name = e.item.getDescription().getString();
-                gfx.drawString(font, name, x, y, 0xCCCCCC);
-                gfx.drawString(font, e.formatted(), x + 180, y, 0xCCCCCC);
-                y += 13;
-            }
-            if (materials.size() > maxShow)
-            {
-                gfx.drawString(font, Component.translatable(P + "moreTypes", materials.size() - maxShow),
-                        x, y, 0xFFFFFF);
-                y += 13;
-            }
+        // 把偏移钳制到合法页边界，避免建筑切换后残留
+        int perPage = materialRowsPerPage() * MAT_COLS;
+        int maxOffset = Math.max(0, ((materials.size() - 1) / perPage) * perPage);
+        materialOffset = Math.max(0, Math.min(materialOffset, maxOffset));
+
+        int page = materialOffset / perPage + 1;
+        int pages = (materials.size() + perPage - 1) / perPage;
+        Component countLine = Component.translatable(P + "materials", materials.size());
+        if (pages > 1)
+        {
+            countLine = countLine.copy().append("   " + page + "/" + pages);
+        }
+        gfx.drawString(font, countLine, x, y, 0xFFFFFF);
+        y += 14;
+
+        int gap = 24;
+        int colW = (width - 40 - gap * (MAT_COLS - 1)) / MAT_COLS;
+        for (int i = 0; i < perPage && materialOffset + i < materials.size(); i++)
+        {
+            MaterialCalculator.MaterialEntry e = materials.get(materialOffset + i);
+            int cx = x + (i % MAT_COLS) * (colW + gap);
+            int cy = y + (i / MAT_COLS) * 13;
+            gfx.drawString(font, e.item.getDescription().getString(), cx, cy, 0xCCCCCC);
+
+            // 数量右对齐到本列右缘
+            gfx.drawString(font, e.formatted(), cx + colW - font.width(e.formatted()), cy, 0xCCCCCC);
         }
 
     }

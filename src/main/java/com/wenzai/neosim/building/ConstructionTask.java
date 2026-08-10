@@ -252,7 +252,7 @@ public class ConstructionTask
         // 速度控制+抬手
         long now = System.currentTimeMillis();
         long elapsed = now - animStartTime;
-        if (!isCreativeMode() && elapsed < buildDelay)
+        if (currentMode() != 2 && elapsed < buildDelay)
         {
             if (elapsed < LOWER_ANIM_MS)
             {
@@ -373,7 +373,7 @@ public class ConstructionTask
             }
 
             // 材料检查与消耗
-            if (MaterialCalculator.requiresMaterial(desired) && !isCreativeMode())
+            if (MaterialCalculator.requiresMaterial(desired, currentMode()))
             {
                 Item item = desired.getBlock().asItem();
                 if (!hasMaterial(item))
@@ -944,7 +944,7 @@ public class ConstructionTask
             BlockPos worldPos = building.blueprintToWorld(width, layer, depth);
             BlockState current = level.getBlockState(worldPos);
             if (current.equals(CoordTransform.transformState(desired, building.getFacing()))) continue;
-            if (MaterialCalculator.requiresMaterial(desired))
+            if (MaterialCalculator.requiresMaterial(desired, currentMode()))
             {
                 return desired.getBlock().asItem();
             }
@@ -1244,9 +1244,11 @@ public class ConstructionTask
         this.builderLevel = levelBuilder;
         this.buildDelay = Math.max(1, (int) (BASE_DELAY / levelBuilder));
     }
-    private boolean isCreativeMode()
+    
+    // 当前运行模式
+    private byte currentMode()
     {
-        return com.wenzai.neosim.storage.ModSavedData.get(level).getMode() == 2;
+        return com.wenzai.neosim.storage.ModSavedData.get(level).getMode();
     }
 
     public void pause()
