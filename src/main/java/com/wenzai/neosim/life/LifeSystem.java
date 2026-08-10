@@ -90,20 +90,35 @@ public class LifeSystem
         ReproductionSystem.onMinuteNight(level, city);
     }
 
-    // 无目标且有家的NPC清晨1/4概率在家休息
+    // 有家无业市民清晨按配置概率在家休息
     private static void rollRestToday(ServerLevel level)
     {
+        double restChance = restChance();
         for (net.minecraft.world.entity.Entity e : level.getAllEntities())
         {
             if (!(e instanceof Entity npc)) continue;
             if (npc.getHomePos() != null && !npc.hasJob())
             {
-                npc.setRestToday(RANDOM.nextDouble() < 0.25);
+                npc.setRestToday(RANDOM.nextDouble() < restChance);
             }
             else
             {
                 npc.setRestToday(false);
             }
+        }
+    }
+
+    // 有家无业市民白天居家休息概率
+    private static double restChance()
+    {
+        try
+        {
+            return Config.LIFE_REST_CHANCE.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            // 配置尚未加载，使用默认值
+            return 0.25;
         }
     }
 

@@ -36,13 +36,8 @@ public class ReproductionSystem
     private static final Random RANDOM = new Random();
 
     // 女方超过该年龄不再受孕
-    private static final int PREGNANCY_MAX_AGE = 45;
-
     // 夜晚每秒进度
     private static final float MATING_STEP = 0.02F;
-
-    // 受孕初始孕期进度
-    private static final float PREGNANCY_START_STAGE = 0.1F;
 
     // 到达分娩地点的判定阈值）
     private static final double BIRTH_REACH_RANGE = 9.0D;
@@ -103,7 +98,7 @@ public class ReproductionSystem
             if (!"female".equals(npc.getSex())) continue;
             if (npc.getPregnancyStage() > 0.0F) continue;
             if (npc.getMatingStage() >= 0.0F) continue;
-            if (npc.getAge() >= PREGNANCY_MAX_AGE) continue;
+            if (npc.getAge() >= pregnancyMaxAge()) continue;
 
             // 有伴侣且双方夜晚都在家
             if (npc.getPartner().isEmpty()) continue;
@@ -153,7 +148,7 @@ public class ReproductionSystem
     {
         if (RANDOM.nextDouble() >= pregnancyChance()) return;
 
-        mother.setPregnancyStage(PREGNANCY_START_STAGE);
+        mother.setPregnancyStage(pregnancyStartStage());
         mother.syncToJson();
 
         // 双方心形粒子
@@ -429,6 +424,32 @@ public class ReproductionSystem
         catch (IllegalStateException ignored)
         {
             return 1.0D / 7.0D;
+        }
+    }
+
+    // 女性受孕上限年龄
+    private static int pregnancyMaxAge()
+    {
+        try
+        {
+            return Config.LIFE_PREGNANCY_MAX_AGE.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            return 45;
+        }
+    }
+
+    // 受孕初始孕期进度
+    private static float pregnancyStartStage()
+    {
+        try
+        {
+            return (float) (double) Config.LIFE_PREGNANCY_START_STAGE.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            return 0.1F;
         }
     }
 

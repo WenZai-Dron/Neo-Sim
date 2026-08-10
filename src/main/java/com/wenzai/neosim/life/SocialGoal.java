@@ -2,6 +2,7 @@
 
 package com.wenzai.neosim.life;
 
+import com.wenzai.neosim.Config;
 import com.wenzai.neosim.npc.Entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -15,8 +16,6 @@ import java.util.List;
 
 public class SocialGoal extends Goal
 {
-    private static final int SOCIAL_RANGE = 40;       // 找对象半径
-    private static final double ARRIVE_DIST = 2.5;    // 到达判定（格）
     private static final double SEPARATE_DIST = 8.0;  // 分开结束串门判定（格）
     private static final int MEDDLE_TICKS = 12;       // 凑在一起每 12 tick 结算一次关系
     private static final int REPATH_INTERVAL = 20;    // 每 20 tick 重新寻路（目标会移动）
@@ -93,7 +92,7 @@ public class SocialGoal extends Goal
             return;
         }
 
-        if (distSqr <= ARRIVE_DIST * ARRIVE_DIST)
+        if (distSqr <= arriveDist() * arriveDist())
         {
             // 到达：原地停住，双方互标记串门对象
             npc.getNavigation().stop();
@@ -159,7 +158,7 @@ public class SocialGoal extends Goal
         String city = npc.getCityName();
         if (city.isEmpty()) return null;
 
-        AABB box = new AABB(npc.blockPosition()).inflate(SOCIAL_RANGE);
+        AABB box = new AABB(npc.blockPosition()).inflate(socialRange());
         List<Entity> others = serverLevel.getEntitiesOfClass(Entity.class, box, e ->
                 e != npc && city.equals(e.getCityName()) && !e.hasJob() && e.getHangingWith().isEmpty());
 
@@ -185,6 +184,32 @@ public class SocialGoal extends Goal
         {
             target.setHangingWith("");
             target.setHangTicks(0);
+        }
+    }
+
+    // 社交寻找半径
+    private static int socialRange()
+    {
+        try
+        {
+            return Config.LIFE_SOCIAL_RANGE.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            return 40;
+        }
+    }
+
+    // 社交判定范围
+    private static double arriveDist()
+    {
+        try
+        {
+            return Config.LIFE_SOCIAL_ARRIVE_DIST.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            return 2.5;
         }
     }
 

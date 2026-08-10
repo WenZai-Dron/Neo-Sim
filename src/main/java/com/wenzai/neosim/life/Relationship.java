@@ -2,6 +2,7 @@
 
 package com.wenzai.neosim.life;
 
+import com.wenzai.neosim.Config;
 import net.minecraft.server.level.ServerLevel;
 
 import java.util.Random;
@@ -104,13 +105,13 @@ public class Relationship
         }
 
         RelationshipData next;
-        if (RANDOM.nextInt(5) == 0)
+        if (RANDOM.nextDouble() < downgradeChance())
         {
-            next = decrease(rel, RANDOM.nextInt(30));
+            next = decrease(rel, RANDOM.nextInt(changeMax()));
         }
         else
         {
-            next = increase(rel, RANDOM.nextInt(30));
+            next = increase(rel, RANDOM.nextInt(changeMax()));
         }
 
         if (!next.equals(rel))
@@ -122,6 +123,32 @@ public class Relationship
         if (rel.level() == RelationshipLevel.BESTFRIENDS && next.level() != RelationshipLevel.BESTFRIENDS)
         {
             MarriageSystem.dissolve(level, city, f1, f2);
+        }
+    }
+
+    // 关系变差概率
+    private static double downgradeChance()
+    {
+        try
+        {
+            return Config.LIFE_RELATIONSHIP_DOWNGRADE_CHANCE.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            return 0.2;
+        }
+    }
+
+    // 单次关系增减量上限
+    private static int changeMax()
+    {
+        try
+        {
+            return Config.LIFE_RELATIONSHIP_CHANGE_MAX.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            return 30;
         }
     }
 }

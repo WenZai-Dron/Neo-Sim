@@ -32,7 +32,7 @@ public class MarriageSystem
 
         for (RelationshipData rel : RelationshipPersistence.loadAll(level, city))
         {
-            if (rel.level() != RelationshipLevel.BESTFRIENDS || rel.subLevel() < 100) continue;
+            if (rel.level() != RelationshipLevel.BESTFRIENDS || rel.subLevel() < marriageSubLevel()) continue;
             attemptMarriage(level, city, rel.folk1(), rel.folk2());
         }
     }
@@ -48,7 +48,7 @@ public class MarriageSystem
 
         // 条件：关系度
         RelationshipData rel = RelationshipPersistence.loadPair(level, city, nameA, nameB);
-        if (rel == null || rel.level() != RelationshipLevel.BESTFRIENDS || rel.subLevel() < 100) return;
+        if (rel == null || rel.level() != RelationshipLevel.BESTFRIENDS || rel.subLevel() < marriageSubLevel()) return;
         
         // 条件：异性
         if (a.getSex().equals(b.getSex())) return;
@@ -233,6 +233,20 @@ public class MarriageSystem
         {
             // 配置尚未加载，使用默认值
             return 0.5;
+        }
+    }
+
+    // 结婚所需关系度
+    private static int marriageSubLevel()
+    {
+        try
+        {
+            return Config.LIFE_MARRIAGE_SUBLEVEL.get();
+        }
+        catch (IllegalStateException ignored)
+        {
+            // 配置尚未加载，使用默认值
+            return 100;
         }
     }
 }

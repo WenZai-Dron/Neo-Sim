@@ -204,6 +204,57 @@ public class LangEnUs extends LanguageProvider
         add("config.neosim.lifePregnancyDays.tooltip","Days from conception to birth");
         add("config.neosim.lifePregnancyChance","Pregnancy Chance");
         add("config.neosim.lifePregnancyChance.tooltip","Pregnancy Chance (1/7)");
+        add("config.neosim.lifeRestChance","Rest at Home Chance");
+        add("config.neosim.lifeRestChance.tooltip","Chance for jobless residents with a home to rest at home instead of socializing during the day");
+        add("config.neosim.lifePregnancyMaxAge","Pregnancy Max Age");
+        add("config.neosim.lifePregnancyMaxAge.tooltip","Maximum age at which a female resident can become pregnant");
+        add("config.neosim.lifePregnancyStartStage","Pregnancy Start Stage");
+        add("config.neosim.lifePregnancyStartStage.tooltip","Initial pregnancy stage at conception; higher values shorten the total pregnancy");
+        add("config.neosim.lifeSocialRange","Social Search Range");
+        add("config.neosim.lifeSocialRange.tooltip","Maximum distance (blocks) in which jobless residents look for someone to socialize with during the day");
+        add("config.neosim.lifeSocialArriveDist","Social Arrive Distance");
+        add("config.neosim.lifeSocialArriveDist.tooltip","Distance (blocks) at which two residents are considered to have met and start chatting");
+        add("config.neosim.lifeRelationshipDowngradeChance","Relationship Downgrade Chance");
+        add("config.neosim.lifeRelationshipDowngradeChance.tooltip","Chance that a relationship worsens rather than improves on each social interaction");
+        add("config.neosim.lifeRelationshipChangeMax","Relationship Change Max");
+        add("config.neosim.lifeRelationshipChangeMax.tooltip","Maximum magnitude by which a relationship can change per social interaction");
+        add("config.neosim.lifeMarriageSubLevel","Marriage Sub-level");
+        add("config.neosim.lifeMarriageSubLevel.tooltip","Sub-level a BESTFRIENDS relationship must reach before marriage can be triggered");
+
+        // NeoForge ConfigurationScreen category/button/title translations
+        add("neo_sim.configuration.title","%s Configuration");
+        add("neo_sim.configuration.section.neo.sim.toml.title","%s Common Configuration");
+        add("neo_sim.configuration.section.neo.sim.toml","%s Configuration");
+        add("neo_sim.configuration.general","General");
+        add("neo_sim.configuration.general.button","General");
+        add("neo_sim.configuration.general.tooltip","City initial credit, build cost, population cap and NPC age range");
+        add("neo_sim.configuration.life","Life System");
+        add("neo_sim.configuration.life.button","Life System");
+        add("neo_sim.configuration.life.tooltip","Resident lifecycle parameters: rent, aging, rest, reproduction, social, relationship and marriage");
+        add("neo_sim.configuration.rent","Rent & Income");
+        add("neo_sim.configuration.rent.button","Rent & Income");
+        add("neo_sim.configuration.rent.tooltip","Default daily rent and volume-based pricing multiplier for residences");
+        add("neo_sim.configuration.aging","Aging & Death");
+        add("neo_sim.configuration.aging.button","Aging & Death");
+        add("neo_sim.configuration.aging.tooltip","Adult age, max age and weekly aging days");
+        add("neo_sim.configuration.genealogy","Genealogy");
+        add("neo_sim.configuration.genealogy.button","Genealogy");
+        add("neo_sim.configuration.genealogy.tooltip","Genealogy blood-relation backtrack depth");
+        add("neo_sim.configuration.rest","Rest Schedule");
+        add("neo_sim.configuration.rest.button","Rest Schedule");
+        add("neo_sim.configuration.rest.tooltip","Chance for jobless residents with a home to rest at home during the day");
+        add("neo_sim.configuration.reproduction","Reproduction");
+        add("neo_sim.configuration.reproduction.button","Reproduction");
+        add("neo_sim.configuration.reproduction.tooltip","Pregnancy days, chance, max age and initial pregnancy stage");
+        add("neo_sim.configuration.social","Social & Visiting");
+        add("neo_sim.configuration.social.button","Social & Visiting");
+        add("neo_sim.configuration.social.tooltip","Search range and arrive distance for jobless residents socializing during the day");
+        add("neo_sim.configuration.relationship","Relationship Change");
+        add("neo_sim.configuration.relationship.button","Relationship Change");
+        add("neo_sim.configuration.relationship.tooltip","Downgrade chance and max change per social interaction");
+        add("neo_sim.configuration.marriage","Marriage");
+        add("neo_sim.configuration.marriage.button","Marriage");
+        add("neo_sim.configuration.marriage.tooltip","Marriage chance and required relationship sub-level");
 
         add("gui.neosim.npc.info.maternityLeave","On Maternity Leave");
     }

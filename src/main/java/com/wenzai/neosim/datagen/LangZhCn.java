@@ -204,6 +204,57 @@ public class LangZhCn extends LanguageProvider
         add("config.neosim.lifePregnancyDays.tooltip","从怀孕到分娩的天数");
         add("config.neosim.lifePregnancyChance","怀孕概率");
         add("config.neosim.lifePregnancyChance.tooltip","怀孕概率（1/7）");
+        add("config.neosim.lifeRestChance","居家休息概率");
+        add("config.neosim.lifeRestChance.tooltip","有家无业市民白天在家休息、不外出社交的概率");
+        add("config.neosim.lifePregnancyMaxAge","受孕上限年龄");
+        add("config.neosim.lifePregnancyMaxAge.tooltip","女性超过该年龄后不再参与受孕");
+        add("config.neosim.lifePregnancyStartStage","受孕初始孕期进度");
+        add("config.neosim.lifePregnancyStartStage.tooltip","受孕瞬间孕期进度的初始值，越高则总孕期越短");
+        add("config.neosim.lifeSocialRange","社交寻找半径");
+        add("config.neosim.lifeSocialRange.tooltip","无业市民白天寻找社交对象的最大距离（格）");
+        add("config.neosim.lifeSocialArriveDist","社交判定范围");
+        add("config.neosim.lifeSocialArriveDist.tooltip","两人相距达到该值（格）即视为到达、开始凑在一起聊天");
+        add("config.neosim.lifeRelationshipDowngradeChance","关系变差概率");
+        add("config.neosim.lifeRelationshipDowngradeChance.tooltip","每次社交结算时关系下降而非上升的概率");
+        add("config.neosim.lifeRelationshipChangeMax","单次关系增减量上限");
+        add("config.neosim.lifeRelationshipChangeMax.tooltip","每次社交结算时关系增减幅度的最大值");
+        add("config.neosim.lifeMarriageSubLevel","结婚所需关系度");
+        add("config.neosim.lifeMarriageSubLevel.tooltip","BESTFRIENDS 关系达到该子等级后才会触发结婚判定");
+
+        // NeoForge 配置界面（ConfigurationScreen）分类/按钮/标题翻译
+        add("neo_sim.configuration.title","%s 配置");
+        add("neo_sim.configuration.section.neo.sim.toml.title","%s 通用配置");
+        add("neo_sim.configuration.section.neo.sim.toml","%s 配置");
+        add("neo_sim.configuration.general","通用");
+        add("neo_sim.configuration.general.button","通用");
+        add("neo_sim.configuration.general.tooltip","城市初始资金、建造费用、人口上限与 NPC 年龄范围");
+        add("neo_sim.configuration.life","生活系统");
+        add("neo_sim.configuration.life.button","生活系统");
+        add("neo_sim.configuration.life.tooltip","居民生命周期相关参数：房租、衰老、作息、生育、社交、关系与婚姻");
+        add("neo_sim.configuration.rent","房租与收入");
+        add("neo_sim.configuration.rent.button","房租与收入");
+        add("neo_sim.configuration.rent.tooltip","住宅每日收租的默认值与按建筑体积定价系数");
+        add("neo_sim.configuration.aging","衰老与寿终");
+        add("neo_sim.configuration.aging.button","衰老与寿终");
+        add("neo_sim.configuration.aging.tooltip","成年年龄、寿终年龄与每周长岁日");
+        add("neo_sim.configuration.genealogy","族谱");
+        add("neo_sim.configuration.genealogy.button","族谱");
+        add("neo_sim.configuration.genealogy.tooltip","族谱血亲回溯深度");
+        add("neo_sim.configuration.rest","作息");
+        add("neo_sim.configuration.rest.button","作息");
+        add("neo_sim.configuration.rest.tooltip","有家无业市民白天居家休息概率");
+        add("neo_sim.configuration.reproduction","生育与分娩");
+        add("neo_sim.configuration.reproduction.button","生育与分娩");
+        add("neo_sim.configuration.reproduction.tooltip","孕期天数、怀孕概率、受孕上限年龄与初始孕期进度");
+        add("neo_sim.configuration.social","社交与串门");
+        add("neo_sim.configuration.social.button","社交与串门");
+        add("neo_sim.configuration.social.tooltip","无业市民白天社交的寻找半径与到达判定距离");
+        add("neo_sim.configuration.relationship","关系增减");
+        add("neo_sim.configuration.relationship.button","关系增减");
+        add("neo_sim.configuration.relationship.tooltip","每次社交结算时关系变差概率与增减量上限");
+        add("neo_sim.configuration.marriage","婚姻");
+        add("neo_sim.configuration.marriage.button","婚姻");
+        add("neo_sim.configuration.marriage.tooltip","结婚概率与结婚所需关系度");
 
         add("gui.neosim.npc.info.maternityLeave","产假中");
     }
