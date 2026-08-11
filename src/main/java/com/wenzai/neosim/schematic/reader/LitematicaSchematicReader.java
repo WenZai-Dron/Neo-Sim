@@ -120,6 +120,9 @@ public class LitematicaSchematicReader implements ISchematicReader
         List<SchematicData.SchematicEntity> allEntities = new ArrayList<>();
         Map<BlockPos, SpecialMarker> allMarkers = new HashMap<>();
 
+        // 扩展字段（特殊标记）：Metadata.NeoSim_SpecialBlocks
+        parseSpecialMarkers(meta, allMarkers);
+
         for (String regionName : regionsTag.getAllKeys())
         {
             CompoundTag region = regionsTag.getCompound(regionName);
@@ -243,6 +246,32 @@ public class LitematicaSchematicReader implements ISchematicReader
                 .entities(allEntities.isEmpty() ? null : allEntities)
                 .specialMarkers(allMarkers.isEmpty() ? null : allMarkers)
                 .build();
+    }
+
+    // 解析扩展字段
+    private void parseSpecialMarkers(CompoundTag meta, Map<BlockPos, SpecialMarker> out)
+    {
+        if (!meta.contains("NeoSim_SpecialBlocks", Tag.TAG_LIST)) return;
+
+        ListTag list = meta.getList("NeoSim_SpecialBlocks", Tag.TAG_COMPOUND);
+        for (int i = 0; i < list.size(); i++)
+        {
+            CompoundTag entry = list.getCompound(i);
+            int x = entry.getInt("X");
+            int y = entry.getInt("Y");
+            int z = entry.getInt("Z");
+            String type = entry.getString("Type");
+            try
+            {
+                out.put(new BlockPos(x, y, z), SpecialMarker.valueOf(type));
+                LOGGER.info("NeoSim-LitematicaSchematicReader: marker {} at ({},{},{})", type, x, y, z);
+            }
+            catch (IllegalArgumentException e)
+            {
+                LOGGER.warn("NeoSim-LitematicaSchematicReader: unknown SpecialMarker type '{}' at ({},{},{}) — skipped",
+                        type, x, y, z);
+            }
+        }
     }
 
     // palette解析
