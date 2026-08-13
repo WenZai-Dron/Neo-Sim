@@ -4,6 +4,7 @@ import com.wenzai.neosim.client.gui.City;
 import com.wenzai.neosim.client.gui.NPC;
 import com.wenzai.neosim.client.gui.Run;
 import com.wenzai.neosim.npc.Entity;
+import com.wenzai.neosim.client.render.MarkerBeamRenderer;
 import com.wenzai.neosim.client.render.Model;
 import com.wenzai.neosim.client.render.Renderer;
 import com.wenzai.neosim.schematic.SchematicRegistry;
@@ -108,6 +109,7 @@ public class NeoSimClient
             {
                 ClientDataHolder.getInstance().reset();
                 Model.clearCache();
+                MarkerBeamRenderer.clear();
             }
         }
 

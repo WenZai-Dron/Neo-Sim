@@ -24,7 +24,7 @@ public class ModBlocks
             registerBlocks("control_box", () -> new ControlBox(BlockBehaviour.Properties.of().strength(2.5F)
                     .noLootTable()));
     public static final DeferredBlock<Block> MARKER =
-            registerBlocks("marker", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)
+            registerBlocks("marker", () -> new Marker(BlockBehaviour.Properties.of().strength(0.5F)
                     .noOcclusion()));
     public static final DeferredBlock<Block> FARMING_BOX =
             registerBlocks("farming_box", () -> new Block(BlockBehaviour.Properties.of().strength(0.5F)));

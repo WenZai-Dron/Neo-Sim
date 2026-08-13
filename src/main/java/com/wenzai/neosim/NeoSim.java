@@ -1,6 +1,7 @@
 package com.wenzai.neosim;
 
 import com.mojang.logging.LogUtils;
+import com.wenzai.neosim.block.MarkerManager;
 import com.wenzai.neosim.block.ModBlocks;
 import com.wenzai.neosim.client.gui.HUD;
 import com.wenzai.neosim.life.LifeSystem;
@@ -25,6 +26,7 @@ import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
+import net.neoforged.neoforge.event.level.LevelEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -177,6 +179,9 @@ public class NeoSim
                 PacketDistributor.sendToPlayer(player, new ServerToClientPayloads.OpenGuiPayload(ServerToClientPayloads.OpenGuiPayload.GuiType.CITY));
                 NeoSim.LOGGER.info("NeoSim-onPlayerJoin: open City for {}", playerName);
             }
+
+            // 同步标记棒全局状态，后加入者也能看到光束
+            MarkerManager.syncTo(player);
     }
 
     // 玩家断线时清理其打开的NPC-GUI，防止NPC永久冻结
@@ -294,6 +299,13 @@ public class NeoSim
                 ServerToClientPayloads.OpenGuiPayload::handle
         );
 
+        // 标记棒全局状态同步
+        registrar.playToClient(
+                ServerToClientPayloads.MarkerSyncPayload.TYPE,
+                ServerToClientPayloads.MarkerSyncPayload.STREAM_CODEC,
+                ServerToClientPayloads.MarkerSyncPayload::handle
+        );
+
         registrar.playToServer(
                 ClientToServerPayloads.UpdatePayload.TYPE,
                 ClientToServerPayloads.UpdatePayload.STREAM_CODEC,
@@ -353,11 +365,22 @@ public class NeoSim
         com.wenzai.neosim.schematic.SchematicRegistry.getInstance().initializeAsync();
     }
 
+    // 世界加载：从存档恢复标记位置
+    @SubscribeEvent
+    public void onLevelLoad(LevelEvent.Load event)
+    {
+        if (event.getLevel() instanceof ServerLevel serverLevel)
+        {
+            MarkerManager.loadFrom(serverLevel);
+        }
+    }
+
     // 服务端停止时重置静态变量，防止下一个存档读到残留数据
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event)
     {
         ModSavedData.setActiveCityName("");
+        MarkerManager.clear();
         LOGGER.info("NeoSim: activeCityName reset on server stopping");
     }
 }

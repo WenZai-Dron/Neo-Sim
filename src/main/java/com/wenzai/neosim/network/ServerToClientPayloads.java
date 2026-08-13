@@ -6,14 +6,20 @@ import com.wenzai.neosim.client.ClientDataHolder;
 import com.wenzai.neosim.storage.SimData;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class ServerToClientPayloads
 {
@@ -177,6 +183,38 @@ public class ServerToClientPayloads
                             Component.literal("§f" + pkt.schematicName() + " §e已完工"), false);
                 }
             });
+        }
+    }
+
+    // 标记棒活动矩形同步
+    public record MarkerSyncPayload(ResourceKey<Level> dim, List<List<BlockPos>> rectangles) implements CustomPacketPayload
+    {
+        public static final Type<MarkerSyncPayload> TYPE =
+                new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "marker_sync"));
+
+        public static final StreamCodec<ByteBuf, MarkerSyncPayload> STREAM_CODEC =
+                StreamCodec.composite(
+                        ResourceKey.streamCodec(Registries.DIMENSION), MarkerSyncPayload::dim,
+                        ByteBufCodecs.collection(ArrayList::new,
+                                ByteBufCodecs.collection(ArrayList::new, BlockPos.STREAM_CODEC)), MarkerSyncPayload::rectangles,
+                        MarkerSyncPayload::new
+                );
+
+        public static void handle(MarkerSyncPayload payload, IPayloadContext context)
+        {
+            context.enqueueWork(() -> {
+                com.wenzai.neosim.client.render.MarkerBeamRenderer.onSync(payload.dim(), payload.rectangles());
+                NeoSim.LOGGER.debug("NeoSim-MarkerSync(S→C): dim={}, rects={}", payload.dim(), payload.rectangles());
+            }).exceptionally(e -> {
+                NeoSim.LOGGER.error("NeoSim-MarkerSync: Fail", e);
+                return null;
+            });
+        }
+
+        @Override
+        public @NotNull Type<? extends CustomPacketPayload> type()
+        {
+            return TYPE;
         }
     }
 }
