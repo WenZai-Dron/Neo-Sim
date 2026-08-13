@@ -1,7 +1,7 @@
 {
 	"format_version": "1.9.0",
 	"credit": "Made with Blockbench",
-	"parent": "block",
+	"parent": "block/block",
 	"texture_size": [16, 19],
 	"textures": {
 		"0": "neo_sim:block/marker",
