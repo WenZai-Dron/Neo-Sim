@@ -31,7 +31,7 @@ public class Command
 					.then(Commands.literal("set")
 						.then(Commands.argument("value", DoubleArgumentType.doubleArg(0))
 							.then(Commands.argument("cityName", StringArgumentType.greedyString())
-							.suggests(Command::suggestCities)
+								.suggests(Command::suggestCities)
 								.executes(ctx -> setCredit(ctx,
 										DoubleArgumentType.getDouble(ctx, "value"),
 										StringArgumentType.getString(ctx, "cityName")))
@@ -41,7 +41,7 @@ public class Command
 					.then(Commands.literal("add")
 						.then(Commands.argument("value", DoubleArgumentType.doubleArg(0))
 							.then(Commands.argument("cityName", StringArgumentType.greedyString())
-							.suggests(Command::suggestCities)
+								.suggests(Command::suggestCities)
 								.executes(ctx -> addCredit(ctx,
 										DoubleArgumentType.getDouble(ctx, "value"),
 										StringArgumentType.getString(ctx, "cityName")))

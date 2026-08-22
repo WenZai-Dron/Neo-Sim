@@ -40,11 +40,30 @@ public record SimData(byte mode, short population, int dayOfWeek, int day, doubl
 	}
 
 	// 返回新实例
-	public SimData withMode(byte mode) { return new SimData(mode, population, dayOfWeek, day, credit); }
-	public SimData withPopulation(short population) { return new SimData(mode, population, dayOfWeek, day, credit); }
-	public SimData withDayOfWeek(int dayOfWeek) { return new SimData(mode, population, dayOfWeek, day, credit); }
-	public SimData withDay(int day) { return new SimData(mode, population, dayOfWeek, day, credit); }
-	public SimData withCredit(double credit) { return new SimData(mode, population, dayOfWeek, day, Math.round(credit * 100.0) / 100.0); }
+	public SimData withMode(byte mode)
+	{
+		return new SimData(mode, population, dayOfWeek, day, credit);
+	}
+
+	public SimData withPopulation(short population)
+	{
+		return new SimData(mode, population, dayOfWeek, day, credit);
+	}
+
+	public SimData withDayOfWeek(int dayOfWeek)
+	{
+		return new SimData(mode, population, dayOfWeek, day, credit);
+	}
+
+	public SimData withDay(int day)
+	{
+		return new SimData(mode, population, dayOfWeek, day, credit);
+	}
+
+	public SimData withCredit(double credit)
+	{
+		return new SimData(mode, population, dayOfWeek, day, Math.round(credit * 100.0) / 100.0);
+	}
 
 	// 每城市运行时数据
 	public record CityData(short population, int day, double credit)
@@ -53,8 +72,16 @@ public record SimData(byte mode, short population, int dayOfWeek, int day, doubl
 
 		public static final CityData DEFAULT = new CityData((short) 0, 1, Config.INITIAL_CREDIT.get());
 
-		public CityData withPopulation(short population) { return new CityData(population, day, credit); }
-		public CityData withDay(int day) { return new CityData(population, day, credit); }
+		public CityData withPopulation(short population)
+		{
+			return new CityData(population, day, credit);
+		}
+
+		public CityData withDay(int day)
+		{
+			return new CityData(population, day, credit);
+		}
+
 		public CityData withCredit(double credit)
 		{
 			return new CityData(population, day, Math.round(credit * 100.0) / 100.0);

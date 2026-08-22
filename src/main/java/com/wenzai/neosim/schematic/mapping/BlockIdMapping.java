@@ -12,7 +12,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -22,6 +21,8 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import javax.annotation.Nullable;
 
 // 映射
 public class BlockIdMapping
@@ -33,7 +34,9 @@ public class BlockIdMapping
 	// L19：整数键 (id<<8)|meta → BlockState（构建时一次性转换，运行期免字符串拼接查表）
 	private final Map<Integer, BlockState> intMapping = new HashMap<>();
 
-	public BlockIdMapping() {}
+	public BlockIdMapping()
+	{
+	}
 
 	// 加载内置映射
 	public void loadBuiltin()
@@ -138,7 +141,10 @@ public class BlockIdMapping
 		return UNKNOWN_BLOCK;
 	}
 
-	public int size() { return mapping.size(); }
+	public int size()
+	{
+		return mapping.size();
+	}
 
 	public boolean isMapped(int blockId, int meta)
 	{

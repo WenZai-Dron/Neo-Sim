@@ -125,7 +125,9 @@ public class NpcData
 		}
 	}
 
-	private NpcData() {}
+	private NpcData()
+	{
+	}
 
 	// 客户端路径
 	public static void save(Entity entity, String cityName, String saveName)

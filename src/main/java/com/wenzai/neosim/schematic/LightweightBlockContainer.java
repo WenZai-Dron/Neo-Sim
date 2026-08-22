@@ -41,18 +41,40 @@ public class LightweightBlockContainer
 		this.storage = storage;
 	}
 
-	public int getSizeX() { return sizeX; }
-	public int getSizeY() { return sizeY; }
-	public int getSizeZ() { return sizeZ; }
-	public int getTotalVolume() { return totalVolume; }
+	public int getSizeX()
+	{
+		return sizeX;
+	}
+
+	public int getSizeY()
+	{
+		return sizeY;
+	}
+
+	public int getSizeZ()
+	{
+		return sizeZ;
+	}
+
+	public int getTotalVolume()
+	{
+		return totalVolume;
+	}
 
 	public String getDimensionString()
 	{
 		return sizeX + " × " + sizeY + " × " + sizeZ + " (W×H×D)";
 	}
 
-	public BlockStatePalette getPalette() { return palette; }
-	public LightweightBitArray getStorage() { return storage; }
+	public BlockStatePalette getPalette()
+	{
+		return palette;
+	}
+
+	public LightweightBitArray getStorage()
+	{
+		return storage;
+	}
 
 	// X-major线性索引
 	public int getIndex(int x, int y, int z)

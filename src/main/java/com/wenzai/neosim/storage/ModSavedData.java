@@ -36,7 +36,9 @@ public class ModSavedData
 	// 实例所属世界
 	private ServerLevel level;
 
-	private ModSavedData() {}
+	private ModSavedData()
+	{
+	}
 
 	public static void setActiveCityName(String name)
 	{
@@ -161,7 +163,11 @@ public class ModSavedData
 		syncToClients(level);
 	}
 
-	public byte getMode() { return data.mode(); }
+	public byte getMode()
+	{
+		return data.mode();
+	}
+
 	public void setMode(byte mode, ServerLevel level)
 	{
 		this.data = data.withMode(mode);
@@ -169,7 +175,11 @@ public class ModSavedData
 		syncToClients(level);
 	}
 
-	public int getDayOfWeek() { return data.dayOfWeek(); }
+	public int getDayOfWeek()
+	{
+		return data.dayOfWeek();
+	}
+
 	public void setDayOfWeek(int dayOfWeek, ServerLevel level)
 	{
 		this.data = data.withDayOfWeek(dayOfWeek);
@@ -193,6 +203,7 @@ public class ModSavedData
 		SimData.CityData cd = SimData.CityData.read(level, city);
 		return cd != null ? cd.population() : data.population();
 	}
+
 	public void setPopulation(short population, ServerLevel level)
 	{
 		int maxPop = Config.MAX_POPULATION.get();
@@ -222,6 +233,7 @@ public class ModSavedData
 		SimData.CityData city = readCityData();
 		return city != null ? city.day() : data.day();
 	}
+
 	public void setDay(int day, ServerLevel level)
 	{
 		SimData.CityData city = readCityData();
@@ -234,6 +246,7 @@ public class ModSavedData
 		SimData.CityData city = readCityData();
 		return city != null ? city.credit() : data.credit();
 	}
+
 	public void setCredit(double credit, ServerLevel level)
 	{
 		SimData.CityData city = readCityData();
@@ -293,7 +306,11 @@ public class ModSavedData
 		SimData.CityData.write(level, city, newData);
 	}
 
-	public boolean isRunGuiSent() { return runGuiSent; }
+	public boolean isRunGuiSent()
+	{
+		return runGuiSent;
+	}
+
 	public void setRunGuiSent(boolean sent)
 	{
 		this.runGuiSent = sent;

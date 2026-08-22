@@ -18,29 +18,89 @@ public class PreviewState
 	private boolean isActive;
 	private boolean needsRebuild = true;
 
-	public PreviewState() {}
+	public PreviewState()
+	{
+	}
 
-	public SchematicData getSchematic() { return schematic; }
-	public void setSchematic(SchematicData v) { this.schematic = v; markNeedsRebuild(); }
+	public SchematicData getSchematic()
+	{
+		return schematic;
+	}
 
-	public BlockPos getOrigin() { return origin; }
-	public void setOrigin(BlockPos v) { this.origin = v; markNeedsRebuild(); }
+	public void setSchematic(SchematicData v)
+	{
+		this.schematic = v;
+		markNeedsRebuild();
+	}
 
-	public Rotation getRotation() { return rotation; }
-	public Mirror getMirror() { return mirror; }
+	public BlockPos getOrigin()
+	{
+		return origin;
+	}
 
-	public void setRotation(Rotation v) { this.rotation = v; markNeedsRebuild(); }
-	public void setMirror(Mirror v) { this.mirror = v; markNeedsRebuild(); }
+	public void setOrigin(BlockPos v)
+	{
+		this.origin = v;
+		markNeedsRebuild();
+	}
 
-	public Direction getFacing() { return facing; }
-	public void setFacing(Direction v) { this.facing = v; markNeedsRebuild(); }
+	public Rotation getRotation()
+	{
+		return rotation;
+	}
 
-	public boolean isActive() { return isActive; }
-	public void setActive(boolean v) { this.isActive = v; }
+	public Mirror getMirror()
+	{
+		return mirror;
+	}
 
-	public boolean needsRebuild() { return needsRebuild; }
-	public void markNeedsRebuild() { this.needsRebuild = true; }
-	public void clearNeedsRebuild() { this.needsRebuild = false; }
+	public void setRotation(Rotation v)
+	{
+		this.rotation = v;
+		markNeedsRebuild();
+	}
+
+	public void setMirror(Mirror v)
+	{
+		this.mirror = v;
+		markNeedsRebuild();
+	}
+
+	public Direction getFacing()
+	{
+		return facing;
+	}
+
+	public void setFacing(Direction v)
+	{
+		this.facing = v;
+		markNeedsRebuild();
+	}
+
+	public boolean isActive()
+	{
+		return isActive;
+	}
+
+	public void setActive(boolean v)
+	{
+		this.isActive = v;
+	}
+
+	public boolean needsRebuild()
+	{
+		return needsRebuild;
+	}
+
+	public void markNeedsRebuild()
+	{
+		this.needsRebuild = true;
+	}
+
+	public void clearNeedsRebuild()
+	{
+		this.needsRebuild = false;
+	}
 
 	// 移动
 	public void nudgeForward(int dx, int dy, int dz)

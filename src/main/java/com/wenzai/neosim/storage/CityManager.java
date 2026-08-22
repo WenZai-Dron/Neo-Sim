@@ -21,15 +21,23 @@ public final class CityManager
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final ConcurrentMap<UUID, String> CITY_BY_PLAYER = new ConcurrentHashMap<>();
 
-	private CityManager() {}
+	private CityManager()
+	{
+	}
 
 	// ---- 会话 ----
 
-	public static String getCity(UUID uuid) { return CITY_BY_PLAYER.getOrDefault(uuid, ""); }
+	public static String getCity(UUID uuid)
+	{
+		return CITY_BY_PLAYER.getOrDefault(uuid, "");
+	}
 
-	public static String getCity(Player player) { return getCity(player.getUUID()); }
+	public static String getCity(Player player)
+	{
+		return getCity(player.getUUID());
+	}
 
-	/** 玩家加入：从档案解析并登记；无档案则登记空串（等待客户端创建/加入城市） */
+	// 玩家加入：从档案解析并登记；无档案则登记空串（等待客户端创建/加入城市）
 	public static void onPlayerJoin(ServerLevel level, Player player)
 	{
 		String city = FileCreater.findPlayerCity(level, player.getName().getString());
@@ -40,9 +48,12 @@ public final class CityManager
 		}
 	}
 
-	public static void onPlayerLogout(UUID uuid) { CITY_BY_PLAYER.remove(uuid); }
+	public static void onPlayerLogout(UUID uuid)
+	{
+		CITY_BY_PLAYER.remove(uuid);
+	}
 
-	/** 在线玩家所属的不同城市（按会话表去重；join/logout 维护，等价于在线玩家） */
+	// 在线玩家所属的不同城市（按会话表去重；join/logout 维护，等价于在线玩家）
 	public static Set<String> onlineCities(ServerLevel level)
 	{
 		Set<String> cities = new LinkedHashSet<>();
@@ -53,12 +64,15 @@ public final class CityManager
 		return cities;
 	}
 
-	/** 服务器停止：清空会话表，防止下个存档读到残留 */
-	public static void clear() { CITY_BY_PLAYER.clear(); }
+	// 服务器停止：清空会话表，防止下个存档读到残留
+	public static void clear()
+	{
+		CITY_BY_PLAYER.clear();
+	}
 
 	// ---- 城市操作（服务端权威；替代客户端 City.java 的本地文件写入）----
 
-	/** 创建城市：建目录 + 写 player.json + 初始化 CityData + 补第一个市民。返回 null=成功，否则为提示文本 */
+	// 创建城市：建目录 + 写 player.json + 初始化 CityData + 补第一个市民。返回 null=成功，否则为提示文本
 	public static String createCity(ServerLevel level, Player player, String cityName)
 	{
 		if (cityName == null || cityName.isBlank()) return "§c城市名不能为空";
@@ -81,7 +95,7 @@ public final class CityManager
 		return null;
 	}
 
-	/** 加入已有城市。返回 null=成功，否则为提示文本 */
+	// 加入已有城市。返回 null=成功，否则为提示文本
 	public static String joinCity(ServerLevel level, Player player, String cityName)
 	{
 		if (cityName == null || cityName.isBlank()) return "§c城市名不能为空";

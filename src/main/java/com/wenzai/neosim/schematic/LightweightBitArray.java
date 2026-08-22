@@ -67,12 +67,26 @@ public class LightweightBitArray
 		this.data = data;
 	}
 
-	public int size() { return size; }
-	public int bitsPerEntry() { return bitsPerEntry; }
-	public long maxEntryValue() { return maxEntryValue; }
+	public int size()
+	{
+		return size;
+	}
+
+	public int bitsPerEntry()
+	{
+		return bitsPerEntry;
+	}
+
+	public long maxEntryValue()
+	{
+		return maxEntryValue;
+	}
 
 	// 返回底层{@code long[]}直接引用
-	public long[] backingArray() { return data; }
+	public long[] backingArray()
+	{
+		return data;
+	}
 
 	// 读取指定索引的无符号值
 	public long getAt(int index)

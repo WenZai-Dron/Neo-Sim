@@ -38,7 +38,7 @@ import org.slf4j.Logger;
 @Mod(NeoSim.MOD_ID)
 public class NeoSim
 {
-	// Define mod id in a common place for everything to reference
+	// 在公共位置定义 mod id，供所有地方引用
 	public static final String MOD_ID = "neo_sim";
 	public static final Logger LOGGER = LogUtils.getLogger();
 
@@ -54,11 +54,11 @@ public class NeoSim
 	// 持久化合并窗口 flush 计时（每 100 tick = 5 秒：CityData 缓存 + NPC 写盘去抖）
 	private int persistFlushTimer = 0;
 
-	// The constructor for the mod class is the first code that is run when your mod is loaded.
-	// FML will recognize some parameter types like IEventBus or ModContainer and pass them in automatically.
+	// 模组类的构造方法是模组加载时最先运行的代码。
+	// FML 会识别一些参数类型（如 IEventBus 或 ModContainer）并自动传入。
 	public NeoSim(IEventBus modEventBus, ModContainer modContainer)
 	{
-		// Register the commonSetup method for mod-loading
+		// 注册用于模组加载的 commonSetup 方法
 		modEventBus.addListener(this::commonSetup);
 
 		// 此处进行注册
@@ -70,16 +70,16 @@ public class NeoSim
 		// 注册实体属性
 		modEventBus.addListener(this::registerEntityAttributes);
 
-		// Register ourselves for server and other game events we are interested in.
+		// 将自身注册到服务器及其他感兴趣的游戏事件。
 		NeoForge.EVENT_BUS.register(this);
 
 		// 注册命令
 		NeoForge.EVENT_BUS.register(Command.class);
 
-		// Register the item to a creative tab
+		// 将物品注册到创造模式标签页
 		modEventBus.addListener(this::addCreative);
 
-		// Register our mod's ModConfigSpec so that FML can create and load the config file for us
+		// 注册本模组的 ModConfigSpec，让 FML 能创建并加载配置文件
 		modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC, "neo-sim.toml");
 
 		// 注册HUD
@@ -170,15 +170,17 @@ public class NeoSim
 			java.util.UUID playerUUID = player.getUUID();
 
 			// 遍历所有维度的所有已加载NPC，确保每个被该玩家冻结的NPC都被解冻
+			// （不用无限AABB查询：Sable 会拦截并中止无限范围的实体查询）
 			if (player.getServer() != null)
 			{
 				for (ServerLevel serverLevel : player.getServer().getAllLevels())
 				{
-					for (Entity npc : serverLevel.getEntitiesOfClass(Entity.class,
-							new AABB(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY,
-									 Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)))
+					for (net.minecraft.world.entity.Entity e : serverLevel.getEntities().getAll())
 					{
-						npc.unfreezeBy(playerUUID);
+						if (e instanceof com.wenzai.neosim.npc.Entity neosimNpc)
+						{
+							neosimNpc.unfreezeBy(playerUUID);
+						}
 					}
 				}
 			}
@@ -452,7 +454,7 @@ public class NeoSim
 		LOGGER.info("npcAgeRange=[{}, {}]", Config.NPC_MIN_AGE.get(), Config.NPC_MAX_AGE.get());
 	}
 
-	// Add the example block item to the building blocks tab
+	// 将示例方块物品添加到建筑方块标签页
 	private void addCreative(BuildCreativeModeTabContentsEvent event)
 	{
 
@@ -463,11 +465,11 @@ public class NeoSim
 		event.put(Entity.NPC.get(), Entity.createAttributes().build());
 	}
 
-	// You can use SubscribeEvent and let the Event Bus discover methods to call
+	// 你可以使用 SubscribeEvent，让事件总线自动发现要调用的方法
 	@SubscribeEvent
 	public void onServerStarting(ServerStartingEvent event)
 	{
-		// Do something when the server starts
+		// 在服务器启动时执行一些操作
 		LOGGER.info("HELLO from server starting");
 
 		// 服务器初始化蓝图

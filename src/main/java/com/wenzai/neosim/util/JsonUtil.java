@@ -18,7 +18,9 @@ public class JsonUtil
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-	private JsonUtil() {}
+	private JsonUtil()
+	{
+	}
 
 	// 读取文件（不抛异常）
 	public static JsonObject readObject(Path file)
@@ -110,7 +112,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsString();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	public static byte getByte(JsonObject o, String key, byte def)
@@ -120,7 +125,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsByte();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	public static short getShort(JsonObject o, String key, short def)
@@ -130,7 +138,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsShort();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	public static int getInt(JsonObject o, String key, int def)
@@ -140,7 +151,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsInt();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	public static long getLong(JsonObject o, String key, long def)
@@ -150,7 +164,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsLong();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	public static float getFloat(JsonObject o, String key, float def)
@@ -160,7 +177,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsFloat();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	public static double getDouble(JsonObject o, String key, double def)
@@ -170,7 +190,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsDouble();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	public static boolean getBoolean(JsonObject o, String key, boolean def)
@@ -180,7 +203,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || o.get(key).isJsonNull()) return def;
 			return o.get(key).getAsBoolean();
 		}
-		catch (Exception e) { return def; }
+		catch (Exception e)
+		{
+			return def;
+		}
 	}
 
 	// 取子对象
@@ -191,7 +217,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || !o.get(key).isJsonObject()) return null;
 			return o.getAsJsonObject(key);
 		}
-		catch (Exception e) { return null; }
+		catch (Exception e)
+		{
+			return null;
+		}
 	}
 
 	// 取子数组
@@ -202,7 +231,10 @@ public class JsonUtil
 			if (o == null || !o.has(key) || !o.get(key).isJsonArray()) return new JsonArray();
 			return o.getAsJsonArray(key);
 		}
-		catch (Exception e) { return new JsonArray(); }
+		catch (Exception e)
+		{
+			return new JsonArray();
+		}
 	}
 
 	// ===== SafeCoord（合并自 util/SafeCoord）=====

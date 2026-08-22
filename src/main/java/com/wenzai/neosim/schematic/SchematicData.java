@@ -3,11 +3,12 @@ package com.wenzai.neosim.schematic;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 
-import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import javax.annotation.Nullable;
 
 // 统一数据模型
 public class SchematicData
@@ -56,19 +57,70 @@ public class SchematicData
 				: Collections.emptyMap();
 	}
 
-	public String getName()                                   { return name; }
-	@Nullable public String getDescription()                  { return description; }
-	public BuildingType getType()                             { return type; }
-	public SchematicFormat getFormat()                        { return format; }
-	public long getTimeCreated()                              { return timeCreated; }
-	public long getTimeModified()                             { return timeModified; }
-	public int getSizeX()                                     { return sizeX; }
-	public int getSizeY()                                     { return sizeY; }
-	public int getSizeZ()                                     { return sizeZ; }
-	public LightweightBlockContainer getBlockContainer()      { return blockContainer; }
-	public Map<BlockPos, CompoundTag> getTileEntities()       { return tileEntities; }
-	public List<SchematicEntity> getEntities()                 { return entities; }
-	public Map<BlockPos, SpecialMarker> getSpecialMarkers()   { return specialMarkers; }
+	public String getName()
+	{
+		return name;
+	}
+
+	@Nullable public String getDescription()
+	{
+		return description;
+	}
+
+	public BuildingType getType()
+	{
+		return type;
+	}
+
+	public SchematicFormat getFormat()
+	{
+		return format;
+	}
+
+	public long getTimeCreated()
+	{
+		return timeCreated;
+	}
+
+	public long getTimeModified()
+	{
+		return timeModified;
+	}
+
+	public int getSizeX()
+	{
+		return sizeX;
+	}
+
+	public int getSizeY()
+	{
+		return sizeY;
+	}
+
+	public int getSizeZ()
+	{
+		return sizeZ;
+	}
+
+	public LightweightBlockContainer getBlockContainer()
+	{
+		return blockContainer;
+	}
+
+	public Map<BlockPos, CompoundTag> getTileEntities()
+	{
+		return tileEntities;
+	}
+
+	public List<SchematicEntity> getEntities()
+	{
+		return entities;
+	}
+
+	public Map<BlockPos, SpecialMarker> getSpecialMarkers()
+	{
+		return specialMarkers;
+	}
 
 	public String getDimensionString()
 	{
@@ -126,20 +178,89 @@ public class SchematicData
 		private List<SchematicEntity> entities;
 		private Map<BlockPos, SpecialMarker> specialMarkers;
 
-		public Builder name(String v)                                        { this.name = v; return this; }
-		public Builder author(String v)                                      { this.author = v; return this; }
-		public Builder description(String v)                                 { this.description = v; return this; }
-		public Builder type(BuildingType v)                                  { this.type = v; return this; }
-		public Builder format(SchematicFormat v)                             { this.format = v; return this; }
-		public Builder timeCreated(long v)                                   { this.timeCreated = v; return this; }
-		public Builder timeModified(long v)                                  { this.timeModified = v; return this; }
-		public Builder sizeX(int v)                                          { this.sizeX = v; return this; }
-		public Builder sizeY(int v)                                          { this.sizeY = v; return this; }
-		public Builder sizeZ(int v)                                          { this.sizeZ = v; return this; }
-		public Builder blockContainer(LightweightBlockContainer v)           { this.blockContainer = v; return this; }
-		public Builder tileEntities(Map<BlockPos, CompoundTag> v)             { this.tileEntities = v; return this; }
-		public Builder entities(List<SchematicEntity> v)                      { this.entities = v; return this; }
-		public Builder specialMarkers(Map<BlockPos, SpecialMarker> v)         { this.specialMarkers = v; return this; }
+		public Builder name(String v)
+		{
+			this.name = v;
+			return this;
+		}
+
+		public Builder author(String v)
+		{
+			this.author = v;
+			return this;
+		}
+
+		public Builder description(String v)
+		{
+			this.description = v;
+			return this;
+		}
+
+		public Builder type(BuildingType v)
+		{
+			this.type = v;
+			return this;
+		}
+
+		public Builder format(SchematicFormat v)
+		{
+			this.format = v;
+			return this;
+		}
+
+		public Builder timeCreated(long v)
+		{
+			this.timeCreated = v;
+			return this;
+		}
+
+		public Builder timeModified(long v)
+		{
+			this.timeModified = v;
+			return this;
+		}
+
+		public Builder sizeX(int v)
+		{
+			this.sizeX = v;
+			return this;
+		}
+
+		public Builder sizeY(int v)
+		{
+			this.sizeY = v;
+			return this;
+		}
+
+		public Builder sizeZ(int v)
+		{
+			this.sizeZ = v;
+			return this;
+		}
+
+		public Builder blockContainer(LightweightBlockContainer v)
+		{
+			this.blockContainer = v;
+			return this;
+		}
+
+		public Builder tileEntities(Map<BlockPos, CompoundTag> v)
+		{
+			this.tileEntities = v;
+			return this;
+		}
+
+		public Builder entities(List<SchematicEntity> v)
+		{
+			this.entities = v;
+			return this;
+		}
+
+		public Builder specialMarkers(Map<BlockPos, SpecialMarker> v)
+		{
+			this.specialMarkers = v;
+			return this;
+		}
 
 		public SchematicData build()
 		{

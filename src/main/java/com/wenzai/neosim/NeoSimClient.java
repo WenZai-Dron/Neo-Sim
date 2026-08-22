@@ -29,9 +29,9 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
-// This class will not load on dedicated servers. Accessing client side code from here is safe.
+// 此类不会在专用服务器上加载。从这里访问客户端代码是安全的。
 @Mod(value = NeoSim.MOD_ID, dist = Dist.CLIENT)
-// You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
+// 你可以使用 EventBusSubscriber 自动注册类中所有带有 @SubscribeEvent 注解的静态方法
 @EventBusSubscriber(modid = NeoSim.MOD_ID, value = Dist.CLIENT)
 public class NeoSimClient
 {
@@ -43,16 +43,16 @@ public class NeoSimClient
 
 	public NeoSimClient(ModContainer container)
 	{
-		// Allows NeoForge to create a config screen for this mod's configs.
-		// The config screen is accessed by going to the Mods screen > clicking on your mod > clicking on config.
-		// Do not forget to add translations for your config options to the en_us.json file.
+		// 允许 NeoForge 为本模组的配置创建配置界面。
+		// 可通过“模组界面 > 点击你的模组 > 点击配置”访问该配置界面。
+		// 别忘了在 en_us.json 文件中为你的配置项添加翻译。
 		container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
 	}
 
 	@SubscribeEvent
 	static void onClientSetup(FMLClientSetupEvent event)
 	{
-		// Some client setup code
+		// 一些客户端初始化代码
 		NeoSim.LOGGER.info("HELLO FROM CLIENT SETUP");
 		NeoSim.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
 

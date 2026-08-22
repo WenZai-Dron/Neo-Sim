@@ -9,7 +9,6 @@ import com.wenzai.neosim.schematic.reader.SimUKraftSchematicReader;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -19,6 +18,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 // 蓝图注册
 public class SchematicRegistry
@@ -55,7 +56,10 @@ public class SchematicRegistry
 		}
 	}
 
-	public static SchematicRegistry getInstance() { return INSTANCE; }
+	public static SchematicRegistry getInstance()
+	{
+		return INSTANCE;
+	}
 
 	// 异步加载资源中的蓝图
 	public void initializeAsync()
@@ -98,7 +102,10 @@ public class SchematicRegistry
 		loader.start();
 	}
 
-	public boolean isLoaded() { return loaded; }
+	public boolean isLoaded()
+	{
+		return loaded;
+	}
 
 	private void loadClasspathDir(String classpathDir, ISchematicReader reader, BuildingType type)
 	{
@@ -338,7 +345,9 @@ public class SchematicRegistry
 				{
 					current.put(f.getFileName().toString(), Files.getLastModifiedTime(f).toMillis());
 				}
-				catch (IOException ignored) {}
+				catch (IOException ignored)
+				{
+				}
 			}
 		}
 		catch (IOException e)
@@ -351,11 +360,21 @@ public class SchematicRegistry
 		loadCustomDir();
 	}
 
-	public Map<String, SchematicData> getAll() { return Collections.unmodifiableMap(loadedSchematics); }
-	public int size() { return loadedSchematics.size(); }
+	public Map<String, SchematicData> getAll()
+	{
+		return Collections.unmodifiableMap(loadedSchematics);
+	}
+
+	public int size()
+	{
+		return loadedSchematics.size();
+	}
 
 	@Nullable
-	public SchematicData get(String name) { return loadedSchematics.get(name); }
+	public SchematicData get(String name)
+	{
+		return loadedSchematics.get(name);
+	}
 
 	public List<SchematicData> getByType(BuildingType type)
 	{
@@ -424,15 +443,33 @@ public class SchematicRegistry
 		{
 			if (token.startsWith("w:") || token.startsWith("W:"))
 			{
-				try { filterW = Integer.parseInt(token.substring(2)); } catch (NumberFormatException ignored) {}
+				try
+				{
+					filterW = Integer.parseInt(token.substring(2));
+				}
+				catch (NumberFormatException ignored)
+				{
+				}
 			}
 			else if (token.startsWith("d:") || token.startsWith("D:"))
 			{
-				try { filterD = Integer.parseInt(token.substring(2)); } catch (NumberFormatException ignored) {}
+				try
+				{
+					filterD = Integer.parseInt(token.substring(2));
+				}
+				catch (NumberFormatException ignored)
+				{
+				}
 			}
 			else if (token.startsWith("h:") || token.startsWith("H:"))
 			{
-				try { filterH = Integer.parseInt(token.substring(2)); } catch (NumberFormatException ignored) {}
+				try
+				{
+					filterH = Integer.parseInt(token.substring(2));
+				}
+				catch (NumberFormatException ignored)
+				{
+				}
 			}
 			else
 			{
@@ -506,7 +543,10 @@ public class SchematicRegistry
 					Integer.parseInt(parts[2].trim())
 			};
 		}
-		catch (NumberFormatException e) { return null; }
+		catch (NumberFormatException e)
+		{
+			return null;
+		}
 	}
 
 	private static int levenshtein(String a, String b)
