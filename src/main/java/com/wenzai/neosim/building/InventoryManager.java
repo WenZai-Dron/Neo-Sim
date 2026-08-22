@@ -27,7 +27,9 @@ import java.util.Set;
 
 public class InventoryManager
 {
-	private InventoryManager() {}
+	private InventoryManager()
+	{
+	}
 
 	// 搜索与模盒相邻的6个面；大箱子（合并双人箱）把另一半一并纳入
 	public static List<ChestBlockEntity> findNearbyChests(ServerLevel level, BlockPos center)

@@ -90,7 +90,10 @@ public class ControlBoxGui extends Screen
 
 	// 生命周期
 	@Override
-	public boolean isPauseScreen() { return false; }
+	public boolean isPauseScreen()
+	{
+		return false;
+	}
 
 	@Override
 	protected void init()

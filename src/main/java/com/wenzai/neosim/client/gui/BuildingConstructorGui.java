@@ -32,7 +32,9 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	private static final String P = "gui.neosim.BuildingConstructor.";
 
 	// 单条缺少材料记录
-	private record MissingEntry(net.minecraft.world.item.Item item, int missing) {}
+	private record MissingEntry(net.minecraft.world.item.Item item, int missing)
+	{
+	}
 
 	private int currentPage = 0;
 	private int previousPage = 0;
@@ -62,9 +64,20 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	// 缓存的已选蓝图
 	private static final java.util.Map<BlockPos, String> SELECTED_BUILDING = new java.util.concurrent.ConcurrentHashMap<>();
 
-	public static String getWorkerAt(BlockPos pos) { return WORKER_MAP.get(pos); }
-	public static void clearWorkerAt(BlockPos pos) { WORKER_MAP.remove(pos); }
-	public static void clearSelectedAt(BlockPos pos) { SELECTED_BUILDING.remove(pos); }
+	public static String getWorkerAt(BlockPos pos)
+	{
+		return WORKER_MAP.get(pos);
+	}
+
+	public static void clearWorkerAt(BlockPos pos)
+	{
+		WORKER_MAP.remove(pos);
+	}
+
+	public static void clearSelectedAt(BlockPos pos)
+	{
+		SELECTED_BUILDING.remove(pos);
+	}
 	private String assignedWorker = null;
 	private com.wenzai.neosim.building.ConstructionTask activeTask = null;
 	private EditBox searchField;
@@ -114,9 +127,16 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		this.hirePanel = new HireListPanel(new HireListPanel.WidgetHost()
 		{
 			@Override
-			public <T extends AbstractWidget> T add(T widget) { return addRenderableWidget(widget); }
+			public <T extends AbstractWidget> T add(T widget)
+			{
+				return addRenderableWidget(widget);
+			}
+
 			@Override
-			public void clear() { clearWidgets(); }
+			public void clear()
+			{
+				clearWidgets();
+			}
 		}, constructorPos, P, 0, name ->
 		{
 			// 雇佣统一发包，由服务端 WorkerService 校验+落盘，WorkerUpdatePayload 回来刷新
@@ -143,10 +163,16 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 
 	// 生命周期
 	@Override
-	public boolean isPauseScreen() { return false; }
+	public boolean isPauseScreen()
+	{
+		return false;
+	}
 
 	@Override
-	protected void init() { showPage(); }
+	protected void init()
+	{
+		showPage();
+	}
 
 	@Override
 	public void render(GuiGraphics gfx, int mx, int my, float pt)
@@ -222,10 +248,25 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	}
 
 	// 需求页右侧预览面板矩形
-	private int previewPanelX() { return width / 2 + 6; }
-	private int previewPanelY() { return 55; }
-	private int previewPanelW() { return width / 2 - 14; }
-	private int previewPanelH() { return height - 110; }
+	private int previewPanelX()
+	{
+		return width / 2 + 6;
+	}
+
+	private int previewPanelY()
+	{
+		return 55;
+	}
+
+	private int previewPanelW()
+	{
+		return width / 2 - 14;
+	}
+
+	private int previewPanelH()
+	{
+		return height - 110;
+	}
 
 	private boolean isInPreviewPanel(double mx, double my)
 	{

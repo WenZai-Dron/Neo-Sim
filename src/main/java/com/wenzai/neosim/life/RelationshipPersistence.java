@@ -1,5 +1,3 @@
-// 关系文件读写（C3：内存缓存 + 脏标记合并落盘）
-
 package com.wenzai.neosim.life;
 
 import com.google.gson.JsonObject;
@@ -19,11 +17,13 @@ public class RelationshipPersistence
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	// C3：关系内存缓存（键=relationships 目录路径，天然区分存档/城市）+ 脏键集合（合并窗口落盘）
+	// 关系内存缓存（键=relationships 目录路径，天然区分存档/城市）+ 脏键集合（合并窗口落盘）
 	private static final Map<Path, Map<String, Relationship.RelationshipData>> CACHE = new HashMap<>();
 	private static final Map<Path, Set<String>> DIRTY_KEYS = new HashMap<>();
 
-	private RelationshipPersistence() {}
+	private RelationshipPersistence()
+	{
+	}
 
 	private static Path relationshipsDir(ServerLevel level, String cityName)
 	{
@@ -167,7 +167,9 @@ public class RelationshipPersistence
 					LOGGER.debug("NeoSim-RelationshipPersistence: cleanup stale {} in {}", key, city);
 				}
 			}
-			catch (IOException ignored) {}
+			catch (IOException ignored)
+			{
+			}
 		}
 	}
 

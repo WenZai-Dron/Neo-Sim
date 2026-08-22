@@ -1,5 +1,3 @@
-// 客户端缓存变量
-
 package com.wenzai.neosim.client;
 
 import com.wenzai.neosim.storage.SimData;
@@ -14,9 +12,14 @@ public class ClientDataHolder
 	private SimData data = SimData.DEFAULT;
 	private String cityName = "";
 
-	private ClientDataHolder() {}
+	private ClientDataHolder()
+	{
+	}
 
-	public static ClientDataHolder getInstance() { return INSTANCE; }
+	public static ClientDataHolder getInstance()
+	{
+		return INSTANCE;
+	}
 
 	// 由客户端处理逻辑调用；空 cityName 表示该包不携带城市信息（全局同步），不覆盖已有城市
 	public void updateData(SimData data, String cityName)
@@ -29,13 +32,40 @@ public class ClientDataHolder
 	}
 
 	// 切换存档时重置
-	public void reset() { this.data = SimData.DEFAULT; this.cityName = ""; }
+	public void reset()
+	{
+		this.data = SimData.DEFAULT;
+		this.cityName = "";
+	}
 
 	// Getter
-	public byte getMode() { return data.mode(); }
-	public short getPopulation() { return data.population(); }
-	public int getDayOfWeek() { return data.dayOfWeek(); }
-	public int getDay() { return data.day(); }
-	public double getCredit() { return data.credit(); }
-	public String getCityName() { return cityName; }
+	public byte getMode()
+	{
+		return data.mode();
+	}
+
+	public short getPopulation()
+	{
+		return data.population();
+	}
+
+	public int getDayOfWeek()
+	{
+		return data.dayOfWeek();
+	}
+
+	public int getDay()
+	{
+		return data.day();
+	}
+
+	public double getCredit()
+	{
+		return data.credit();
+	}
+
+	public String getCityName()
+	{
+		return cityName;
+	}
 }

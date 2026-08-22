@@ -21,7 +21,9 @@ public class BuildingNameLocalizer
 	private static final Map<String, String> TRANSLATIONS = new HashMap<>();
 	private static boolean loaded;
 
-	private BuildingNameLocalizer() {}
+	private BuildingNameLocalizer()
+	{
+	}
 
 	// 返回中文名（未翻译则原样返回）
 	public static String localize(String originalName)

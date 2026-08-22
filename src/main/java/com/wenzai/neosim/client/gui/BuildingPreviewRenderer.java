@@ -46,7 +46,9 @@ public final class BuildingPreviewRenderer
 				}
 			};
 
-	private BuildingPreviewRenderer() {}
+	private BuildingPreviewRenderer()
+	{
+	}
 
 	// 释放缓存的VBO
 	public static void release()

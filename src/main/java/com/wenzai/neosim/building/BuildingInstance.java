@@ -1,5 +1,3 @@
-// 世界中放置的建筑实例—蓝图引用、世界定位、建造进度
-
 package com.wenzai.neosim.building;
 
 import com.wenzai.neosim.schematic.CoordTransform;
@@ -83,60 +81,191 @@ public class BuildingInstance
 	}
 
 	// 访问
-	public String getSchematicName() { return schematicName; }
-	public void setSchematicName(String v) { this.schematicName = v; }
+	public String getSchematicName()
+	{
+		return schematicName;
+	}
 
-	public SchematicData getSchematic() { return schematic; }
-	public void setSchematic(SchematicData v) { this.schematic = v; }
+	public void setSchematicName(String v)
+	{
+		this.schematicName = v;
+	}
 
-	public BlockPos getControlBoxPos() { return controlBoxPos; }
-	public void setControlBoxPos(BlockPos v) { this.controlBoxPos = v; }
+	public SchematicData getSchematic()
+	{
+		return schematic;
+	}
 
-	public Rotation getRotation() { return rotation; }
-	public void setRotation(Rotation v) { this.rotation = v; }
+	public void setSchematic(SchematicData v)
+	{
+		this.schematic = v;
+	}
 
-	public Mirror getMirror() { return mirror; }
-	public void setMirror(Mirror v) { this.mirror = v; }
+	public BlockPos getControlBoxPos()
+	{
+		return controlBoxPos;
+	}
 
-	public Direction getFacing() { return facing; }
-	public void setFacing(Direction v) { this.facing = v; }
+	public void setControlBoxPos(BlockPos v)
+	{
+		this.controlBoxPos = v;
+	}
 
-	public int getBuildProgress() { return buildProgress; }
-	public void setBuildProgress(int v) { this.buildProgress = v; }
+	public Rotation getRotation()
+	{
+		return rotation;
+	}
 
-	public boolean isPhaseTwo() { return phaseTwo; }
-	public void setPhaseTwo(boolean v) { this.phaseTwo = v; }
+	public void setRotation(Rotation v)
+	{
+		this.rotation = v;
+	}
 
-	public boolean isPaused() { return paused; }
-	public void setPaused(boolean v) { this.paused = v; }
+	public Mirror getMirror()
+	{
+		return mirror;
+	}
 
-	public boolean isBuildingComplete() { return buildingComplete; }
-	public void setBuildingComplete(boolean v) { this.buildingComplete = v; }
+	public void setMirror(Mirror v)
+	{
+		this.mirror = v;
+	}
 
-	public BuildState getState() { return state; }
-	public void setState(BuildState v) { this.state = v; }
+	public Direction getFacing()
+	{
+		return facing;
+	}
 
-	public UUID getAssignedBuilder() { return assignedBuilder; }
-	public void setAssignedBuilder(UUID v) { this.assignedBuilder = v; }
+	public void setFacing(Direction v)
+	{
+		this.facing = v;
+	}
 
-	public String getBuilderName() { return builderName; }
-	public void setBuilderName(String v) { this.builderName = v; }
+	public int getBuildProgress()
+	{
+		return buildProgress;
+	}
 
-	public String getWorkerName() { return workerName; }
-	public void setWorkerName(String v) { this.workerName = v; }
+	public void setBuildProgress(int v)
+	{
+		this.buildProgress = v;
+	}
 
-	public String getAuthor() { return author; }
-	public void setAuthor(String v) { this.author = v; }
+	public boolean isPhaseTwo()
+	{
+		return phaseTwo;
+	}
 
-	public String getPlacerName() { return placerName; }
-	public void setPlacerName(String v) { this.placerName = v; }
+	public void setPhaseTwo(boolean v)
+	{
+		this.phaseTwo = v;
+	}
 
-	public BlockPos getConstructorPos() { return constructorPos; }
-	public void setConstructorPos(BlockPos v) { this.constructorPos = v; }
+	public boolean isPaused()
+	{
+		return paused;
+	}
 
-	public List<ChunkPos> getLoadedChunks() { return loadedChunks; }
-	public void addLoadedChunk(ChunkPos cp) { if (!loadedChunks.contains(cp)) loadedChunks.add(cp); }
-	public void clearLoadedChunks() { loadedChunks.clear(); }
+	public void setPaused(boolean v)
+	{
+		this.paused = v;
+	}
+
+	public boolean isBuildingComplete()
+	{
+		return buildingComplete;
+	}
+
+	public void setBuildingComplete(boolean v)
+	{
+		this.buildingComplete = v;
+	}
+
+	public BuildState getState()
+	{
+		return state;
+	}
+
+	public void setState(BuildState v)
+	{
+		this.state = v;
+	}
+
+	public UUID getAssignedBuilder()
+	{
+		return assignedBuilder;
+	}
+
+	public void setAssignedBuilder(UUID v)
+	{
+		this.assignedBuilder = v;
+	}
+
+	public String getBuilderName()
+	{
+		return builderName;
+	}
+
+	public void setBuilderName(String v)
+	{
+		this.builderName = v;
+	}
+
+	public String getWorkerName()
+	{
+		return workerName;
+	}
+
+	public void setWorkerName(String v)
+	{
+		this.workerName = v;
+	}
+
+	public String getAuthor()
+	{
+		return author;
+	}
+
+	public void setAuthor(String v)
+	{
+		this.author = v;
+	}
+
+	public String getPlacerName()
+	{
+		return placerName;
+	}
+
+	public void setPlacerName(String v)
+	{
+		this.placerName = v;
+	}
+
+	public BlockPos getConstructorPos()
+	{
+		return constructorPos;
+	}
+
+	public void setConstructorPos(BlockPos v)
+	{
+		this.constructorPos = v;
+	}
+
+	public List<ChunkPos> getLoadedChunks()
+	{
+		return loadedChunks;
+	}
+
+	public void addLoadedChunk(ChunkPos cp)
+	{
+		if (!loadedChunks.contains(cp)) loadedChunks.add(cp);
+	}
+
+	public void clearLoadedChunks()
+	{
+		loadedChunks.clear();
+	}
+
 	public boolean containsLoadedChunk(long l)
 	{
 		for (ChunkPos cp : loadedChunks)
@@ -146,7 +275,10 @@ public class BuildingInstance
 		return false;
 	}
 
-	public int getTotalBlocks() { return schematic != null ? schematic.getTotalVolume() : 0; }
+	public int getTotalBlocks()
+	{
+		return schematic != null ? schematic.getTotalVolume() : 0;
+	}
 
 	public enum BuildState
 	{

@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.*;
+import com.wenzai.neosim.compat.PhysicsWorld;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.NpcGoals;
@@ -34,6 +35,12 @@ public class ConstructionTask
 	// 建造者等级上限
 	private static final float MAX_LEVEL = 10.0f;
 
+	// 挖掘阻挡方块的等级进度惩罚（等价 10 个方块的建造经验：每块 0.001/等级）
+	private static final float DIG_PENALTY = 0.01f;
+
+	// 挖掘耗时倍率（相对 buildDelay）
+	private static final int DIG_DELAY_MULTIPLIER = 2;
+
 	// 等待材料时3秒检查一次
 	private static final int WAITING_CHECK_DELAY = 3000;
 	private static final int SEARCH_RADIUS = 5;
@@ -56,6 +63,10 @@ public class ConstructionTask
 	private long lastTickTime;
 	private float builderLevel = 1.0f;
 	private int buildDelay = BASE_DELAY;
+
+	// 待挖掘的阻挡方块（建造遇不同类型方块挡路时）
+	private BlockPos pendingDigPos;
+	private boolean pendingDigDrop;
 	private boolean paused;
 
 	// 两轮建造
@@ -154,6 +165,15 @@ public class ConstructionTask
 		}
 		ensureWorkerAtSite();
 
+		// 模盒被破坏（含子世界内模盒）：任务取消
+		if (!constructorBoxStillThere())
+		{
+			LOGGER.warn("NeoSim-ConstructionTask: constructor box gone at {}, cancelling task",
+					building.getConstructorPos());
+			com.wenzai.neosim.building.ConstructionEngine.cancelTaskAt(boxPos(), level);
+			return;
+		}
+
 		if (!hasWorker())
 		{
 			if (currentState != BuildingInstance.BuildState.WAITING_FOR_WORKER)
@@ -180,7 +200,9 @@ public class ConstructionTask
 			resolveBuilderNpc();
 			BlockPos box = building.getConstructorPos();
 			if (box == null) box = building.getControlBoxPos();
-			if (builderNpc != null && NpcGoals.MoveToSiteGoal.isAboveSite(builderNpc, box))
+			if (box != null && builderNpc != null
+					&& NpcGoals.MoveToSiteGoal.isAboveSite(builderNpc,
+							PhysicsWorld.toWorld(level, box)))
 			{
 				workerMissingTicks = 0;
 				onWorkerArrived();
@@ -257,12 +279,20 @@ public class ConstructionTask
 		{
 			BlockPos box = building.getConstructorPos();
 			if (box == null) box = building.getControlBoxPos();
-			if (box != null && !NpcGoals.MoveToSiteGoal.isAboveSite(builderNpc, box))
+			if (box != null && !NpcGoals.MoveToSiteGoal.isAboveSite(builderNpc,
+					PhysicsWorld.toWorld(level, box)))
 			{
 				setBuilderAnim(0.0F);
 				clearBuilderHand();
 				return;
 			}
+		}
+
+		// 挖掘优先：正在挖阻挡方块时不建造
+		if (pendingDigPos != null)
+		{
+			tickDig();
+			return;
 		}
 
 		// 速度控制+抬手
@@ -302,7 +332,8 @@ public class ConstructionTask
 		BlockPos.MutableBlockPos markerScanPos = new BlockPos.MutableBlockPos();
 
 		// C6：建造 flag 按模式降级（创造模式不触发全量光照/邻居更新）
-		int placeFlags = currentMode() == 2 ? Block.UPDATE_CLIENTS : Block.UPDATE_ALL;
+		// 放置后触发完整方块更新（邻居更新/形状传播/onPlace），保证模组方块（机械连接、红石等）正确联动
+		int placeFlags = Block.UPDATE_ALL;
 
 		// C6b/C7：跳过循环每 tick 上限——大段空气/标记区不得单 tick 连续扫描数万格
 		int scanned = 0;
@@ -345,7 +376,7 @@ public class ConstructionTask
 			}
 
 			BlockPos worldPos = building.blueprintToWorld(width, layer, depth);
-			BlockState current = level.getBlockState(worldPos);
+			BlockState current = PhysicsWorld.getBlockState(level, worldPos);
 
 			// 应用镜像/旋转
 			BlockState toPlace = CoordTransform.transformState(desired, building.getFacing());
@@ -383,6 +414,13 @@ public class ConstructionTask
 				continue;
 			}
 
+			// 已有同类型方块（含被手动旋转朝向/修改状态的）：尊重现状，不重放，防止恢复时还原
+			if (!current.isAir() && current.getBlock() == toPlace.getBlock())
+			{
+				resumeIndex++;
+				continue;
+			}
+
 			// 双方块：目标位置已有同类型方块，跳过避免覆盖
 			if ((toPlace.getBlock() instanceof DoorBlock || toPlace.getBlock() instanceof BedBlock)
 					&& current.getBlock() == toPlace.getBlock())
@@ -391,10 +429,11 @@ public class ConstructionTask
 				continue;
 			}
 
-			// 清除现有方块（创造模式不掉落，避免掉落物风暴）
+			// 阻挡方块：启动挖掘（延迟后清除 + 扣等级进度），本 tick 结束
 			if (!current.isAir())
 			{
-				level.destroyBlock(worldPos, currentMode() != 2);
+				startDig(worldPos, currentMode() != 2);
+				return;
 			}
 
 			// 材料检查与消耗
@@ -427,8 +466,14 @@ public class ConstructionTask
 				}
 			}
 
-			// 放置方块（C6：创造模式降级 flag）
-			level.setBlock(worldPos, toPlace, placeFlags);
+			// 放置方块
+			PhysicsWorld.setBlock(level, worldPos, toPlace, placeFlags);
+
+			// 双箱合并：vanilla 的 getStateForPlacement 路径在纯 setBlock 下不触发，放置后手动合并
+			if (toPlace.getBlock() instanceof ChestBlock)
+			{
+				mergeDoubleChest(worldPos, toPlace);
+			}
 
 			// 特殊方块放置后生效
 			activatePlacedSpecial(toPlace, worldPos);
@@ -443,23 +488,23 @@ public class ConstructionTask
 					// 放下半格，补上半格
 					BlockState upper = toPlace.setValue(DoorBlock.HALF,
 							net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER);
-					if (level.getBlockState(worldPos.above()).isAir())
+					if (PhysicsWorld.getBlockState(level, worldPos.above()).isAir())
 					{
-						level.setBlock(worldPos.above(), upper, placeFlags);
+						PhysicsWorld.setBlock(level, worldPos.above(), upper, placeFlags);
 					}
 				}
-				else if (level.getBlockState(worldPos.below()).isAir())
+				else if (PhysicsWorld.getBlockState(level, worldPos.below()).isAir())
 				{
 					// 上半格先：补下半格
 					BlockState lower = toPlace.setValue(DoorBlock.HALF,
 							net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER);
-					level.setBlock(worldPos.below(), lower, placeFlags);
+					PhysicsWorld.setBlock(level, worldPos.below(), lower, placeFlags);
 				}
 
 				// 双开门
 				fixDoubleDoor(worldPos);
 				LOGGER.debug("NeoSim-ConstructionTask: door placed at {} → {}", worldPos,
-						level.getBlockState(worldPos));
+						PhysicsWorld.getBlockState(level, worldPos));
 			}
 			else if (toPlace.getBlock() instanceof BedBlock)
 			{
@@ -479,9 +524,9 @@ public class ConstructionTask
 						part == net.minecraft.world.level.block.state.properties.BedPart.HEAD
 								? net.minecraft.world.level.block.state.properties.BedPart.FOOT
 								: net.minecraft.world.level.block.state.properties.BedPart.HEAD);
-				if (!level.getBlockState(other).equals(otherState))
+				if (!PhysicsWorld.getBlockState(level, other).equals(otherState))
 				{
-					level.setBlock(other, otherState, placeFlags);
+					PhysicsWorld.setBlock(level, other, otherState, placeFlags);
 				}
 			}
 
@@ -561,9 +606,9 @@ public class ConstructionTask
 		if (markerState == null) return;
 
 		BlockPos worldPos = building.blueprintToWorld(width, layer, depth);
-		if (!level.getBlockState(worldPos).equals(markerState))
+		if (!PhysicsWorld.getBlockState(level, worldPos).equals(markerState))
 		{
-			level.setBlock(worldPos, markerState, Block.UPDATE_ALL);
+			PhysicsWorld.setBlock(level, worldPos, markerState, Block.UPDATE_ALL);
 		}
 
 		// 标记棒：登记矩形
@@ -577,6 +622,104 @@ public class ConstructionTask
 		if (marker == SpecialMarker.CONTROL_BOX)
 		{
 			recordControlBox(worldPos);
+		}
+	}
+
+	// 启动挖掘：记录待挖位置，计时从抬手动画开始
+	private void startDig(BlockPos pos, boolean drop)
+	{
+		pendingDigPos = pos;
+		pendingDigDrop = drop;
+		animStartTime = System.currentTimeMillis();
+	}
+
+	// 挖掘 tick：计时 + 抬手动画，到时执行清除 + 等级惩罚
+	private void tickDig()
+	{
+		long now = System.currentTimeMillis();
+		long digDelay = Math.max(1, (long) buildDelay * DIG_DELAY_MULTIPLIER);
+		long elapsed = now - animStartTime;
+		if (elapsed < digDelay)
+		{
+			// 与建造同款抬手动画
+			if (elapsed < LOWER_ANIM_MS)
+			{
+				setBuilderAnim(1.0F - elapsed / (float) LOWER_ANIM_MS);
+			}
+			else
+			{
+				long raiseStart = digDelay - RAISE_ANIM_MS;
+				if (elapsed < raiseStart)
+				{
+					setBuilderAnim(0.0F);
+				}
+				else
+				{
+					setBuilderAnim((elapsed - raiseStart) / (float) RAISE_ANIM_MS);
+				}
+			}
+			return;
+		}
+
+		BlockPos pos = pendingDigPos;
+		pendingDigPos = null;
+
+		// 方块还在才算挖掉（期间被他人移除则不扣进度）
+		BlockState cur = PhysicsWorld.getBlockState(level, pos);
+		if (!cur.isAir())
+		{
+			PhysicsWorld.destroyBlock(level, pos, pendingDigDrop);
+			level.playSound(null, pos, cur.getSoundType().getBreakSound(),
+					SoundSource.BLOCKS, 1.0F, 1.0F);
+			applyDigPenalty(pos);
+		}
+	}
+
+	// 挖掘完成：等级进度下降（等价 10 块经验），掉级时同步 NPC 档案
+	private void applyDigPenalty(BlockPos pos)
+	{
+		int before = (int) Math.floor(builderLevel);
+		builderLevel = Math.max(1.0F, builderLevel - DIG_PENALTY);
+		int after = (int) Math.floor(builderLevel);
+		if (after < before)
+		{
+			resolveBuilderNpc();
+			if (builderNpc != null)
+			{
+				builderNpc.setJobArchitect((byte) Math.max(1, after));
+				builderNpc.syncToJson();
+			}
+		}
+		updateBuildSpeed(builderLevel);
+		LOGGER.info("NeoSim-ConstructionTask: dug obstacle at {} (Lv.{}, -0.01 progress)",
+				pos, builderLevel);
+	}
+
+	// 双箱合并：相邻同朝向的 SINGLE 箱子互设 LEFT/RIGHT
+	private void mergeDoubleChest(BlockPos pos, BlockState state)
+	{
+		if (state.getValue(ChestBlock.TYPE) != net.minecraft.world.level.block.state.properties.ChestType.SINGLE)
+		{
+			return;
+		}
+		Direction facing = state.getValue(ChestBlock.FACING);
+		for (int i = 0; i < 2; i++)
+		{
+			Direction dir = i == 0 ? facing.getClockWise() : facing.getCounterClockWise();
+			BlockPos partnerPos = pos.relative(dir);
+			BlockState partner = PhysicsWorld.getBlockState(level, partnerPos);
+			if (partner.is(state.getBlock())
+					&& partner.getValue(ChestBlock.TYPE) == net.minecraft.world.level.block.state.properties.ChestType.SINGLE
+					&& partner.getValue(ChestBlock.FACING) == facing)
+			{
+				net.minecraft.world.level.block.state.properties.ChestType thisType =
+						i == 0 ? net.minecraft.world.level.block.state.properties.ChestType.LEFT
+								: net.minecraft.world.level.block.state.properties.ChestType.RIGHT;
+				PhysicsWorld.setBlock(level, pos, state.setValue(ChestBlock.TYPE, thisType), 3);
+				PhysicsWorld.setBlock(level, partnerPos,
+						partner.setValue(ChestBlock.TYPE, thisType.getOpposite()), 3);
+				return;
+			}
 		}
 	}
 
@@ -766,7 +909,7 @@ public class ConstructionTask
 				|| block instanceof BannerBlock
 				|| block instanceof CarpetBlock)
 		{
-			return level.getBlockState(worldPos.below()).isAir() ? null : state;
+			return PhysicsWorld.getBlockState(level, worldPos.below()).isAir() ? null : state;
 		}
 
 		return state;
@@ -785,7 +928,7 @@ public class ConstructionTask
 		for (Direction dir : Direction.values())
 		{
 			BlockPos neighborPos = pos.relative(dir);
-			state = state.updateShape(dir, level.getBlockState(neighborPos), level, pos, neighborPos);
+			state = state.updateShape(dir, PhysicsWorld.getBlockState(level, neighborPos), level, pos, neighborPos);
 		}
 		return state;
 	}
@@ -795,7 +938,7 @@ public class ConstructionTask
 	{
 		// 一律以下半格为准
 		BlockPos lowerPos = doorPos;
-		BlockState lower = level.getBlockState(lowerPos);
+		BlockState lower = PhysicsWorld.getBlockState(level, lowerPos);
 		if (!(lower.getBlock() instanceof DoorBlock))
 		{
 			LOGGER.info("NeoSim-ConstructionTask: fixDoubleDoor skip {} — not a door", lowerPos);
@@ -804,7 +947,7 @@ public class ConstructionTask
 		if (lower.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER)
 		{
 			lowerPos = lowerPos.below();
-			lower = level.getBlockState(lowerPos);
+			lower = PhysicsWorld.getBlockState(level, lowerPos);
 			if (!(lower.getBlock() instanceof DoorBlock)) return;
 		}
 
@@ -816,7 +959,7 @@ public class ConstructionTask
 		for (Direction side : new Direction[] { facing.getCounterClockWise(), facing.getClockWise() })
 		{
 			BlockPos neighborPos = lowerPos.relative(side);
-			BlockState neighbor = level.getBlockState(neighborPos);
+			BlockState neighbor = PhysicsWorld.getBlockState(level, neighborPos);
 			LOGGER.debug("NeoSim-ConstructionTask: fixDoubleDoor side={} at {} → {}",
 					side, neighborPos, neighbor.getBlock().getDescriptionId());
 			if (neighbor.getBlock() instanceof DoorBlock
@@ -840,11 +983,11 @@ public class ConstructionTask
 				}
 
 				// 本门两格一起改铰链，保持上下一致
-				level.setBlock(lowerPos, lower.setValue(BlockStateProperties.DOOR_HINGE, opposite), Block.UPDATE_ALL);
-				BlockState upper = level.getBlockState(lowerPos.above());
+				PhysicsWorld.setBlock(level, lowerPos, lower.setValue(BlockStateProperties.DOOR_HINGE, opposite), Block.UPDATE_ALL);
+				BlockState upper = PhysicsWorld.getBlockState(level, lowerPos.above());
 				if (upper.getBlock() instanceof DoorBlock)
 				{
-					level.setBlock(lowerPos.above(),
+					PhysicsWorld.setBlock(level, lowerPos.above(),
 							upper.setValue(BlockStateProperties.DOOR_HINGE, opposite), Block.UPDATE_ALL);
 				}
 				return;
@@ -855,7 +998,7 @@ public class ConstructionTask
 		for (Direction side : new Direction[] { facing, facing.getOpposite() })
 		{
 			BlockPos neighborPos = lowerPos.relative(side);
-			BlockState neighbor = level.getBlockState(neighborPos);
+			BlockState neighbor = PhysicsWorld.getBlockState(level, neighborPos);
 			if (neighbor.getBlock() instanceof DoorBlock
 					&& neighbor.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing
 					&& neighbor.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
@@ -869,7 +1012,7 @@ public class ConstructionTask
 	// 把同朝向、沿朝向轴相邻的两扇门重定向成真正对开门
 	private void orientDoubleDoorPair(BlockPos posA, BlockPos posB, Direction side)
 	{
-		BlockState lowerA = level.getBlockState(posA);
+		BlockState lowerA = PhysicsWorld.getBlockState(level, posA);
 		Direction orig = lowerA.getValue(BlockStateProperties.HORIZONTAL_FACING);
 		Direction target = pickDoubleDoorFacing(posA, posB, orig);
 
@@ -908,8 +1051,8 @@ public class ConstructionTask
 	private int solidsInFront(BlockPos posA, BlockPos posB, Direction dir)
 	{
 		int n = 0;
-		if (!level.getBlockState(posA.relative(dir)).isAir()) n++;
-		if (!level.getBlockState(posB.relative(dir)).isAir()) n++;
+		if (!PhysicsWorld.getBlockState(level, posA.relative(dir)).isAir()) n++;
+		if (!PhysicsWorld.getBlockState(level, posB.relative(dir)).isAir()) n++;
 		return n;
 	}
 
@@ -917,14 +1060,14 @@ public class ConstructionTask
 	private void setDoorFacingHinge(BlockPos pos, Direction facing,
 									net.minecraft.world.level.block.state.properties.DoorHingeSide hinge)
 	{
-		BlockState lower = level.getBlockState(pos);
+		BlockState lower = PhysicsWorld.getBlockState(level, pos);
 		if (!(lower.getBlock() instanceof DoorBlock)) return;
-		level.setBlock(pos, lower.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
+		PhysicsWorld.setBlock(level, pos, lower.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
 				.setValue(BlockStateProperties.DOOR_HINGE, hinge), Block.UPDATE_ALL);
-		BlockState upper = level.getBlockState(pos.above());
+		BlockState upper = PhysicsWorld.getBlockState(level, pos.above());
 		if (upper.getBlock() instanceof DoorBlock)
 		{
-			level.setBlock(pos.above(), upper.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
+			PhysicsWorld.setBlock(level, pos.above(), upper.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
 					.setValue(BlockStateProperties.DOOR_HINGE, hinge), Block.UPDATE_ALL);
 		}
 	}
@@ -961,7 +1104,7 @@ public class ConstructionTask
 
 	private boolean hasSupport(BlockPos pos, Direction dir)
 	{
-		return !level.getBlockState(pos.relative(dir)).isAir();
+		return !PhysicsWorld.getBlockState(level, pos.relative(dir)).isAir();
 	}
 
 	// 方向属性
@@ -1004,7 +1147,7 @@ public class ConstructionTask
 			// 检查当前轮次的方块
 			if (MaterialCalculator.isAttachedBlock(desired) != phaseTwo) continue;
 			BlockPos worldPos = building.blueprintToWorld(width, layer, depth);
-			BlockState current = level.getBlockState(worldPos);
+			BlockState current = PhysicsWorld.getBlockState(level, worldPos);
 			if (current.equals(CoordTransform.transformState(desired, building.getFacing()))) continue;
 			if (MaterialCalculator.requiresMaterial(desired, currentMode()))
 			{
@@ -1150,6 +1293,23 @@ public class ConstructionTask
 		}
 	}
 
+	// 模盒位置（子世界内模盒为局部坐标，主世界模盒为世界坐标）
+	private BlockPos boxPos()
+	{
+		BlockPos box = building.getConstructorPos();
+		if (box == null) box = building.getControlBoxPos();
+		return box;
+	}
+
+	// 模盒是否还在（主世界或子世界内）：被破坏则任务取消
+	private boolean constructorBoxStillThere()
+	{
+		BlockPos box = boxPos();
+		if (box == null) return true;
+		return PhysicsWorld.getBlockState(level, box).getBlock()
+				instanceof com.wenzai.neosim.block.BuildingConstructor;
+	}
+
 	// 是否已雇佣工人
 	private boolean hasWorker()
 	{
@@ -1214,7 +1374,7 @@ public class ConstructionTask
 			if (builderNpc.getPregnancyStage() > 0.0F) return;
 			BlockPos box = building.getConstructorPos();
 			if (box == null) box = building.getControlBoxPos();
-			if (box != null) builderNpc.setMoveTarget(box);
+			if (box != null) builderNpc.setMoveTarget(PhysicsWorld.toWorld(level, box));
 		}
 	}
 
@@ -1310,10 +1470,12 @@ public class ConstructionTask
 		if (city.isEmpty()) return;
 
 		com.wenzai.neosim.npc.Entity npc =
-				com.wenzai.neosim.npc.Manage.spawnSingle(level, city, workerName, box);
+				com.wenzai.neosim.npc.Manage.spawnSingle(level, city, workerName,
+						PhysicsWorld.toWorld(level, box));
 		if (npc != null)
 		{
-			npc.assignToSite(box);
+			npc.assignToSite(PhysicsWorld.toWorld(level, box));
+			PhysicsWorld.attachNpc(level, npc, box);
 			builderNpc = npc;
 			LOGGER.info("NeoSim-ConstructionTask: worker '{}' restored to site (was missing)", workerName);
 		}
@@ -1366,21 +1528,48 @@ public class ConstructionTask
 		LOGGER.info("NeoSim-ConstructionTask: resumed from {}/{}", resumeIndex, getTotal());
 	}
 
-	public BuildingInstance.BuildState getState() { return currentState; }
-	public void setState(BuildingInstance.BuildState state) { this.currentState = state; building.setState(state); }
+	public BuildingInstance.BuildState getState()
+	{
+		return currentState;
+	}
+
+	public void setState(BuildingInstance.BuildState state)
+	{
+		this.currentState = state;
+		building.setState(state);
+	}
 
 	// GUI进度：两轮显示
 	public int getProgress()
 	{
 		return phaseTwo ? schematic.getTotalVolume() + resumeIndex : resumeIndex;
 	}
-	public int getTotal() { return schematic.getTotalVolume() * 2; }
-	public BuildingInstance getBuilding() { return building; }
-	public boolean isPaused() { return paused; }
-	public float getBuilderLevel() { return builderLevel; }
+
+	public int getTotal()
+	{
+		return schematic.getTotalVolume() * 2;
+	}
+
+	public BuildingInstance getBuilding()
+	{
+		return building;
+	}
+
+	public boolean isPaused()
+	{
+		return paused;
+	}
+
+	public float getBuilderLevel()
+	{
+		return builderLevel;
+	}
 
 	// GUI状态页读取：当前阻塞建造的缺料
-	public Item getLastMissingMaterial() { return lastMissingMaterial; }
+	public Item getLastMissingMaterial()
+	{
+		return lastMissingMaterial;
+	}
 
 	// 防删改：蓝图数据越界（原点/高度超世界）时安全中止建造
 	private void abortConstruction()

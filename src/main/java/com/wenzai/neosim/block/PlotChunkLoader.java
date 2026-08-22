@@ -1,5 +1,3 @@
-// 工作盒地块区块强制加载（按盒子记账，两个地块共享区块时互不误释放）
-
 package com.wenzai.neosim.block;
 
 import com.mojang.logging.LogUtils;
@@ -21,7 +19,9 @@ public class PlotChunkLoader
 	// 按盒子记账（仿 DeliveryChunkLoader），两个地块共享区块时一个释放不会误删另一个的 ticket
 	private static final Map<BlockPos, Set<Long>> plotTickets = new HashMap<>();
 
-	private PlotChunkLoader() {}
+	private PlotChunkLoader()
+	{
+	}
 
 	// 为地块矩形覆盖的所有区块注册（按盒子记账）
 	public static void registerForPlot(ServerLevel level, WorkBoxPersistence.WorkBoxRecord record)

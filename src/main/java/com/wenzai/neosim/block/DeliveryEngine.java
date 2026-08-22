@@ -1,5 +1,3 @@
-// 快递盒调度引擎：服务端 tick 轮询、启动恢复、派单认领互斥（仿 WorkPlotEngine）
-
 package com.wenzai.neosim.block;
 
 import com.mojang.logging.LogUtils;

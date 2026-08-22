@@ -9,13 +9,14 @@ import net.minecraft.client.model.geom.builders.*;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+
+import javax.imageio.ImageIO;
 
 public class Model<T extends Entity> extends HumanoidModel<T>
 {
@@ -167,7 +168,13 @@ public class Model<T extends Entity> extends HumanoidModel<T>
 		}
 		finally
 		{
-			try { is.close(); } catch (Exception ignored) {}
+			try
+			{
+				is.close();
+			}
+			catch (Exception ignored)
+			{
+			}
 		}
 	}
 

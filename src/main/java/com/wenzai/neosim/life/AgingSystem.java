@@ -22,7 +22,9 @@ public class AgingSystem
 
 	private static final Random RANDOM = new Random();
 
-	private AgingSystem() {}
+	private AgingSystem()
+	{
+	}
 
 	// 每日结算：先长岁，再处理成年离家与高龄寿终（city 仅用于未加载档案结算）
 	public static void onDayStart(ServerLevel level, int dayOfWeek, String city)

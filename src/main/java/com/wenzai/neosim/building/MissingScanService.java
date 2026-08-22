@@ -13,7 +13,9 @@ import java.util.List;
 // 服务端缺料扫描：替代客户端 hasSingleplayerServer 路径（联机/单机统一）
 public final class MissingScanService
 {
-	private MissingScanService() {}
+	private MissingScanService()
+	{
+	}
 
 	public static List<MissingEntry> scan(ServerLevel level, BlockPos boxPos)
 	{

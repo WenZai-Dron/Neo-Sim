@@ -26,7 +26,9 @@ import java.util.List;
 
 public class ServerToClientPayloads
 {
-	private ServerToClientPayloads() {}
+	private ServerToClientPayloads()
+	{
+	}
 
 	public record SyncDataPayload(SimData data, String cityName) implements CustomPacketPayload
 	{
@@ -118,7 +120,10 @@ public class ServerToClientPayloads
 				ByteBufCodecs.STRING_UTF8.map(ResourceShortagePacket::new, ResourceShortagePacket::message);
 
 		@Override
-		public Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 
 		// 聊天栏提示缺料
 		public static void handle(ResourceShortagePacket pkt, IPayloadContext ctx)
@@ -143,7 +148,10 @@ public class ServerToClientPayloads
 				ByteBufCodecs.STRING_UTF8.map(BuildingCompletePacket::new, BuildingCompletePacket::message);
 
 		@Override
-		public Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 
 		// 聊天栏显示完工公告
 		public static void handle(BuildingCompletePacket pkt, IPayloadContext ctx)
@@ -168,7 +176,10 @@ public class ServerToClientPayloads
 				ByteBufCodecs.STRING_UTF8.map(TerraformCompletePacket::new, TerraformCompletePacket::message);
 
 		@Override
-		public Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 
 		// 聊天栏显示完工公告
 		public static void handle(TerraformCompletePacket pkt, IPayloadContext ctx)
@@ -332,7 +343,10 @@ public class ServerToClientPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 可雇佣市民列表响应（S→C）
@@ -354,7 +368,10 @@ public class ServerToClientPayloads
 							HireEntry::new);
 
 			@Override
-			public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+			public @NotNull Type<? extends CustomPacketPayload> type()
+			{
+				return TYPE;
+			}
 		}
 
 		public static final Type<HireListResponsePayload> TYPE =
@@ -383,7 +400,10 @@ public class ServerToClientPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 雇佣状态同步（S→C；workerName 为空=已解雇），客户端更新 WORKER_MAP 缓存并刷新 GUI
@@ -424,7 +444,10 @@ public class ServerToClientPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 缺料响应（S→C）
@@ -466,7 +489,10 @@ public class ServerToClientPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 无家 NPC 名单响应（S→C）
@@ -498,6 +524,9 @@ public class ServerToClientPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 }

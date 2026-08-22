@@ -1,5 +1,3 @@
-// 整地任务区块强制加载（按任务记账，共享区块互不误释放）
-
 package com.wenzai.neosim.block;
 
 import com.mojang.logging.LogUtils;
@@ -21,7 +19,9 @@ public class TerraformChunkLoader
 	// 按任务记账（两个整地任务共享区块时互不误释放）
 	private static final Map<BlockPos, Set<Long>> taskTickets = new HashMap<>();
 
-	private TerraformChunkLoader() {}
+	private TerraformChunkLoader()
+	{
+	}
 
 	// 为整地地块覆盖的所有区块注册
 	public static void registerForPlot(ServerLevel level, TerraformPersistence.TerraformRecord record)

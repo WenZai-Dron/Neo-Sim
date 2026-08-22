@@ -8,8 +8,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-import javax.annotation.Nullable;
 import java.util.*;
+
+import javax.annotation.Nullable;
 
 // 标记棒全局管理器（Task 4.2：按维度存储，切维度不丢内存态）
 public class MarkerManager
@@ -28,7 +29,9 @@ public class MarkerManager
 	private static List<MarkerRect> cachedRects;
 	private static boolean rectsDirty = true;
 
-	private MarkerManager() {}
+	private MarkerManager()
+	{
+	}
 
 	// L11：标记集合变化 → 矩形缓存失效
 	private static void invalidateRects()

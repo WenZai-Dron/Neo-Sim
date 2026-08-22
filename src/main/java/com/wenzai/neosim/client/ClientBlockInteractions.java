@@ -6,7 +6,9 @@ import net.minecraft.core.BlockPos;
 
 public class ClientBlockInteractions
 {
-	private ClientBlockInteractions() {}
+	private ClientBlockInteractions()
+	{
+	}
 
 	// 打开建筑模盒GUI
 	public static void openBuildingConstructor(BlockPos pos)

@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -16,6 +15,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 // 控制箱记录JSON持久化：按城市存储已放置控制箱的信息
 public class ControlBoxPersistence
@@ -26,7 +27,10 @@ public class ControlBoxPersistence
 	// 居民：姓名 + 入住的生活点位置
 	public record Resident(String name, int x, int y, int z)
 	{
-		public BlockPos pos() { return new BlockPos(x, y, z); }
+		public BlockPos pos()
+		{
+			return new BlockPos(x, y, z);
+		}
 	}
 
 	// 生活点（按列 x/z）是否已被居民占用：兼容旧存档中居民记录了抬升后坐标（y 不同）的情况
@@ -61,9 +65,15 @@ public class ControlBoxPersistence
 					placerName, author, livingPoints, residents, rent);
 		}
 
-		public BlockPos boxPos() { return new BlockPos(x, y, z); }
+		public BlockPos boxPos()
+		{
+			return new BlockPos(x, y, z);
+		}
 
-		public BlockPos originPos() { return new BlockPos(originX, originY, originZ); }
+		public BlockPos originPos()
+		{
+			return new BlockPos(originX, originY, originZ);
+		}
 	}
 
 	// 记录文件路径

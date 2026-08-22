@@ -20,7 +20,9 @@ public class BuildingChunkLoader
 	private static final TicketType<ChunkPos> BUILDING_TICKET =
 			TicketType.create("neo_sim:building", Comparator.comparingLong(ChunkPos::toLong));
 
-	private BuildingChunkLoader() {}
+	private BuildingChunkLoader()
+	{
+	}
 
 	// 为建筑覆盖的所有区块注册BORDER模式ticket（首次全量注册，随后 updateWindow 收窄滚动）
 	public static void registerForBuilding(BuildingInstance building, ServerLevel level)

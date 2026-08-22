@@ -215,12 +215,21 @@ public class FarmTask extends PlotTask
 		LOGGER.info("NeoSim-FarmTask: farm config set to '{}' at {}", normalized, boxPos());
 	}
 
-	public List<FarmType> getFarmTypes() { return farmTypes; }
+	public List<FarmType> getFarmTypes()
+	{
+		return farmTypes;
+	}
 
 	// 当前饲养
-	public List<LivestockType> getLivestockTypes() { return livestockTypes; }
+	public List<LivestockType> getLivestockTypes()
+	{
+		return livestockTypes;
+	}
 
-	public List<TreeType> getForestryTypes() { return forestryTypes; }
+	public List<TreeType> getForestryTypes()
+	{
+		return forestryTypes;
+	}
 
 	// 是否林业模式
 	public boolean isForestryMode()
@@ -235,7 +244,10 @@ public class FarmTask extends PlotTask
 	}
 
 	// 是否本轮缺树苗（供 GUI 显示「缺少树苗」）
-	public boolean isMissingSaplings() { return missingSaplings; }
+	public boolean isMissingSaplings()
+	{
+		return missingSaplings;
+	}
 
 	// 是否畜牧模式
 	public boolean isLivestockMode()
@@ -453,10 +465,16 @@ public class FarmTask extends PlotTask
 	}
 
 	@Override
-	protected byte jobLevelOf(Entity npc) { return npc.getJobFarmer(); }
+	protected byte jobLevelOf(Entity npc)
+	{
+		return npc.getJobFarmer();
+	}
 
 	@Override
-	protected void setNpcJobLevel(Entity npc, int lvl) { npc.setJobFarmer((byte) lvl); }
+	protected void setNpcJobLevel(Entity npc, int lvl)
+	{
+		npc.setJobFarmer((byte) lvl);
+	}
 
 	@Override
 	protected void subclassWorkTick()
@@ -565,7 +583,11 @@ public class FarmTask extends PlotTask
 			BlockPos pos = cellPos(cursorRow, cursorCol);
 			if (cellOutsideBuildHeight(pos))
 			{
-				if (advanceCursor()) { finishRound(); return; }
+				if (advanceCursor())
+				{
+					finishRound();
+					return;
+				}
 				continue;
 			}
 			BlockState bs = level.getBlockState(pos);
@@ -593,7 +615,11 @@ public class FarmTask extends PlotTask
 			{
 				// 无活可干：跳过游标（树苗/非选中树/水格/缺种子格等）
 				setHandAnim(0.0F);
-				if (advanceCursor()) { finishRound(); return; }
+				if (advanceCursor())
+				{
+					finishRound();
+					return;
+				}
 				continue;
 			}
 
@@ -655,7 +681,11 @@ public class FarmTask extends PlotTask
 					{
 						// 无树苗：跳过该格（林业空转，树叶掉落可回补）
 						missingSaplings = true;
-						if (advanceCursor()) { finishRound(); return; }
+						if (advanceCursor())
+						{
+							finishRound();
+							return;
+						}
 						continue;
 					}
 					if (currentMode() != 2)
@@ -985,7 +1015,11 @@ public class FarmTask extends PlotTask
 			long now = System.currentTimeMillis();
 			if (animateHand(now)) return;
 			int n = livestockTypes.size();
-			if (n == 0) { setHandAnim(0.0F); return; }
+			if (n == 0)
+			{
+				setHandAnim(0.0F);
+				return;
+			}
 
 			// 超员屠宰
 			for (int i = 0; i < n; i++)
@@ -1269,12 +1303,26 @@ public class FarmTask extends PlotTask
 	}
 
 	// 标记矩形边框不计入范围（矩形太窄没有内部时退回整框）
-	private int insetX() { return record.rx2() - record.rx1() + 1 > 2 ? 1 : 0; }
-	private int insetZ() { return record.rz2() - record.rz1() + 1 > 2 ? 1 : 0; }
+	private int insetX()
+	{
+		return record.rx2() - record.rx1() + 1 > 2 ? 1 : 0;
+	}
+
+	private int insetZ()
+	{
+		return record.rz2() - record.rz1() + 1 > 2 ? 1 : 0;
+	}
 
 	// 矩形/游标
-	private int rows() { return record.rz2() - record.rz1() + 1 - 2 * insetZ(); }
-	private int cols() { return record.rx2() - record.rx1() + 1 - 2 * insetX(); }
+	private int rows()
+	{
+		return record.rz2() - record.rz1() + 1 - 2 * insetZ();
+	}
+
+	private int cols()
+	{
+		return record.rx2() - record.rx1() + 1 - 2 * insetX();
+	}
 
 	// 当前游标的世界坐标
 	private BlockPos cellPos(int row, int col)

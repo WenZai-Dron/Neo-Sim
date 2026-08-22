@@ -267,14 +267,27 @@ public enum TerraformPlan
 		this.materialItem = materialItem;
 	}
 
-	public String labelKey() { return labelKey; }
-	public String descKey() { return descKey; }
+	public String labelKey()
+	{
+		return labelKey;
+	}
+
+	public String descKey()
+	{
+		return descKey;
+	}
 
 	// 该方案是否需要从箱子取料（null=免费方案）
-	public Item materialItem() { return materialItem; }
+	public Item materialItem()
+	{
+		return materialItem;
+	}
 
 	// 默认：有材料则每块都取；NATURE 覆盖为每 15 块取 1 树苗
-	public boolean needsMaterial(int processedIndex) { return materialItem != null; }
+	public boolean needsMaterial(int processedIndex)
+	{
+		return materialItem != null;
+	}
 
 	// 扫描地块收集目标方块列表
 	public abstract void scan(ServerLevel level, int minX, int minZ, int maxX, int maxZ, int baselineY, List<BlockPos> out);

@@ -3,6 +3,7 @@ package com.wenzai.neosim.building;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.client.ClientBlockInteractions;
+import com.wenzai.neosim.compat.PhysicsWorld;
 import com.wenzai.neosim.schematic.PreviewState;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicRegistry;
@@ -53,6 +54,14 @@ public class ConstructionEngine
 
 		// 快照当前雇佣关系
 		building.setWorkerName(NeoSim.WORKER_MAP.get(constructorPos));
+
+		// 物理化结构上的建造已停用：拒绝创建任务（避免触发 Sable 卸载自旋导致的保存卡死）
+		if (PhysicsWorld.isInSubLevel(level, constructorPos))
+		{
+			LOGGER.warn("NeoSim-ConstructionEngine: reject '{}' — constructor on physicized structure (unsupported)",
+					schematic.getName());
+			return null;
+		}
 
 		// 整地互斥：模盒有进行中整地任务时拒绝建造
 		if (com.wenzai.neosim.block.TerraformEngine.findTask(constructorPos) != null)
@@ -375,7 +384,7 @@ public class ConstructionEngine
 					}
 
 					if (building.getConstructorPos() != null
-							&& !(level.getBlockState(building.getConstructorPos()).getBlock()
+							&& !(PhysicsWorld.getBlockState(level, building.getConstructorPos()).getBlock()
 									instanceof com.wenzai.neosim.block.BuildingConstructor))
 					{
 						LOGGER.warn("NeoSim-ConstructionEngine: skip restore '{}' — constructor box gone at {}",

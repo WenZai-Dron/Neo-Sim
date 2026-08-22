@@ -19,10 +19,14 @@ public class HireListPanel
 	public interface HostScreen
 	{
 		// 服务器返回可雇佣列表（entries 可能为空=加载失败或无城市）
-		default void onHireList(List<HireEntry> entries) {}
+		default void onHireList(List<HireEntry> entries)
+		{
+		}
 
 		// 雇佣/解雇状态变化（boxPos 对应本屏幕岗位时刷新）
-		default void onWorkerUpdate(BlockPos boxPos) {}
+		default void onWorkerUpdate(BlockPos boxPos)
+		{
+		}
 	}
 	// 每页 12 名：6 行 × 2 列
 	private static final int PER_PAGE = 12;
@@ -43,8 +47,15 @@ public class HireListPanel
 	// 一名候选 NPC 的展示快照
 	private record NpcEntry(String name, int level, int age, boolean maternity, boolean hiredElsewhere)
 	{
-		boolean underage() { return age >= 0 && age < Config.LIFE_ADULT_AGE.get(); }
-		boolean hireable() { return !hiredElsewhere && !underage() && !maternity; }
+		boolean underage()
+		{
+			return age >= 0 && age < Config.LIFE_ADULT_AGE.get();
+		}
+
+		boolean hireable()
+		{
+			return !hiredElsewhere && !underage() && !maternity;
+		}
 	}
 
 	// 向所属 Screen 增删控件的宿主
@@ -154,7 +165,13 @@ public class HireListPanel
 	{
 		String q = searchText.trim().toLowerCase();
 		int minLevel = 0;
-		try { minLevel = Integer.parseInt(minLevelText); } catch (NumberFormatException ignored) {}
+		try
+		{
+			minLevel = Integer.parseInt(minLevelText);
+		}
+		catch (NumberFormatException ignored)
+		{
+		}
 		final int ml = minLevel;
 
 		filtered = cachedEntries.stream()

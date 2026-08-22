@@ -13,7 +13,10 @@ public class FreeCamera
 	private static Object hudListener;
 	private static boolean active;
 
-	public static boolean isActive() { return active; }
+	public static boolean isActive()
+	{
+		return active;
+	}
 
 	public static void enter()
 	{

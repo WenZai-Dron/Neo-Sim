@@ -1,5 +1,3 @@
-// 关系等级链与增减
-
 package com.wenzai.neosim.life;
 
 import com.wenzai.neosim.Config;
@@ -12,7 +10,9 @@ public class Relationship
 	// 无logger字段
 	private static final Random RANDOM = new Random();
 
-	private Relationship() {}
+	private Relationship()
+	{
+	}
 
 	public enum RelationshipLevel
 	{

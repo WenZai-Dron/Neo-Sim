@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
@@ -16,12 +15,16 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.annotation.Nullable;
+
 public class MarkerPersistence
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-	private MarkerPersistence() {}
+	private MarkerPersistence()
+	{
+	}
 
 	// 防删改：标记Y钳制范围（正常标记都在世界高度内，放宽到±4096只是防离谱数值）
 	private static final int MARKER_MIN_Y = -4096;
@@ -98,7 +101,9 @@ public class MarkerPersistence
 				JsonObject existing = GSON.fromJson(r, JsonObject.class);
 				if (existing != null) root = existing;
 			}
-			catch (Exception ignored) {}
+			catch (Exception ignored)
+			{
+			}
 		}
 		JsonArray arr = new JsonArray();
 		for (BlockPos p : markers)

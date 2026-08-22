@@ -9,7 +9,9 @@ import java.util.EnumSet;
 
 public class NpcGoals
 {
-	private NpcGoals() {}
+	private NpcGoals()
+	{
+	}
 
 	// 夜晚回家休息：有生活点的NPC天黑后回生活点，原地休息，天亮解除
 	public static class GoHomeGoal extends Goal

@@ -8,13 +8,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 public class WorkBoxPersistence
 {
@@ -54,7 +55,10 @@ public class WorkBoxPersistence
 					Config.WORK_MINE_DISCARDS.get(), 0, false);
 		}
 
-		public BlockPos boxPos() { return new BlockPos(bx, by, bz); }
+		public BlockPos boxPos()
+		{
+			return new BlockPos(bx, by, bz);
+		}
 
 		public WorkBoxRecord withWorker(String name)
 		{
@@ -416,8 +420,18 @@ public class WorkBoxPersistence
 			int bz = JsonUtil.clampX(boxPos.getZ());
 
 			// 矩形反向则交换，保证min<=max
-			if (rx1 > rx2) { int t = rx1; rx1 = rx2; rx2 = t; }
-			if (rz1 > rz2) { int t = rz1; rz1 = rz2; rz2 = t; }
+			if (rx1 > rx2)
+			{
+				int t = rx1;
+				rx1 = rx2;
+				rx2 = t;
+			}
+			if (rz1 > rz2)
+			{
+				int t = rz1;
+				rz1 = rz2;
+				rz2 = t;
+			}
 			rx1 = JsonUtil.clampX(rx1);
 			rx2 = JsonUtil.clampX(rx2);
 			ry = JsonUtil.clampY(ry);

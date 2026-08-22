@@ -58,10 +58,16 @@ public class MineTask extends PlotTask
 		LOGGER.info("NeoSim-MineTask: discards={} at {}", this.discards, boxPos());
 	}
 
-	public int getDiscards() { return discards; }
+	public int getDiscards()
+	{
+		return discards;
+	}
 
 	// 当前开采深度
-	public int getDepth() { return cursorDepth; }
+	public int getDepth()
+	{
+		return cursorDepth;
+	}
 
 	@Override
 	protected void onArrived()
@@ -87,10 +93,16 @@ public class MineTask extends PlotTask
 	}
 
 	@Override
-	protected byte jobLevelOf(Entity npc) { return npc.getJobMiner(); }
+	protected byte jobLevelOf(Entity npc)
+	{
+		return npc.getJobMiner();
+	}
 
 	@Override
-	protected void setNpcJobLevel(Entity npc, int lvl) { npc.setJobMiner((byte) lvl); }
+	protected void setNpcJobLevel(Entity npc, int lvl)
+	{
+		npc.setJobMiner((byte) lvl);
+	}
 
 	@Override
 	protected void subclassWorkTick()
@@ -249,11 +261,25 @@ public class MineTask extends PlotTask
 	}
 
 	// 标记矩形边框不计入范围（矩形太窄没有内部时退回整框）
-	private int insetX() { return record.rx2() - record.rx1() + 1 > 2 ? 1 : 0; }
-	private int insetZ() { return record.rz2() - record.rz1() + 1 > 2 ? 1 : 0; }
+	private int insetX()
+	{
+		return record.rx2() - record.rx1() + 1 > 2 ? 1 : 0;
+	}
 
-	private int rows() { return record.rz2() - record.rz1() + 1 - 2 * insetZ(); }
-	private int cols() { return record.rx2() - record.rx1() + 1 - 2 * insetX(); }
+	private int insetZ()
+	{
+		return record.rz2() - record.rz1() + 1 > 2 ? 1 : 0;
+	}
+
+	private int rows()
+	{
+		return record.rz2() - record.rz1() + 1 - 2 * insetZ();
+	}
+
+	private int cols()
+	{
+		return record.rx2() - record.rx1() + 1 - 2 * insetX();
+	}
 
 	// 当前游标的世界坐标
 	private BlockPos cellPos(int row, int col)

@@ -1,5 +1,3 @@
-// 生育系统：孕期推进->诊所分娩->新生儿落地
-
 package com.wenzai.neosim.life;
 
 import com.google.gson.JsonObject;
@@ -53,7 +51,9 @@ public class ReproductionSystem
 		BIRTH_TARGETS.clear();
 	}
 
-	private ReproductionSystem() {}
+	private ReproductionSystem()
+	{
+	}
 
 	// 每天清晨：孕期推进，临产者出发去Clinic/Hospital
 	public static void onDayStart(ServerLevel level, String city)
@@ -465,7 +465,7 @@ public class ReproductionSystem
 		}
 	}
 
-	// C5/C1：城市已加载实体快照（索引取数，快照防迭代中卸载）
+	// 城市已加载实体快照（索引取数，快照防迭代中卸载）
 	private static List<Entity> loadedNpcs(ServerLevel level, String city)
 	{
 		return new ArrayList<>(com.wenzai.neosim.npc.NpcRegistry.byCity(city));

@@ -4,10 +4,12 @@ import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.block.BuildingConstructor;
 import com.wenzai.neosim.block.DeliveryEngine;
 import com.wenzai.neosim.block.DeliveryTask;
 import com.wenzai.neosim.block.PlotTask;
 import com.wenzai.neosim.block.WorkPlotEngine;
+import com.wenzai.neosim.compat.PhysicsWorld;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.storage.CityManager;
@@ -22,7 +24,9 @@ public final class WorkerService
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	private WorkerService() {}
+	private WorkerService()
+	{
+	}
 
 	// 返回 null=成功，否则为提示文本
 	public static String tryHire(ServerLevel level, ServerPlayer player, BlockPos boxPos, String npcName)
@@ -40,11 +44,13 @@ public final class WorkerService
 		if (json.has("pregnancy") && json.get("pregnancy").getAsFloat() > 0.0F)
 			return "§c产假中不可雇佣";
 
-		// 实体（可能未加载）：未加载则从档案恢复到岗位位置
+		// 实体（可能未加载）：未加载则从档案恢复到岗位位置（世界坐标：模盒在子世界时投影到甲板，
+		// 避免实体生成在 20.48M 局部坐标——那是保存卸载自旋的触发源）
 		Entity npc = Entity.findByNpcName(level, npcName);
 		if (npc == null)
 		{
-			npc = Manage.spawnSingle(level, city, npcName, boxPos);
+			npc = Manage.spawnSingle(level, city, npcName,
+					PhysicsWorld.toWorld(level, boxPos));
 			if (npc == null) return "§c市民恢复失败";
 		}
 		else if (!city.equals(npc.getCityName()))
@@ -59,7 +65,8 @@ public final class WorkerService
 			NeoSim.WORKER_MAP.put(boxPos, npcName);
 			ct.assignWorker();
 			ConstructionEngine.saveAllTasks(level);
-			npc.assignToSite(boxPos);
+			npc.assignToSite(PhysicsWorld.toWorld(level, boxPos));
+			PhysicsWorld.attachNpc(level, npc, boxPos);
 			LOGGER.info("NeoSim-WorkerService: hired builder '{}' at {}", npcName, boxPos);
 			return null;
 		}
@@ -79,6 +86,21 @@ public final class WorkerService
 			LOGGER.info("NeoSim-WorkerService: hired courier '{}' at {}", npcName, boxPos);
 			return null;
 		}
+
+		// 建筑模盒：允许先雇佣（尚无建造任务）。
+		// 之后在模盒 GUI 确认蓝图时，createBuilding 会从 WORKER_MAP 快照工人到任务。
+		if (level.getBlockState(boxPos).getBlock() instanceof BuildingConstructor)
+		{
+			NeoSim.WORKER_MAP.put(boxPos, npcName);
+			npc.assignToSite(PhysicsWorld.toWorld(level, boxPos));
+			PhysicsWorld.attachNpc(level, npc, boxPos);
+			LOGGER.info("NeoSim-WorkerService: pre-hired builder '{}' at {} (no task yet, waiting blueprint)", npcName, boxPos);
+			return null;
+		}
+
+		LOGGER.warn("NeoSim-WorkerService: no hireable position at {} (buildings={}, block={}, npc='{}')",
+				boxPos, ConstructionEngine.getActiveBuildings().size(),
+				level.getBlockState(boxPos).getBlock(), npcName);
 		return "§c此处没有可雇佣的岗位";
 	}
 
@@ -114,6 +136,23 @@ public final class WorkerService
 		{
 			delivery.fireWorker();
 			DeliveryEngine.saveAll(level);
+			return null;
+		}
+
+		// 建筑模盒：先雇佣的工人直接解除（无任务场景）
+		if (level.getBlockState(boxPos).getBlock() instanceof BuildingConstructor)
+		{
+			String name = NeoSim.WORKER_MAP.remove(boxPos);
+			if (name != null)
+			{
+				Entity npc = Entity.findByNpcName(level, name);
+				if (npc != null)
+				{
+					npc.releaseFromSite();
+					npc.setBuildAnim(0.0F);
+				}
+				LOGGER.info("NeoSim-WorkerService: pre-hire cancelled for '{}' at {}", name, boxPos);
+			}
 			return null;
 		}
 		return "§c此处没有可解雇的岗位";

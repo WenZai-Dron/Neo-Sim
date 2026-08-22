@@ -1,5 +1,3 @@
-// 建筑实例JSON持久化：按城市存储所有使用中的模盒状态（BuildingConstructor.json）
-
 package com.wenzai.neosim.building;
 
 import com.google.gson.JsonArray;
@@ -152,7 +150,9 @@ public class BuildingPersistence
 			{
 				b.setFacing(net.minecraft.core.Direction.valueOf(facing));
 			}
-			catch (IllegalArgumentException ignored) {}
+			catch (IllegalArgumentException ignored)
+			{
+			}
 		}
 		b.setBuildProgress(getInt(obj, "buildProgress", 0));
 		b.setBuildingComplete(getBool(obj, "buildingComplete", false));

@@ -32,7 +32,9 @@ import java.util.List;
 
 public class ClientToServerPayloads
 {
-	private ClientToServerPayloads() {}
+	private ClientToServerPayloads()
+	{
+	}
 
 	// 发送mode及NPC的GUI操作
 	public record UpdatePayload(byte mode, int npcEntityId, String npcNewSurname, String npcNewGivenName, String npcNewSkin) implements CustomPacketPayload
@@ -291,7 +293,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 
 		// 服务端处理
 		public static void handle(ConfirmPlacementPayload payload, IPayloadContext ctx)
@@ -310,13 +315,31 @@ public class ClientToServerPayloads
 					return;
 				}
 
-				// 安全校验
-				if (!isValidBlueprintName(payload.schematicName)) return;
-				if (!isWithinBuildHeight(level, payload.origin)) return;
-				if (!isWithinRange(player, payload.origin, 50)) return;
+				// 安全校验（失败全部记日志，避免静默无提示）
+				if (!isValidBlueprintName(payload.schematicName))
+				{
+					NeoSim.LOGGER.warn("NeoSim-ConfirmPlacement: invalid blueprint name '{}'", payload.schematicName);
+					return;
+				}
+				if (!isWithinBuildHeight(level, payload.origin))
+				{
+					NeoSim.LOGGER.warn("NeoSim-ConfirmPlacement: origin Y={} out of build height [{}, {}]",
+							payload.origin.getY(), level.getMinBuildHeight(), level.getMaxBuildHeight());
+					return;
+				}
+				if (!isWithinRange(player, payload.origin, 50))
+				{
+					NeoSim.LOGGER.warn("NeoSim-ConfirmPlacement: origin {} too far from player {} (distSqr={})",
+							payload.origin, player.blockPosition(), player.blockPosition().distSqr(payload.origin));
+					return;
+				}
 
 				var schematic = SchematicRegistry.getInstance().get(payload.schematicName);
-				if (schematic == null) return;
+				if (schematic == null)
+				{
+					NeoSim.LOGGER.warn("NeoSim-ConfirmPlacement: schematic '{}' not found", payload.schematicName);
+					return;
+				}
 
 				PreviewState state = new PreviewState();
 				state.setSchematic(schematic);
@@ -373,7 +396,10 @@ public class ClientToServerPayloads
 				);
 
 		@Override
-		public Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 
 		public static void handle(WorkBoxApplyPayload payload, IPayloadContext context)
 		{
@@ -450,7 +476,10 @@ public class ClientToServerPayloads
 				);
 
 		@Override
-		public Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 
 		public static void handle(ControlBoxManagePayload payload, IPayloadContext context)
 		{
@@ -592,7 +621,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 
 		public static void handle(TerraformStartPayload payload, IPayloadContext context)
 		{
@@ -636,8 +668,7 @@ public class ClientToServerPayloads
 		}
 	}
 
-	// ===== 城市系统（C→S，原 CityPayloads）=====
-	// 创建城市（模式为全服全局，由 Run 界面的 UpdatePayload 设置，此处不带 mode）
+	// 创建城市
 	public record CreateCityPayload(String cityName) implements CustomPacketPayload
 	{
 		public static final Type<CreateCityPayload> TYPE =
@@ -666,7 +697,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 加入已有城市
@@ -698,7 +732,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 请求服务器城市列表（City GUI 的"选择城市"页，联机客户端无服务器文件系统）
@@ -725,7 +762,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 请求可雇佣市民列表（C→S；jobKind: 0 建筑师 1 农夫 2 矿工 3 快递员）
@@ -758,7 +798,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 雇佣市民（C→S）
@@ -798,7 +841,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 解雇（C→S）
@@ -836,7 +882,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 请求重算缺少材料（C→S）
@@ -868,7 +917,10 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 
 	// 请求无家 NPC 名单（C→S；缺陷 C 结构性，服务端按玩家城市权威生成）
@@ -897,6 +949,9 @@ public class ClientToServerPayloads
 		}
 
 		@Override
-		public @NotNull Type<? extends CustomPacketPayload> type() { return TYPE; }
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
 	}
 }

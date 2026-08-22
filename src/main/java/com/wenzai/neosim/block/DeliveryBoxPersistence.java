@@ -1,5 +1,3 @@
-// 快递盒记录持久化：每城市 DeliveryBox.json（仿 WorkBoxPersistence，无矩形/游标字段）
-
 package com.wenzai.neosim.block;
 
 import com.mojang.logging.LogUtils;
@@ -9,12 +7,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 public class DeliveryBoxPersistence
 {
@@ -34,7 +33,10 @@ public class DeliveryBoxPersistence
 					null, false, "IDLE", placer);
 		}
 
-		public BlockPos boxPos() { return new BlockPos(bx, by, bz); }
+		public BlockPos boxPos()
+		{
+			return new BlockPos(bx, by, bz);
+		}
 
 		public DeliveryBoxRecord withWorker(String name)
 		{
@@ -52,7 +54,10 @@ public class DeliveryBoxPersistence
 		}
 	}
 
-	private static String fileName() { return "DeliveryBox.json"; }
+	private static String fileName()
+	{
+		return "DeliveryBox.json";
+	}
 
 	// 城市目录
 	private static Path getCityDir(ServerLevel level, String cityName)

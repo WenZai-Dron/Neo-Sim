@@ -41,7 +41,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	private java.util.Set<FarmTask.LivestockType> selectedLivestock;
 	private java.util.Set<FarmTask.TreeType> selectedTrees;
 
-	// M12：无任务时 worker 档案等级字段缓存（reload/refreshTask 时刷新，避免每帧读 JSON 文件）
+	// 无任务时 worker 档案等级字段缓存（reload/refreshTask 时刷新，避免每帧读 JSON 文件）
 	private String cachedWorkerKey = "";
 	private int cachedWorkerLevel = -1;
 
@@ -56,9 +56,16 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		this.hirePanel = new HireListPanel(new HireListPanel.WidgetHost()
 		{
 			@Override
-			public <T extends AbstractWidget> T add(T widget) { return addRenderableWidget(widget); }
+			public <T extends AbstractWidget> T add(T widget)
+			{
+				return addRenderableWidget(widget);
+			}
+
 			@Override
-			public void clear() { clearWidgets(); }
+			public void clear()
+			{
+				clearWidgets();
+			}
 		}, boxPos, P, 1, this::hire, () ->
 		{
 			currentPage = 0;
@@ -94,25 +101,39 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		Minecraft mc = Minecraft.getInstance();
 		this.task = (mc != null && mc.hasSingleplayerServer())
 				? WorkPlotEngine.findTask(boxPos) : null;
-		// M12：任务/记录变化 → worker 等级缓存失效
+		// 任务/记录变化 → worker 等级缓存失效
 		cachedWorkerKey = "";
 		cachedWorkerLevel = -1;
 	}
 
 	@Override
-	public boolean isPauseScreen() { return false; }
+	public boolean isPauseScreen()
+	{
+		return false;
+	}
 
 	@Override
-	protected void init() { showPage(); }
+	protected void init()
+	{
+		showPage();
+	}
 
 	@Override
 	public void render(GuiGraphics gfx, int mx, int my, float pt)
 	{
 		renderBackground(gfx, mx, my, pt);
 		super.render(gfx, mx, my, pt);
-		if (currentPage == 0) { drawMain(gfx); drawCropButtonIcons(gfx); }
+		if (currentPage == 0)
+		{
+			drawMain(gfx);
+			drawCropButtonIcons(gfx);
+		}
 		else if (currentPage == 1) hirePanel.render(gfx);
-		else { drawCropList(gfx); drawCropIcons(gfx); }
+		else
+		{
+			drawCropList(gfx);
+			drawCropIcons(gfx);
+		}
 	}
 
 	private void showPage()
@@ -133,7 +154,11 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 					b ->
 					{
 						if (hasWorker) fireWorker();
-						else { currentPage = 1; showPage(); }
+						else
+						{
+							currentPage = 1;
+							showPage();
+						}
 					});
 
 			addButton(3, cx - 100, height - 56, 200, 20,
@@ -645,7 +670,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		if (task != null) return (int) task.getJobLevel();
 		String worker = record != null && record.worker() != null ? record.worker() : "";
 		if (worker.isEmpty()) return 1;
-		// M12：同一 worker 的等级缓存（reload/refreshTask 时失效），避免每帧读 JSON
+		// 同一 worker 的等级缓存（reload/refreshTask 时失效），避免每帧读 JSON
 		if (worker.equals(cachedWorkerKey) && cachedWorkerLevel >= 0) return cachedWorkerLevel;
 		try
 		{
@@ -667,7 +692,9 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 				}
 			}
 		}
-		catch (Exception ignored) {}
+		catch (Exception ignored)
+		{
+		}
 		return 1;
 	}
 

@@ -13,11 +13,24 @@ public class SchematicPreviewManager
 	private final ClientPreviewState state = new ClientPreviewState();
 	private BlockPos constructorPos;
 
-	private SchematicPreviewManager() {}
+	private SchematicPreviewManager()
+	{
+	}
 
-	public static SchematicPreviewManager getInstance() { return INSTANCE; }
-	public ClientPreviewState getState() { return state; }
-	public BlockPos getConstructorPos() { return constructorPos; }
+	public static SchematicPreviewManager getInstance()
+	{
+		return INSTANCE;
+	}
+
+	public ClientPreviewState getState()
+	{
+		return state;
+	}
+
+	public BlockPos getConstructorPos()
+	{
+		return constructorPos;
+	}
 
 	// 进入预览模式
 	public void enterPreview(SchematicData schematic, BlockPos constructorPos)

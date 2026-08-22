@@ -1,5 +1,3 @@
-// 婚姻与同居
-
 package com.wenzai.neosim.life;
 
 import com.mojang.logging.LogUtils;
@@ -23,7 +21,9 @@ public class MarriageSystem
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final Random RANDOM = new Random();
 
-	private MarriageSystem() {}
+	private MarriageSystem()
+	{
+	}
 
 	// 每分钟扫描城市内关系对
 	public static void onServerTick(ServerLevel level, String city)

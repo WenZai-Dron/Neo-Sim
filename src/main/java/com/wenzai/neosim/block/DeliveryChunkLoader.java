@@ -1,5 +1,3 @@
-// 快递盒区块强制加载：站点区常驻 + 快递员滚动窗口（按盒子记账，避免跨盒误释放）
-
 package com.wenzai.neosim.block;
 
 import com.mojang.logging.LogUtils;
@@ -23,7 +21,9 @@ public class DeliveryChunkLoader
 	private static final Map<BlockPos, Set<Long>> boxTickets = new HashMap<>();
 	private static final Map<BlockPos, Set<Long>> windowTickets = new HashMap<>();
 
-	private DeliveryChunkLoader() {}
+	private DeliveryChunkLoader()
+	{
+	}
 
 	// 站点区：快递盒所在区块 ±1，快递员在雇状态下常驻
 	public static void registerBox(ServerLevel level, BlockPos box)

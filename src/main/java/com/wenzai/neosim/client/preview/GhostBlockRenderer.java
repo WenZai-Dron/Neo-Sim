@@ -162,6 +162,19 @@ public class GhostBlockRenderer
 						float wz = world.getZ() - origin.getZ();
 
 						BakedModel model = blockRenderer.getBlockModel(blockState);
+
+						// 缺失模型 / 箱子（方块实体渲染器绘制、无标准方块模型）：直接画半透明立方体
+						if (model == Minecraft.getInstance().getModelManager().getMissingModel()
+								|| blockState.getBlock() instanceof net.minecraft.world.level.block.ChestBlock)
+						{
+							if (blockState.getBlock() instanceof net.minecraft.world.level.block.ChestBlock)
+							{
+								LOGGER.debug("NeoSim-GhostBlockRenderer: chest fallback cube at ({},{},{})", x, y, z);
+							}
+							emitFallbackCube(buf, wx, wy, wz, overlayColor);
+							continue;
+						}
+
 						int quads = 0;
 						for (Direction side : Direction.values())
 						{
@@ -268,10 +281,18 @@ public class GhostBlockRenderer
 			}
 		}
 
-		// 无标准模型方块：画纯色立方体
+		// 无标准模型方块：画纯色立方体（采样方块图集白色纹理，alpha 混合下可见）
 		private static void emitFallbackCube(BufferBuilder buf,
-											  float ox, float oy, float oz, int color)
+										  float ox, float oy, float oz, int color)
 		{
+			net.minecraft.client.renderer.texture.TextureAtlasSprite white =
+					Minecraft.getInstance().getTextureAtlas(TextureAtlas.LOCATION_BLOCKS)
+							.apply(net.minecraft.resources.ResourceLocation.withDefaultNamespace("block/white_concrete"));
+			float u0 = white.getU0();
+			float v0 = white.getV0();
+			float u1 = white.getU1();
+			float v1 = white.getV1();
+
 			// 6个面，每面4顶点
 			float[][] faces = {
 				{0,1,0, 1,1,0, 1,1,1, 0,1,1},
@@ -288,7 +309,10 @@ public class GhostBlockRenderer
 					float vx = f[i * 3] + ox;
 					float vy = f[i * 3 + 1] + oy;
 					float vz = f[i * 3 + 2] + oz;
-					buf.addVertex(vx, vy, vz).setUv(0, 0).setColor(color);
+					// 面内 UV 对角展开，避免整面采样单点
+					float u = (i == 1 || i == 2) ? u1 : u0;
+					float v = (i >= 2) ? v1 : v0;
+					buf.addVertex(vx, vy, vz).setUv(u, v).setColor(color);
 				}
 			}
 		}

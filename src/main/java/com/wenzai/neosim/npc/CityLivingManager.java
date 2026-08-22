@@ -17,17 +17,20 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 // 城市级生活点池：完工住宅注册空位、无家NPC入住、退房/驱逐时空位自动归还
 public class CityLivingManager
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	private CityLivingManager() {}
+	private CityLivingManager()
+	{
+	}
 
 	// 建筑完工：注册生活点空位
 	public static void onBuildingCompleted(ServerLevel level, BuildingInstance building)

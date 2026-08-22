@@ -16,10 +16,14 @@ import java.util.function.Consumer;
 public class FamilyTreeRenderer
 {
 	// 节点世界坐标矩形
-	public record Rect(float x, float y, float w, float h) {}
+	public record Rect(float x, float y, float w, float h)
+	{
+	}
 
 	// 连线
-	private record Edge(String a, String b, boolean spouse) {}
+	private record Edge(String a, String b, boolean spouse)
+	{
+	}
 
 	private static final float NODE_H = 28.0F;
 	private static final float NODE_GAP_X = 14.0F;
@@ -36,7 +40,7 @@ public class FamilyTreeRenderer
 	private final Map<String, FamilyNode> nodes = new HashMap<>();
 	private final Map<String, Rect> rects = new HashMap<>();
 	private final List<Edge> edges = new ArrayList<>();
-	// M13：称谓预计算缓存（layout 时一次算全，渲染每帧不再对每个节点重算）
+	// 称谓预计算缓存（layout 时一次算全，渲染每帧不再对每个节点重算）
 	private final Map<String, String> titles = new HashMap<>();
 
 	private float panX, panY;
@@ -69,10 +73,25 @@ public class FamilyTreeRenderer
 	}
 
 	// 世界坐标 <-> 屏幕坐标
-	private float toWorldX(double sx) { return (float) ((sx - panX) / zoom); }
-	private float toWorldY(double sy) { return (float) ((sy - panY) / zoom); }
-	private int toScreenX(float wx) { return Math.round(wx * zoom + panX); }
-	private int toScreenY(float wy) { return Math.round(wy * zoom + panY); }
+	private float toWorldX(double sx)
+	{
+		return (float) ((sx - panX) / zoom);
+	}
+
+	private float toWorldY(double sy)
+	{
+		return (float) ((sy - panY) / zoom);
+	}
+
+	private int toScreenX(float wx)
+	{
+		return Math.round(wx * zoom + panX);
+	}
+
+	private int toScreenY(float wy)
+	{
+		return Math.round(wy * zoom + panY);
+	}
 
 	// 计算某节点相对中心节点的代差：祖辈-2 / 父母、姻亲-1 / 本人、配偶、兄弟姐妹0 / 子女+1
 	private int generation(String name)
@@ -125,7 +144,11 @@ public class FamilyTreeRenderer
 		for (int g = -2; g <= 1; g++)
 		{
 			List<String> layer = layers.get(g);
-			if (layer == null || layer.isEmpty()) { y += NODE_H + LAYER_GAP_Y; continue; }
+			if (layer == null || layer.isEmpty())
+			{
+				y += NODE_H + LAYER_GAP_Y;
+				continue;
+			}
 
 			// 本人所在层：本人放中间
 			if (g == 0)
@@ -182,7 +205,7 @@ public class FamilyTreeRenderer
 			}
 		}
 
-		// M13：称谓预计算（一次全量，渲染零开销）
+		// 称谓预计算（一次全量，渲染零开销）
 		for (String name : nodes.keySet())
 		{
 			String title = computeRelationTitle(name);
@@ -224,7 +247,7 @@ public class FamilyTreeRenderer
 		panY = h / 2.0F - (minY + treeH / 2.0F) * zoom;
 	}
 
-	// 计算某节点的关系称谓（基于与中心节点的关系；M13：layout 时预计算一次进 titles 缓存）
+	// 计算某节点的关系称谓（基于与中心节点的关系；layout 时预计算一次进 titles 缓存）
 	private String computeRelationTitle(String name)
 	{
 		if (name.equals(centerName)) return "";
@@ -328,7 +351,7 @@ public class FamilyTreeRenderer
 			fillRoundRect(gfx, sx + 1, sy + 1, sx + sw - 1, sy + sh - 1, 5.0F * zoom, border);
 		}
 
-		// M13：称谓直接查 layout 预计算缓存（不再每帧重算）
+		// 称谓直接查 layout 预计算缓存（不再每帧重算）
 		String title = titles.getOrDefault(name, "");
 
 		// 文字：同样从世界坐标 → 屏幕坐标（与框完全同源）

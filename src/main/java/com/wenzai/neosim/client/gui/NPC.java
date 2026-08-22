@@ -108,7 +108,7 @@ public class NPC extends Screen
 
 		// 设置皮肤
 		this.addRenderableWidget(Button.builder(
-				Component.translatable("gui.neosim.npc.setSkin"), Button-> {
+				Component.translatable("gui.neosim.npc.setSkin"), btn-> {
 					currentPage = "setSkin";
 					skinPage = 0;
 					refreshSkinList();
@@ -120,7 +120,7 @@ public class NPC extends Screen
 
 		// 重命名
 		this.addRenderableWidget(Button.builder(
-				Component.translatable("gui.neosim.npc.rename"), Button-> {
+				Component.translatable("gui.neosim.npc.rename"), btn-> {
 					currentPage = "rename";
 					showPage();
 				})
@@ -130,7 +130,7 @@ public class NPC extends Screen
 
 		// 族谱
 		this.addRenderableWidget(Button.builder(
-				Component.translatable("gui.neosim.npc.family.open"), Button-> {
+				Component.translatable("gui.neosim.npc.family.open"), btn-> {
 					currentPage = "family";
 					showPage();
 				})
@@ -148,7 +148,7 @@ public class NPC extends Screen
 
 		// 返回
 		this.addRenderableWidget(Button.builder(
-				Component.translatable("gui.neosim.npc.back"), Button-> {
+				Component.translatable("gui.neosim.npc.back"), btn-> {
 					currentPage = "main";
 					showPage();
 				})
@@ -158,7 +158,7 @@ public class NPC extends Screen
 
 		// 复位视图
 		this.addRenderableWidget(Button.builder(
-				Component.translatable("gui.neosim.npc.family.reset"), Button-> {
+				Component.translatable("gui.neosim.npc.family.reset"), btn-> {
 					if (familyRenderer != null) familyRenderer.resetView();
 				})
 				.pos(rightX, startY + gap)
@@ -293,7 +293,7 @@ public class NPC extends Screen
 		if (skinPage > 0)
 		{
 			this.addRenderableWidget(Button.builder(
-					Component.translatable("gui.neosim.npc.skin.prevPage"), Button-> {
+					Component.translatable("gui.neosim.npc.skin.prevPage"), btn-> {
 						skinPage--;
 						showPage();
 					})
@@ -306,7 +306,7 @@ public class NPC extends Screen
 		if (skinPage < totalPages - 1)
 		{
 			this.addRenderableWidget(Button.builder(
-					Component.translatable("gui.neosim.npc.skin.nextPage"), Button-> {
+					Component.translatable("gui.neosim.npc.skin.nextPage"), btn-> {
 						skinPage++;
 						showPage();
 					})
@@ -338,7 +338,7 @@ public class NPC extends Screen
 
 		// 返回
 		this.addRenderableWidget(Button.builder(
-				Component.translatable("gui.neosim.npc.back"), Button-> {
+				Component.translatable("gui.neosim.npc.back"), btn-> {
 					currentPage = "main";
 					showPage();
 				})
@@ -380,7 +380,7 @@ public class NPC extends Screen
 
 		// 确认
 		buttonConfirmRename = Button.builder(
-				Component.translatable("gui.neosim.npc.rename.confirm"), Button-> {
+				Component.translatable("gui.neosim.npc.rename.confirm"), btn-> {
 					String newSurname = inputSurname.getValue().trim();
 					String newGivenName = inputGivenName.getValue().trim();
 					if (!newSurname.isEmpty() && !newGivenName.isEmpty())
@@ -404,7 +404,7 @@ public class NPC extends Screen
 
 		// 取消
 		this.addRenderableWidget(Button.builder(
-				Component.translatable("gui.neosim.npc.rename.cancel"), Button-> {
+				Component.translatable("gui.neosim.npc.rename.cancel"), btn-> {
 					currentPage = "main";
 					showPage();
 				})

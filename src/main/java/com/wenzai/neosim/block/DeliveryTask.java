@@ -90,17 +90,60 @@ public class DeliveryTask
 	}
 
 	// GUI 接口
-	public BlockPos boxPos() { return record.boxPos(); }
-	public DeliveryBoxPersistence.DeliveryBoxRecord record() { return record; }
-	public String cityName() { return cityName; }
-	public DeliveryState getState() { return state; }
-	public boolean isPaused() { return paused; }
-	public float getJobLevel() { return jobLevel; }
-	public String getWorkerName() { return record.worker() != null ? record.worker() : ""; }
-	public String getLastSkipReason() { return lastSkipReason; }
-	public Item getCarryItem() { return carryItem; }
-	public int getCarryCount() { return carryCount; }
-	public BlockPos getTargetSite() { return targetSite; }
+	public BlockPos boxPos()
+	{
+		return record.boxPos();
+	}
+
+	public DeliveryBoxPersistence.DeliveryBoxRecord record()
+	{
+		return record;
+	}
+
+	public String cityName()
+	{
+		return cityName;
+	}
+
+	public DeliveryState getState()
+	{
+		return state;
+	}
+
+	public boolean isPaused()
+	{
+		return paused;
+	}
+
+	public float getJobLevel()
+	{
+		return jobLevel;
+	}
+
+	public String getWorkerName()
+	{
+		return record.worker() != null ? record.worker() : "";
+	}
+
+	public String getLastSkipReason()
+	{
+		return lastSkipReason;
+	}
+
+	public Item getCarryItem()
+	{
+		return carryItem;
+	}
+
+	public int getCarryCount()
+	{
+		return carryCount;
+	}
+
+	public BlockPos getTargetSite()
+	{
+		return targetSite;
+	}
 
 	// 雇佣快递员
 	public void hireWorker(String name)

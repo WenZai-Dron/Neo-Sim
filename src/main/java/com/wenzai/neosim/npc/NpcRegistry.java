@@ -1,7 +1,8 @@
 package com.wenzai.neosim.npc;
 
-import javax.annotation.Nullable;
 import java.util.*;
+
+import javax.annotation.Nullable;
 
 // NPC索引：名字→已加载实体、城市→已加载实体集合。
 // 在 Entity.onAddedToWorld/onRemovedFromWorld 维护（见 Entity），改名时重挂键。
@@ -11,7 +12,9 @@ public final class NpcRegistry
 	private static final Map<String, Entity> BY_NAME = new HashMap<>();
 	private static final Map<String, Set<Entity>> BY_CITY = new HashMap<>();
 
-	private NpcRegistry() {}
+	private NpcRegistry()
+	{
+	}
 
 	public static void register(Entity npc)
 	{

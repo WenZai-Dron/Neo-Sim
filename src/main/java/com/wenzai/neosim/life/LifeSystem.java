@@ -1,5 +1,3 @@
-// 每日结算调度：所有生活机制统一从这里触发
-
 package com.wenzai.neosim.life;
 
 import com.mojang.logging.LogUtils;
@@ -32,14 +30,16 @@ public class LifeSystem
 	private static final int MINUTE_TICKS = 1200;
 	private static int minuteTimer = 0;
 
-	// C4：分钟分片相位（婚姻/生育交替分钟执行）
+	// 分钟分片相位（婚姻/生育交替分钟执行）
 	private static int minutePhase = 0;
 
 	// 秒计时
 	private static final int SECOND_TICKS = 20;
 	private static int secondTimer = 0;
 
-	private LifeSystem() {}
+	private LifeSystem()
+	{
+	}
 
 	// 每天早晨一次：逐城结算（城市只在有玩家在线时演化）
 	public static void onDayStart(ServerLevel level, int dayOfWeek)
@@ -116,7 +116,7 @@ public class LifeSystem
 			}
 		}
 
-		// C4：婚姻/生育等低实时性重活分片到不同分钟，避免每分钟全部挤在同一 tick
+		// 婚姻/生育等低实时性重活分片到不同分钟，避免每分钟全部挤在同一 tick
 		if (minutePhase % 2 == 1)
 		{
 			for (String city : CityManager.onlineCities(level))
@@ -148,7 +148,7 @@ public class LifeSystem
 		}
 	}
 
-	// 有家无业市民清晨按配置概率在家休息（C1：索引遍历全部已加载NPC）
+	// 有家无业市民清晨按配置概率在家休息（索引遍历全部已加载NPC）
 	private static void rollRestToday(ServerLevel level)
 	{
 		double restChance = restChance();

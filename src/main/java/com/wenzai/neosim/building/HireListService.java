@@ -22,7 +22,9 @@ public final class HireListService
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final int MAX_ENTRIES = 200;
 
-	private HireListService() {}
+	private HireListService()
+	{
+	}
 
 	// jobKind: 0=architect 1=farmer 2=miner 3=courier
 	public static List<HireEntry> collect(ServerLevel level, String city, int jobKind)

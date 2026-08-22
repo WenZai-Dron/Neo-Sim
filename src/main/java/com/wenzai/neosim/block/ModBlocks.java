@@ -40,19 +40,19 @@ public class ModBlocks
 					.noLootTable()          // 不掉落（EMPTY loot，datagen 校验自动跳过）
 					.noOcclusion()));       // 不遮挡
 
-	private static  <T extends Block> void registerBlockItems(String name, DeferredBlock<T> block)
+	private static <T extends Block> void registerBlockItems(String name, DeferredBlock<T> block)
 	{
 		ModItems.ITEMS.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
 	}
 
-	private  static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier<T> block) // 此处新增泛型
+	private static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier<T> block) // 此处新增泛型
 	{
 		DeferredBlock<T> blocks = BLOCKS.register(name, block);
 		registerBlockItems(name, blocks);
 		return blocks;
 	}
 
-	public  static void register(IEventBus eventBus)
+	public static void register(IEventBus eventBus)
 	{
 		BLOCKS.register(eventBus);
 	}

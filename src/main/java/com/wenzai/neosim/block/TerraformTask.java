@@ -91,16 +91,55 @@ public class TerraformTask
 	}
 
 	// GUI 读接口
-	public BlockPos boxPos() { return record.boxPos(); }
-	public TerraformPersistence.TerraformRecord record() { return record; }
-	public String cityName() { return cityName; }
-	public TerraformState getState() { return state; }
-	public boolean isPaused() { return paused; }
-	public float getJobLevel() { return jobLevel; }
-	public String getWorkerName() { return record.worker() != null ? record.worker() : ""; }
-	public int getProgress() { return processedIndex; }
-	public int getTotal() { return totalTargets; }
-	public TerraformPlan getPlan() { return TerraformPlan.valueOfSafe(record.plan()); }
+	public BlockPos boxPos()
+	{
+		return record.boxPos();
+	}
+
+	public TerraformPersistence.TerraformRecord record()
+	{
+		return record;
+	}
+
+	public String cityName()
+	{
+		return cityName;
+	}
+
+	public TerraformState getState()
+	{
+		return state;
+	}
+
+	public boolean isPaused()
+	{
+		return paused;
+	}
+
+	public float getJobLevel()
+	{
+		return jobLevel;
+	}
+
+	public String getWorkerName()
+	{
+		return record.worker() != null ? record.worker() : "";
+	}
+
+	public int getProgress()
+	{
+		return processedIndex;
+	}
+
+	public int getTotal()
+	{
+		return totalTargets;
+	}
+
+	public TerraformPlan getPlan()
+	{
+		return TerraformPlan.valueOfSafe(record.plan());
+	}
 
 	// 重启恢复：重新扫描目标并从头开始（扫描天然只收集剩余目标）
 	public void resetForRestore()

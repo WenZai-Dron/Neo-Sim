@@ -40,9 +40,10 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Supplier;
+
+import javax.annotation.Nullable;
 
 public class Entity extends PathfinderMob
 {

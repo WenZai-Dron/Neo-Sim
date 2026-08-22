@@ -24,7 +24,9 @@ import java.util.Set;
 
 public class Manage
 {
-	private Manage() {}
+	private Manage()
+	{
+	}
 
 	// 按城市人口（直接用 ModSavedData 内存人口，不再每次目录列举数文件）
 	public static short getPopulation(ServerLevel level, String cityName)
@@ -219,7 +221,9 @@ public class Manage
 			{
 				npc.setUUID(java.util.UUID.fromString(uuidStr));
 			}
-			catch (IllegalArgumentException ignored) {}
+			catch (IllegalArgumentException ignored)
+			{
+			}
 		}
 
 		// 恢复性别
@@ -473,7 +477,9 @@ public class Manage
 	// 生成第一个NPC
 	public static class NpcAdd
 	{
-		private NpcAdd() {}
+		private NpcAdd()
+		{
+		}
 
 		static void spawn(ServerLevel level)
 		{

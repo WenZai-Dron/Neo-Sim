@@ -1,5 +1,3 @@
-// 族谱
-
 package com.wenzai.neosim.life;
 
 import com.google.gson.JsonArray;
@@ -16,7 +14,9 @@ public class Genealogy
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	private Genealogy() {}
+	private Genealogy()
+	{
+	}
 
 	// 一名NPC的族谱数据
 	public record FamilyData(List<String> parents, List<String> children)
@@ -29,7 +29,9 @@ public class Genealogy
 
 	// 族谱节点（网络传输/渲染用）
 	public record FamilyNode(String name, String sex, String partner,
-							 List<String> parents, List<String> children) {}
+							 List<String> parents, List<String> children)
+	{
+	}
 
 	// 单棵树节点数上限（防异常数据撑爆 payload/渲染）
 	private static final int MAX_FAMILY_NODES = 50;

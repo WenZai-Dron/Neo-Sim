@@ -38,43 +38,52 @@ public class Run extends Screen
 		int btnW = this.width / 3;
 		int btnH = this.height / 13;
 
-		buttonNormal = Button.builder(Component.translatable("gui.neosim.run.buttonNormal"), Button -> {
+		buttonNormal = Button.builder(Component.translatable("gui.neosim.run.buttonNormal"), btn -> {
 			mode = 1;
 			buttonCreative.active = true;
 			buttonHardcore.active = true;
-			Button.active = false;
-			if ( mode != 0 ) { buttonClose.active = true; }
+			btn.active = false;
+			if ( mode != 0 )
+			{
+				buttonClose.active = true;
+			}
 		})
 				.pos(btnW, this.height / 3)
 				.size(btnW + this.width / 24, btnH)
 				.build();
 		this.addRenderableWidget(buttonNormal);
 
-		buttonCreative = Button.builder(Component.translatable("gui.neosim.run.buttonCreative"), Button -> {
+		buttonCreative = Button.builder(Component.translatable("gui.neosim.run.buttonCreative"), btn -> {
 			mode = 2;
 			buttonNormal.active = true;
 			buttonHardcore.active = true;
-			Button.active = false;
-			if ( mode != 0 ) { buttonClose.active = true; }
+			btn.active = false;
+			if ( mode != 0 )
+			{
+				buttonClose.active = true;
+			}
 		})
 				.pos(btnW, this.height / 2)
 				.size(btnW + this.width / 24, btnH)
 				.build();
 		this.addRenderableWidget(buttonCreative);
 
-		buttonHardcore = Button.builder(Component.translatable("gui.neosim.run.buttonHardcore"), Button -> {
+		buttonHardcore = Button.builder(Component.translatable("gui.neosim.run.buttonHardcore"), btn -> {
 			mode = 3;
 			buttonNormal.active = true;
 			buttonCreative.active = true;
-			Button.active = false;
-			if ( mode != 0 ) { buttonClose.active = true; }
+			btn.active = false;
+			if ( mode != 0 )
+			{
+				buttonClose.active = true;
+			}
 		})
 				.pos(btnW, this.height * 2 / 3)
 				.size(btnW + this.width / 24, btnH)
 				.build();
 		this.addRenderableWidget(buttonHardcore);
 
-		buttonClose = Button.builder(Component.translatable("gui.neosim.run.buttonClose"), Button -> {
+		buttonClose = Button.builder(Component.translatable("gui.neosim.run.buttonClose"), btn -> {
 			PacketDistributor.sendToServer(new ClientToServerPayloads.UpdatePayload(mode));
 			onClose();
 			Minecraft.getInstance().setScreen(new City());

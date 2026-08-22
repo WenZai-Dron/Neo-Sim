@@ -16,7 +16,9 @@ import java.util.Set;
 // 在任一 ControlBox 居民列表中，或档案仍带 home（残留）者，均不算无家。
 public final class HomelessListService
 {
-	private HomelessListService() {}
+	private HomelessListService()
+	{
+	}
 
 	public static List<String> collect(ServerLevel level, String city)
 	{

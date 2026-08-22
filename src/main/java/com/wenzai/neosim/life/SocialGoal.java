@@ -1,5 +1,3 @@
-// 串门社交AI
-
 package com.wenzai.neosim.life;
 
 import com.wenzai.neosim.Config;
@@ -23,7 +21,7 @@ public class SocialGoal extends Goal
 	private int stuckTicks;
 	private int repathTicks;
 
-	// C2：目标搜索缓存（每 SEARCH_INTERVAL tick 重搜；搭档失效/走远提前失效）
+	// 目标搜索缓存（每 SEARCH_INTERVAL tick 重搜；搭档失效/走远提前失效）
 	private static final int SEARCH_INTERVAL = 60;
 	private Entity searchResult;
 	private int lastSearchTick = Integer.MIN_VALUE;
@@ -155,7 +153,7 @@ public class SocialGoal extends Goal
 		npc.getNavigation().stop();
 	}
 
-	// 找对象（C2：结果缓存 + 城市索引，免每 tick AABB 查询与全服扫描）
+	// 找对象（结果缓存 + 城市索引，免每 tick AABB 查询与全服扫描）
 	private Entity findTarget()
 	{
 		if (!(npc.level() instanceof ServerLevel serverLevel)) return null;
@@ -203,7 +201,7 @@ public class SocialGoal extends Goal
 		}
 	}
 
-	// 社交寻找半径（C2：默认收窄到 16）
+	// 社交寻找半径（默认收窄到 16）
 	private static int socialRange()
 	{
 		try

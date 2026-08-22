@@ -81,13 +81,40 @@ public abstract class PlotTask
 	}
 
 	// GUI调用：接口
-	public BlockPos boxPos() { return record.boxPos(); }
-	public WorkBoxPersistence.WorkBoxRecord record() { return record; }
-	public String cityName() { return cityName; }
-	public PlotState getState() { return state; }
-	public boolean isPaused() { return paused; }
-	public float getJobLevel() { return jobLevel; }
-	public String getWorkerName() { return record.worker() != null ? record.worker() : ""; }
+	public BlockPos boxPos()
+	{
+		return record.boxPos();
+	}
+
+	public WorkBoxPersistence.WorkBoxRecord record()
+	{
+		return record;
+	}
+
+	public String cityName()
+	{
+		return cityName;
+	}
+
+	public PlotState getState()
+	{
+		return state;
+	}
+
+	public boolean isPaused()
+	{
+		return paused;
+	}
+
+	public float getJobLevel()
+	{
+		return jobLevel;
+	}
+
+	public String getWorkerName()
+	{
+		return record.worker() != null ? record.worker() : "";
+	}
 
 	// 雇佣工人
 	public void hireWorker(String name)

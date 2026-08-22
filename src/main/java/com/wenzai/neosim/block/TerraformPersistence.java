@@ -7,12 +7,13 @@ import net.minecraft.server.level.ServerLevel;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
-import javax.annotation.Nullable;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+
+import javax.annotation.Nullable;
 
 // 整地任务持久化：每城市 Terraform.json
 public class TerraformPersistence
@@ -39,7 +40,10 @@ public class TerraformPersistence
 					minX, minZ, maxX, maxZ, baselineY, null, false, 0, 0, "IDLE", placer);
 		}
 
-		public BlockPos boxPos() { return new BlockPos(bx, by, bz); }
+		public BlockPos boxPos()
+		{
+			return new BlockPos(bx, by, bz);
+		}
 
 		public TerraformRecord withWorker(String name)
 		{
@@ -258,8 +262,18 @@ public class TerraformPersistence
 			int bx = JsonUtil.clampX(boxPos.getX());
 			int by = JsonUtil.clampY(boxPos.getY());
 			int bz = JsonUtil.clampX(boxPos.getZ());
-			if (minX > maxX) { int t = minX; minX = maxX; maxX = t; }
-			if (minZ > maxZ) { int t = minZ; minZ = maxZ; maxZ = t; }
+			if (minX > maxX)
+			{
+				int t = minX;
+				minX = maxX;
+				maxX = t;
+			}
+			if (minZ > maxZ)
+			{
+				int t = minZ;
+				minZ = maxZ;
+				maxZ = t;
+			}
 			minX = JsonUtil.clampX(minX);
 			maxX = JsonUtil.clampX(maxX);
 			minZ = JsonUtil.clampX(minZ);
