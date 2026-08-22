@@ -1,4 +1,4 @@
-![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
+zh![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
 
 # Neo-Sim · 新模拟城市
 
@@ -29,8 +29,8 @@
 - 明确的地块范围 **显示** 光幕
 
 ### 多人游戏
-- **建造区域冲突检测**，同一区域不会重复建造，先到先得
-- 线程安全的建造引擎，防止高频请求炸服
+- **建造区域冲突检测**：同一区域不会重复建造，先到先得
+- **安全校验**：各操作按玩家限流，防止高频请求炸服
 
 ---
 
