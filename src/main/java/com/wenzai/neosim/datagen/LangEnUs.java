@@ -211,6 +211,7 @@ public class LangEnUs extends LanguageProvider
 		add("gui.neosim.FarmingBox.typeWHEAT","Wheat");
 		add("gui.neosim.FarmingBox.typeCARROT","Carrot");
 		add("gui.neosim.FarmingBox.typePOTATO","Potato");
+		add("gui.neosim.FarmingBox.useBoneMeal","Use Bone Meal");
 		add("gui.neosim.FarmingBox.livestock","Livestock");
 		add("gui.neosim.FarmingBox.industryPlant","Planting");
 		add("gui.neosim.FarmingBox.industryLivestock","Livestock");
@@ -255,7 +256,7 @@ public class LangEnUs extends LanguageProvider
 		add("gui.neosim.MiningBox.depth","Depth: mine down to y=%s");
 		add("gui.neosim.MiningBox.worker","Miner: %s");
 		add("gui.neosim.MiningBox.workerNone","No miner");
-		// Shared: workbox hire page (HireListPanel)
+
 		add("gui.neosim.hire.search","Search name");
 		add("gui.neosim.hire.searchHint","Type a name…");
 		add("gui.neosim.hire.minLevel","Min level");

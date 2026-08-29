@@ -4,7 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.*;
-import com.wenzai.neosim.compat.PhysicsWorld;
+import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.NpcGoals;

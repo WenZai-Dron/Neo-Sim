@@ -3,6 +3,8 @@ package com.wenzai.neosim.block;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.compat.crops.CropEntry;
+import com.wenzai.neosim.compat.crops.CropRegistry;
 import com.wenzai.neosim.npc.Entity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
@@ -15,6 +17,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -34,6 +37,20 @@ import java.util.stream.Collectors;
 public class FarmTask extends PlotTask
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
+
+	// 统一可种条目：原版枚举 或 模组作物（二选一）
+	private record Plantable(FarmType vanilla, CropEntry mod)
+	{
+		Item seed()
+		{
+			return vanilla != null ? seedOf(vanilla) : mod.seed();
+		}
+
+		Block plantBlock()
+		{
+			return vanilla != null ? cropOf(vanilla) : mod.plantBlock();
+		}
+	}
 
 	// 作物类型
 	public enum FarmType
@@ -75,6 +92,12 @@ public class FarmTask extends PlotTask
 
 	// 选中的作物组合
 	private List<FarmType> farmTypes;
+
+	// 选中的模组作物（自动检测，持久化为 MOD:<注册名> token）
+	private List<CropEntry> modCrops = List.of();
+
+	// 是否使用骨粉催熟（持久化为 BONEMEAL token）
+	private boolean useBoneMeal;
 
 	// 选中的牲畜
 	private List<LivestockType> livestockTypes = List.of(LivestockType.values());
@@ -124,6 +147,9 @@ public class FarmTask extends PlotTask
 	// 空轮歇息节流：整轮无动作后，10 tick（0.5 秒）才重扫一次田间（避免无谓的整田扫描）
 	private static final int IDLE_RESCAN_INTERVAL = 10;
 
+	// 骨粉催熟粒子事件 ID（原版 Level.levelEvent 2005 = 植物生长粒子+音效）
+	private static final int EVENT_PLANT_GROWTH = 2005;
+
 	// C6b：田间/畜牧循环每 tick 扫描格位上/物种操作上限（防单 tick 叠加风暴）
 	private static final int MAX_SCAN_PER_TICK = 64;
 
@@ -134,10 +160,14 @@ public class FarmTask extends PlotTask
 	private int herdTimer;
 
 	// C8：本轮「可选作物/树苗」缓存（refreshChests 时失效；整田扫描/逐格判断时只算一次，避免每格每物种 countItems 扫箱子）
-	private FarmType cachedPlantable;
+	private Plantable cachedPlantable;
 	private boolean plantableComputed;
 	private TreeType cachedTreePlantable;
 	private boolean treePlantableComputed;
+
+	// C8b：本轮骨粉可用缓存（refreshChests 时失效，整田扫描不再每格查箱子）
+	private boolean boneMealComputed;
+	private boolean boneMealAvailable;
 
 	// L10：游标原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
 	private int cursorRow;
@@ -175,6 +205,8 @@ public class FarmTask extends PlotTask
 	{
 		super(level, cityName, record);
 		this.farmTypes = parseFarmTypes(record.farmType());
+		this.modCrops = parseModCrops(record.farmType());
+		this.useBoneMeal = parseUseBoneMeal(record.farmType());
 		this.livestockTypes = parseLivestockTypes(record.farmType());
 		this.forestryTypes = parseForestryTypes(record.farmType());
 		// L10：游标改为任务内原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
@@ -195,6 +227,8 @@ public class FarmTask extends PlotTask
 	{
 		String normalized = normalizeFarmCsv(csv);
 		this.farmTypes = parseFarmTypes(normalized);
+		this.modCrops = parseModCrops(normalized);
+		this.useBoneMeal = parseUseBoneMeal(normalized);
 		this.livestockTypes = parseLivestockTypes(normalized);
 		this.forestryTypes = parseForestryTypes(normalized);
 		this.livestockIndex = 0;
@@ -263,7 +297,7 @@ public class FarmTask extends PlotTask
 		{
 			if (t != FarmType.LIVESTOCK) return true;
 		}
-		return false;
+		return !modCrops.isEmpty();
 	}
 
 	// 解析：逗号分隔标记
@@ -283,6 +317,16 @@ public class FarmTask extends PlotTask
 				}
 				if (tok.startsWith("FORESTRY"))
 				{
+					continue;
+				}
+				if (tok.startsWith("MOD:"))
+				{
+					// 模组作物走 parseModCrops，此处跳过避免误解析为 WHEAT
+					continue;
+				}
+				if (tok.startsWith("BONEMEAL"))
+				{
+					// 骨粉开关走 parseUseBoneMeal，此处跳过避免误解析为 WHEAT
 					continue;
 				}
 				FarmType t = FarmType.valueOfSafe(tok);
@@ -414,6 +458,25 @@ public class FarmTask extends PlotTask
 				first = false;
 				continue;
 			}
+			if (tok.startsWith("MOD:"))
+			{
+				// 模组作物：仍可检测到的保留，否则丢弃
+				if (CropRegistry.isKnown(tok.substring(4)))
+				{
+					if (!first) sb.append(",");
+					sb.append(tok);
+					first = false;
+				}
+				continue;
+			}
+			if (tok.startsWith("BONEMEAL"))
+			{
+				// 骨粉开关：保留
+				if (!first) sb.append(",");
+				sb.append("BONEMEAL");
+				first = false;
+				continue;
+			}
 			FarmType t = FarmType.valueOfSafe(tok);
 			if (cropOf(t) != null)
 			{
@@ -430,6 +493,46 @@ public class FarmTask extends PlotTask
 	public static String farmTypesToCsv(List<FarmType> types)
 	{
 		return types.stream().map(FarmType::name).collect(Collectors.joining(","));
+	}
+
+	// 解析模组作物（MOD:<种下方块注册名> 逗号分隔 token；未检测到的丢弃）
+	public static List<CropEntry> parseModCrops(String csv)
+	{
+		List<CropEntry> out = new ArrayList<>();
+		if (csv != null)
+		{
+			for (String s : csv.split(","))
+			{
+				String tok = s.trim();
+				if (!tok.startsWith("MOD:")) continue;
+				CropEntry e = CropRegistry.findByPlantBlockId(tok.substring(4));
+				if (e != null && !out.contains(e)) out.add(e);
+			}
+		}
+		return out;
+	}
+
+	// 当前选中的模组作物（GUI 显示用）
+	public List<CropEntry> getModCrops()
+	{
+		return modCrops;
+	}
+
+	// 是否启用骨粉催熟（GUI 显示用）
+	public boolean isUseBoneMeal()
+	{
+		return useBoneMeal;
+	}
+
+	// 解析骨粉开关（BONEMEAL token）
+	public static boolean parseUseBoneMeal(String csv)
+	{
+		if (csv == null) return false;
+		for (String s : csv.split(","))
+		{
+			if (s.trim().startsWith("BONEMEAL")) return true;
+		}
+		return false;
 	}
 
 	@Override
@@ -606,8 +709,14 @@ public class FarmTask extends PlotTask
 			// 该格当下是否有实际可干（缺种子格不算可干，快速跳过，不烧延迟）
 			boolean mature = bs.getBlock() instanceof CropBlock cb
 					&& cb.getAge(bs) >= cb.getMaxAge() && isSelectedCrop(bs.getBlock());
+			boolean canBonemeal = isSelectedCrop(bs.getBlock())
+					&& bs.getBlock() instanceof BonemealableBlock fertilizable
+					&& fertilizable.isValidBonemealTarget(level, pos, bs)
+					&& fertilizable.isBonemealSuccess(level, level.random, pos, bs)
+					&& hasBoneMeal();
 			boolean actionable = isRemovableVegetation(bs)
 					|| mature
+					|| canBonemeal
 					|| (bs.isAir() && isTillableSoil(below))
 					|| (bs.isAir() && below.is(Blocks.FARMLAND) && pickPlantable() != null);
 
@@ -669,6 +778,22 @@ public class FarmTask extends PlotTask
 				return;
 			}
 
+			// 未成熟作物：箱子里有骨粉则催熟加速（通用 BonemealableBlock，覆盖模组两阶段作物幼苗）
+			if (canBonemeal && bs.getBlock() instanceof BonemealableBlock fertilizable)
+			{
+				if (currentMode() != 2)
+				{
+					InventoryManager.extractItem(nearbyChests, Items.BONE_MEAL, 1);
+				}
+				fertilizable.performBonemeal(level, level.random, pos, bs);
+				level.levelEvent(EVENT_PLANT_GROWTH, pos, 0);
+				deductCredits(Config.WORK_FARM_CREDIT_PER_BLOCK.get());
+				gainXp();
+				roundActions++;
+				advanceCursor();
+				return;
+			}
+
 			// 空气格
 			if (bs.isAir())
 			{
@@ -713,10 +838,10 @@ public class FarmTask extends PlotTask
 					return;
 				}
 
-				// 种植：按轮转种选中作物里箱子里有种子的
+				// 种植：按轮转种选中作物里箱子里有种子的（模组作物种其种下方块，两阶段作物种幼苗）
 				if (hasCrops() && below.is(Blocks.FARMLAND))
 				{
-					FarmType toPlant = pickPlantable();
+					Plantable toPlant = pickPlantable();
 					if (toPlant == null)
 					{
 						// 全部缺种子：整体等待（游标冻结；正常不会走到，actionable 已排除）
@@ -726,9 +851,9 @@ public class FarmTask extends PlotTask
 					}
 					if (currentMode() != 2)
 					{
-						InventoryManager.extractItem(nearbyChests, seedOf(toPlant), 1);
+						InventoryManager.extractItem(nearbyChests, toPlant.seed(), 1);
 					}
-					level.setBlock(pos, cropOf(toPlant).defaultBlockState(), Block.UPDATE_ALL);
+					level.setBlock(pos, toPlant.plantBlock().defaultBlockState(), Block.UPDATE_ALL);
 					plantIndex++;
 					deductCredits(Config.WORK_FARM_CREDIT_PER_BLOCK.get());
 					gainXp();
@@ -1355,40 +1480,75 @@ public class FarmTask extends PlotTask
 	private void refreshChests()
 	{
 		nearbyChests = InventoryManager.findNearbyChests(level, boxPos());
-		// C8：箱子内容可能变化 → 作物/树苗缓存失效（下轮扫描重算一次）
+		// C8：箱子内容可能变化 → 作物/树苗/骨粉缓存失效（下轮扫描重算一次）
 		plantableComputed = false;
 		treePlantableComputed = false;
+		boneMealComputed = false;
 	}
 
-	// 该作物方块是否属于选中组合
+	// 该作物方块是否属于选中组合（模组作物覆盖种下与成熟目标两个方块，两阶段作物都认）
 	private boolean isSelectedCrop(Block b)
 	{
 		for (FarmType t : farmTypes)
 		{
 			if (cropOf(t) == b) return true;
 		}
+		for (CropEntry e : modCrops)
+		{
+			if (e.plantBlock() == b || e.matureBlock() == b) return true;
+		}
 		return false;
 	}
 
-	// 选中作物按种植游标轮转，取箱子里有种子的，全缺返回null（创造模式免种子）
-	private FarmType pickPlantable()
+	// 选中作物按种植游标轮转，取箱子里有种子的，全缺返回null（创造模式免种子）。
+	// 原版枚举与模组作物统一轮转；模组作物排除需水条目（如水稻）。
+	private Plantable pickPlantable()
 	{
 		// C8：本轮缓存一次（refreshChests 时失效），整田扫描/逐格判断不再每格每物种扫箱子
 		if (plantableComputed) return cachedPlantable;
 		plantableComputed = true;
 		cachedPlantable = null;
-		if (farmTypes.isEmpty()) return null;
-		for (int i = 0; i < farmTypes.size(); i++)
+		List<Plantable> plantables = plantables();
+		if (plantables.isEmpty()) return null;
+		for (int i = 0; i < plantables.size(); i++)
 		{
-			FarmType t = farmTypes.get((plantIndex + i) % farmTypes.size());
-			Item seed = seedOf(t);
+			Plantable p = plantables.get((plantIndex + i) % plantables.size());
+			Item seed = p.seed();
 			if (seed != null && (currentMode() == 2 || InventoryManager.countItems(nearbyChests, seed) > 0))
 			{
-				cachedPlantable = t;
-				return t;
+				cachedPlantable = p;
+				return p;
 			}
 		}
 		return null;
+	}
+
+	// 可种条目列表：选中原版作物 + 模组作物（排除需水条目）
+	private List<Plantable> plantables()
+	{
+		List<Plantable> out = new ArrayList<>();
+		for (FarmType t : farmTypes)
+		{
+			if (t != FarmType.LIVESTOCK) out.add(new Plantable(t, null));
+		}
+		for (CropEntry e : modCrops)
+		{
+			if (!e.needsWater()) out.add(new Plantable(null, e));
+		}
+		return out;
+	}
+
+	// 本轮是否允许使用骨粉催熟（开关开启且箱子有骨粉；创造模式免骨粉；refreshChests 时重算）
+	private boolean hasBoneMeal()
+	{
+		if (!useBoneMeal) return false;
+		if (!boneMealComputed)
+		{
+			boneMealComputed = true;
+			boneMealAvailable = currentMode() == 2
+					|| InventoryManager.countItems(nearbyChests, Items.BONE_MEAL) > 0;
+		}
+		return boneMealAvailable;
 	}
 
 	// 6 步格位：两树苗之间空 5 格，树冠 5×5 互不干扰

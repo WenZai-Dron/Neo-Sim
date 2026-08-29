@@ -7,6 +7,8 @@ import com.wenzai.neosim.block.PlotTask;
 import com.wenzai.neosim.block.WorkBoxPersistence;
 import com.wenzai.neosim.block.WorkPlotEngine;
 import com.wenzai.neosim.client.ClientDataHolder;
+import com.wenzai.neosim.compat.crops.CropEntry;
+import com.wenzai.neosim.compat.crops.CropRegistry;
 import com.wenzai.neosim.network.ClientToServerPayloads;
 import com.wenzai.neosim.storage.NpcData;
 import net.minecraft.client.Minecraft;
@@ -38,8 +40,10 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	private PlotTask task;
 	private int currentPage = 0;
 	private java.util.Set<FarmTask.FarmType> selectedCrops;
+	private java.util.Set<String> selectedModCrops;
 	private java.util.Set<FarmTask.LivestockType> selectedLivestock;
 	private java.util.Set<FarmTask.TreeType> selectedTrees;
+	private boolean useBoneMeal;
 
 	// 无任务时 worker 档案等级字段缓存（reload/refreshTask 时刷新，避免每帧读 JSON 文件）
 	private String cachedWorkerKey = "";
@@ -195,6 +199,8 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			addButton(998, cx - 50, height - 25, 100, 20,
 					Component.translatable(P + "apply"),
 					b -> applyCrops());
+			// 使用骨粉开关：确认按钮右侧（带图标）
+			addUseBoneMealCheckbox(cx + 56, height - 25);
 
 			// 目标页：种植业/畜牧业/林业 三列等间距（-210 / -40 / +130，整体偏左）
 			int left = cx - 210;
@@ -205,6 +211,15 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			{
 				addCropCheckbox(left, y, t);
 				y += 24;
+			}
+			// 模组作物列：自动检测的可种植作物（排除需水条目，如 FD 水稻）；防超屏最多 8 行
+			int modRows = 0;
+			for (CropEntry e : CropRegistry.plantable())
+			{
+				if (modRows >= 8 || y > height - 60) break;
+				addModCropCheckbox(left, y, e);
+				y += 24;
+				modRows++;
 			}
 			y = 80;
 			for (FarmTask.LivestockType t : FarmTask.LivestockType.values())
@@ -417,6 +432,20 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			crops.sort(java.util.Comparator.comparingInt(FarmTask.FarmType::ordinal));
 			sb.append(FarmTask.farmTypesToCsv(crops));
 		}
+		if (!selectedModCrops.isEmpty())
+		{
+			List<String> mods = new java.util.ArrayList<>(selectedModCrops);
+			mods.sort(String::compareTo);
+			if (sb.length() > 0) sb.append(",");
+			sb.append(mods.stream()
+					.map(m -> "MOD:" + m)
+					.collect(java.util.stream.Collectors.joining(",")));
+		}
+		if (useBoneMeal)
+		{
+			if (sb.length() > 0) sb.append(",");
+			sb.append("BONEMEAL");
+		}
 		if (!selectedLivestock.isEmpty())
 		{
 			List<FarmTask.LivestockType> ls = new java.util.ArrayList<>(selectedLivestock);
@@ -489,6 +518,31 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		addRenderableWidget(cb);
 	}
 
+	// 模组作物复选框（标签用种子物品显示名，无翻译键）
+	private void addModCropCheckbox(int x, int y, CropEntry entry)
+	{
+		String id = entry.plantBlockId().toString();
+		Checkbox cb = Checkbox.builder(new ItemStack(entry.seed()).getHoverName(), font)
+				.pos(x, y).selected(selectedModCrops.contains(id))
+				.onValueChange((c, v) ->
+				{
+					if (v) selectedModCrops.add(id);
+					else selectedModCrops.remove(id);
+				})
+				.build();
+		addRenderableWidget(cb);
+	}
+
+	// 使用骨粉开关复选框
+	private void addUseBoneMealCheckbox(int x, int y)
+	{
+		Checkbox cb = Checkbox.builder(Component.translatable(P + "useBoneMeal"), font)
+				.pos(x, y).selected(useBoneMeal)
+				.onValueChange((c, v) -> useBoneMeal = v)
+				.build();
+		addRenderableWidget(cb);
+	}
+
 	// 牲畜复选框
 	private void addLivestockCheckbox(int x, int y, FarmTask.LivestockType t)
 	{
@@ -523,6 +577,12 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 				record != null ? record.farmType() : null);
 		selectedCrops = new java.util.HashSet<>(parsed);
 		selectedCrops.remove(FarmTask.FarmType.LIVESTOCK);
+		selectedModCrops = new java.util.HashSet<>();
+		for (CropEntry e : FarmTask.parseModCrops(record != null ? record.farmType() : null))
+		{
+			selectedModCrops.add(e.plantBlockId().toString());
+		}
+		this.useBoneMeal = FarmTask.parseUseBoneMeal(record != null ? record.farmType() : null);
 		boolean hasLivestock = parsed.contains(FarmTask.FarmType.LIVESTOCK);
 		selectedLivestock = hasLivestock
 				? new java.util.HashSet<>(FarmTask.parseLivestockTypes(record.farmType()))
@@ -609,6 +669,19 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			Component label = Component.translatable(P + "type" + t.name());
 			gfx.renderItem(cropIcon(t), left + 30 + font.width(label) + 4, y + 2, 16);
 			y += 24;
+		}
+		// 模组作物图标：与复选框同列同节奏（种子物品图标）
+		for (CropEntry e : CropRegistry.plantable())
+		{
+			ItemStack icon = new ItemStack(e.seed());
+			gfx.renderItem(icon, left + 30 + font.width(icon.getHoverName()) + 4, y + 2, 16);
+			y += 24;
+		}
+		// 使用骨粉图标：确认按钮右侧，与复选框对齐
+		{
+			Component label = Component.translatable(P + "useBoneMeal");
+			gfx.renderItem(new ItemStack(Items.BONE_MEAL),
+					width / 2 + 56 + 30 + font.width(label) + 4, height - 23, 16);
 		}
 		y = 80;
 		for (FarmTask.LivestockType t : FarmTask.LivestockType.values())

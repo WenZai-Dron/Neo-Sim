@@ -248,6 +248,7 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.FarmingBox.typeWHEAT","小麦");
 		add("gui.neosim.FarmingBox.typeCARROT","胡萝卜");
 		add("gui.neosim.FarmingBox.typePOTATO","土豆");
+		add("gui.neosim.FarmingBox.useBoneMeal","使用骨粉");
 		add("gui.neosim.FarmingBox.livestock","牲畜");
 		add("gui.neosim.FarmingBox.industryPlant","种植业");
 		add("gui.neosim.FarmingBox.industryLivestock","畜牧业");
@@ -292,7 +293,7 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.MiningBox.depth","深度：挖至 y=%s");
 		add("gui.neosim.MiningBox.worker","矿工：%s");
 		add("gui.neosim.MiningBox.workerNone","暂无矿工");
-		// 公共：工作盒雇佣页（HireListPanel）
+
 		add("gui.neosim.hire.search","搜索名字");
 		add("gui.neosim.hire.searchHint","输入名字…");
 		add("gui.neosim.hire.minLevel","最小等级");
