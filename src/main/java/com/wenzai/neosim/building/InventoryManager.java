@@ -31,7 +31,7 @@ public class InventoryManager
 	{
 	}
 
-	// 搜索与模盒相邻的6个面；大箱子（合并双人箱）把另一半一并纳入
+	// 搜索与模盒紧邻的6个面；大箱子（合并双人箱）把另一半一并纳入
 	public static List<ChestBlockEntity> findNearbyChests(ServerLevel level, BlockPos center)
 	{
 		Set<BlockPos> seen = new HashSet<>();

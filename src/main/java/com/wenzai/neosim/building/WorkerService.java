@@ -9,7 +9,7 @@ import com.wenzai.neosim.block.DeliveryEngine;
 import com.wenzai.neosim.block.DeliveryTask;
 import com.wenzai.neosim.block.PlotTask;
 import com.wenzai.neosim.block.WorkPlotEngine;
-import com.wenzai.neosim.compat.PhysicsWorld;
+import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.storage.CityManager;
