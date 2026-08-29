@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.block.MarkerManager;
 import com.wenzai.neosim.block.ModBlocks;
 import com.wenzai.neosim.client.gui.HUD;
+import com.wenzai.neosim.compat.sable.PhysicsAdapterRegistry;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.network.ClientToServerPayloads;
 import com.wenzai.neosim.network.ServerToClientPayloads;
@@ -60,6 +61,9 @@ public class NeoSim
 	{
 		// 注册用于模组加载的 commonSetup 方法
 		modEventBus.addListener(this::commonSetup);
+
+		// 注册物理模组适配器（Sable 等）：仅加载已安装模组的适配器，保持零硬依赖
+		PhysicsAdapterRegistry.init();
 
 		// 此处进行注册
 		ModItems.register(modEventBus);
@@ -471,6 +475,9 @@ public class NeoSim
 	{
 		// 在服务器启动时执行一些操作
 		LOGGER.info("HELLO from server starting");
+
+		// 预热模组作物注册表（懒加载扫描放启动时，避免首个农业盒放置时卡顿）
+		com.wenzai.neosim.compat.crops.CropRegistry.all();
 
 		// 服务器初始化蓝图
 		com.wenzai.neosim.schematic.SchematicRegistry.getInstance().initializeAsync();

@@ -56,6 +56,9 @@ public class NeoSimClient
 		NeoSim.LOGGER.info("HELLO FROM CLIENT SETUP");
 		NeoSim.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
 
+		// 预热模组作物注册表（客户端）：GUI 模组作物栏依赖检测结果
+		com.wenzai.neosim.compat.crops.CropRegistry.all();
+
 		SchematicRegistry.getInstance().initializeAsync();
 	}
 
