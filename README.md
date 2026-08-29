@@ -1,6 +1,8 @@
-zh![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
+![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
 
 # Neo-Sim · 新模拟城市
+
+## **_一切皆模拟_**
 
 基于 **NeoForge 1.21.1** 开发的模拟城市类模组，致敬并延续 [Sim-U-Kraft](https://www.mcmod.cn/class/489.html)，并接入 [投影](https://www.mcmod.cn/class/2261.html)支持的格式
 
@@ -11,6 +13,10 @@ zh![neo_sim_logo.png](src/main/resources/assets/neo_sim/neo_sim_logo.png)
 ### 自动化建筑
 - 保留 **155 项 Sim-U-Kraft 旧版社区建筑**
 - 支持 **投影** 文件，导入自定义建筑
+
+### 自动化生产
+- **工作盒**自动作业：农业）、矿业、快递、整地
+- **模组作物自动兼容**：农夫乐事等模组的农作物自动进入农业盒，无需手动配置
 
 ### NPC
 - 多样化市民样貌，支持导入自定义皮肤
