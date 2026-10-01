@@ -28,8 +28,8 @@ For the algorithmic work behind it, see [算法改进](算法改进.md) (Chinese
 
 | Block | Feature |
 | --- | --- |
-| **Delivery Box** `delivery_box` | When a build site runs short of materials, a courier fetches them from the station chest, walks them to the site, pays on drop-off, and announces it city-wide |
-| **Rebuild Box** `rebuild_box` | Place it next to a building's Control Box; it reads the adjacent chests for materials and automatically restores any blueprint block that has gone missing (turned to air); **no NPC, no GUI**, and it force-loads the building's chunks so rebuilding continues even when nobody is around |
+| **Delivery Box** `delivery_box` | When a build site runs short of materials, a courier fetches them from the station chest, walks them to the site, and pays on drop-off |
+| **Rebuild Box** `rebuild_box` | Place it next to a building's Control Box; it reads the adjacent chests for materials and automatically restores any missing blocks; **no architect needed** |
 
 ### NPC
 
