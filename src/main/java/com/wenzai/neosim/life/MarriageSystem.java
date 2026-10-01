@@ -23,6 +23,7 @@ public class MarriageSystem
 
 	private MarriageSystem()
 	{
+
 	}
 
 	// 每分钟扫描城市内关系对
@@ -182,7 +183,8 @@ public class MarriageSystem
 			updated.add(r.name().equals(oldName) ? new Resident(newName, r.x(), r.y(), r.z()) : r);
 		}
 		ControlBoxRecord updatedRec = new ControlBoxRecord(rec.x(), rec.y(), rec.z(), rec.schematicName(),
-				rec.originX(), rec.originY(), rec.originZ(), rec.placerName(), rec.author(),
+				rec.originX(), rec.originY(), rec.originZ(), rec.rotation(), rec.mirror(), rec.facing(),
+				rec.placerName(), rec.author(),
 				rec.livingPoints(), updated, rec.rent());
 		ControlBoxPersistence.updateRecord(level, city, updatedRec);
 	}

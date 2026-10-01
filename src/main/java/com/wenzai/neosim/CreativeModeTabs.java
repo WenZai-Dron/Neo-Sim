@@ -21,6 +21,7 @@ public class CreativeModeTabs
 					.title(Component.translatable("itemGroup.neosim_tab"))
 					.displayItems((itemDisplayParameters, output) -> {
 
+						// 此处加入
 						output.accept(ModBlocks.BUILDING_CONSTRUCTOR);
 						output.accept(ModBlocks.CONTROL_BOX);
 						output.accept(ModBlocks.MARKER);
@@ -28,6 +29,7 @@ public class CreativeModeTabs
 						output.accept(ModBlocks.MINING_BOX);
 						output.accept(ModBlocks.DELIVERY_BOX);
 						output.accept(ModBlocks.LIVING_POINT);
+						output.accept(ModBlocks.REBUILD_BOX);
 
 					}).build());
 

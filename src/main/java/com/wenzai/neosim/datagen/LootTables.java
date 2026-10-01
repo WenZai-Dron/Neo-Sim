@@ -24,6 +24,7 @@ public class LootTables extends BlockLootSubProvider
 		dropSelf(ModBlocks.FARMING_BOX.get());
 		dropSelf(ModBlocks.MINING_BOX.get());
 		dropSelf(ModBlocks.DELIVERY_BOX.get());
+		dropSelf(ModBlocks.REBUILD_BOX.get());
 	}
 
 	@Override

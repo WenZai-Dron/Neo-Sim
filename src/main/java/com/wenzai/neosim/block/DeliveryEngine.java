@@ -40,6 +40,11 @@ public class DeliveryEngine
 	public static void createDeliveryBox(ServerLevel level, BlockPos pos, String placer)
 	{
 		if (level.getServer() == null) return;
+		if (!com.wenzai.neosim.Config.WORKBOX_ENABLED.get())
+		{
+			LOGGER.info("NeoSim-DeliveryEngine: skip delivery box {} — workbox disabled", pos);
+			return;
+		}
 		String city = cityOf(level, placer);
 		if (city.isEmpty())
 		{
@@ -132,6 +137,9 @@ public class DeliveryEngine
 		maybeRestoreTasks(level);
 		cleanupClaims();
 		com.wenzai.neosim.building.ConstructionEngine.invalidateWaitingCache();
+
+		// 总开关关闭：暂停快递派送（任务保留，重新打开后继续）
+		if (!com.wenzai.neosim.Config.WORKBOX_ENABLED.get()) return;
 
 		List<DeliveryTask> snapshot;
 		synchronized (tasks)

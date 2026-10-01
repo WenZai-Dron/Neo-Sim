@@ -21,6 +21,7 @@ public class BlockStates extends BlockStateProvider
 		simpleBlockWithItem(ModBlocks.FARMING_BOX.get(), cubeAll(ModBlocks.FARMING_BOX.get()));
 		simpleBlockWithItem(ModBlocks.MINING_BOX.get(), cubeAll(ModBlocks.MINING_BOX.get()));
 		simpleBlockWithItem(ModBlocks.DELIVERY_BOX.get(), cubeAll(ModBlocks.DELIVERY_BOX.get()));
+		simpleBlockWithItem(ModBlocks.REBUILD_BOX.get(), cubeAll(ModBlocks.REBUILD_BOX.get()));
 
 		simpleBlockWithItem(ModBlocks.MARKER.get(), models().getExistingFile(modLoc("block/marker")));
 		simpleBlockWithItem(ModBlocks.LIVING_POINT.get(), cubeAll(ModBlocks.LIVING_POINT.get()));

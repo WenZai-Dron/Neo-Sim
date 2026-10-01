@@ -1,0 +1,541 @@
+package com.wenzai.neosim.block;
+
+import com.mojang.logging.LogUtils;
+import com.wenzai.neosim.Config;
+import com.wenzai.neosim.building.BuildingInstance;
+import com.wenzai.neosim.building.ConstructionEngine;
+import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.compat.sable.PhysicsWorld;
+import com.wenzai.neosim.schematic.BlueprintPlacement;
+import com.wenzai.neosim.schematic.LightweightBlockContainer;
+import com.wenzai.neosim.schematic.MaterialCalculator;
+import com.wenzai.neosim.schematic.SchematicData;
+import com.wenzai.neosim.schematic.SchematicRegistry;
+import com.wenzai.neosim.schematic.SpecialMarker;
+import com.wenzai.neosim.storage.ModSavedData;
+import com.wenzai.neosim.storage.SimData;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
+import org.slf4j.Logger;
+
+import java.util.List;
+import java.util.Map;
+
+// 重建任务：不需要 NPC，按蓝图把"应为方块却成了空气"的格子补回去。
+// - 与控制箱同一套落地链（BlueprintPlacement），保证与建造时位置/朝向一致
+// - 材料从重建盒相邻箱子取；创造模式（mode 2）完全不耗材
+// - 两轮：先普通方块，后依附方块（火把/梯子等），支撑就位后再放
+// - 一轮无缺失后进入冷却，冷却结束重扫（被破坏了就再补）
+public class RebuildTask
+{
+	private static final Logger LOGGER = LogUtils.getLogger();
+
+	// 区块还没加载好时的重试间隔（tick）：小建筑首轮可能一 tick 就跑完，别急着判定完成
+	private static final int CHUNK_RETRY_TICKS = 20;
+
+	// 旧记录（缺落地几何）定向探测的采样格数上限；蓝图体积超过它时按 stride 抽样
+	private static final int PROBE_SAMPLE_CELLS = 8000;
+
+	public enum State
+	{
+		RUNNING,
+		WAITING,
+		UNBOUND,
+		// 重建完成，任务终止（盒子方块保留，不再工作）
+		COMPLETE;
+
+		public static State valueOfSafe(String name)
+		{
+			for (State s : values())
+			{
+				if (s.name().equals(name)) return s;
+			}
+			return RUNNING;
+		}
+	}
+
+	private final ServerLevel level;
+	private final String cityName;
+	private RebuildBoxPersistence.RebuildRecord record;
+	private final BlockPos boxPos;
+	private final BlockPos controlBoxPos;
+	private final BlockPos originPos;
+
+	private State state = State.RUNNING;
+
+	// 解析后的蓝图与落地几何
+	private boolean prepared;
+	private boolean chunksRegistered;
+	private boolean destroyed;
+	private SchematicData schematic;
+	private LightweightBlockContainer container;
+	private BlueprintPlacement placement;
+	private int sx, sy, sz, totalVolume;
+
+	// 扫描游标：phase 0 = 普通方块，phase 1 = 依附方块
+	private int cursor;
+	private int phase;
+
+	// 本轮进度：放过方块 / 被材料卡住 / 实际检查过多少格。
+	// 整轮既没进度又不缺料且确实扫过方块 -> 无事可做，终止
+	private int placedInCycle;
+	private boolean blockedInCycle;
+	private int checkedInCycle;
+	private int retryTicks;
+
+	// 本轮累计应付费用（每 tick 只落盘一次）
+	private double creditDue;
+
+	// 解析/探测出的落地几何（写回记录用）
+	private String geoRotation = "NONE";
+	private String geoMirror = "NONE";
+	private String geoFacing;
+
+	public RebuildTask(ServerLevel level, String cityName, RebuildBoxPersistence.RebuildRecord record)
+	{
+		this.level = level;
+		this.cityName = cityName;
+		this.record = record;
+		this.boxPos = record.boxPos();
+		this.controlBoxPos = record.controlBoxPos();
+		this.originPos = record.originPos();
+		this.state = State.valueOfSafe(record.state());
+	}
+
+	public BlockPos boxPos()
+	{
+		return boxPos;
+	}
+
+	public String cityName()
+	{
+		return cityName;
+	}
+
+	public RebuildBoxPersistence.RebuildRecord record()
+	{
+		return record;
+	}
+
+	public State getState()
+	{
+		return state;
+	}
+
+	// 服务器停止前的收尾
+	public void onBoxDestroyed()
+	{
+		destroyed = true;
+		RebuildChunkLoader.release(level, boxPos);
+	}
+
+	public void tick()
+	{
+		if (destroyed) return;
+
+		if (!prepare())
+		{
+			return;
+		}
+
+		// 同栋建筑正在建造：让行，避免两个系统抢同一格
+		for (BuildingInstance b : ConstructionEngine.getActiveBuildings())
+		{
+			if (b.getControlBoxPos() != null && b.getControlBoxPos().equals(originPos)) return;
+		}
+
+		// 区块尚未加载完（小建筑首轮可能一 tick 跑完）：稍后再试，别急着判定完成
+		if (retryTicks > 0)
+		{
+			retryTicks--;
+			return;
+		}
+
+		byte mode = ModSavedData.get(level).getMode();
+		List<ChestBlockEntity> chests = null;
+
+		// 扫描与放置共用一个每 tick 上限（rebuildPerTick）
+		int scanBudget = Config.REBUILD_PER_TICK.get();
+		int placeBudget = scanBudget;
+		int scanned = 0;
+		int placed = 0;
+		boolean materialShort = false;
+
+		Map<BlockPos, SpecialMarker> markers = schematic.getSpecialMarkers();
+
+		while (scanned < scanBudget && placed < placeBudget)
+		{
+			if (cursor >= totalVolume)
+			{
+				// 一轮结束：先依附方块轮，再把整轮结果结算
+				if (phase == 0)
+				{
+					phase = 1;
+					cursor = 0;
+					continue;
+				}
+				phase = 0;
+				cursor = 0;
+
+				boolean progress = placedInCycle > 0;
+				boolean blocked = blockedInCycle;
+				boolean checked = checkedInCycle > 0;
+				placedInCycle = 0;
+				blockedInCycle = false;
+				checkedInCycle = 0;
+
+				if (blocked)
+				{
+					// 缺料：保持任务存活，等箱子补料后下一轮继续（不终止）
+					setState(State.WAITING);
+					return;
+				}
+				if (!checked)
+				{
+					// 一格都没读到：区块还没加载好，稍后重试
+					retryTicks = CHUNK_RETRY_TICKS;
+					return;
+				}
+				if (progress)
+				{
+					// 本轮有进展：再走一轮确认是否补完
+					continue;
+				}
+				// 整轮既没缺料、也放不下任何方块：无事可做，终止任务
+				setState(State.COMPLETE);
+				return;
+			}
+
+			int idx = cursor++;
+			scanned++;
+
+			int layer = idx / (sx * sz);
+			int depth = (idx / sx) % sz;
+			int width = idx % sx;
+
+			// 特殊标记优先：生活点等标记不落方块
+			SpecialMarker marker = markers.isEmpty() ? null
+					: markers.get(new BlockPos(width, layer, depth));
+			BlockState desired;
+			if (marker != null)
+			{
+				desired = marker.toBlockState();
+				if (desired == null) continue;
+			}
+			else
+			{
+				desired = container.get(width, layer, depth);
+				if (desired.isAir()) continue;
+			}
+
+			// 两轮：先非依附，后依附
+			if (MaterialCalculator.isAttachedBlock(desired) != (phase == 1)) continue;
+
+			BlockPos world = placement.pos(width, layer, depth);
+			if (world.equals(boxPos)) continue;
+
+			// 只处理已加载区块（强制加载由 RebuildChunkLoader 负责）
+			if (!level.hasChunkAt(world)) continue;
+			checkedInCycle++;
+
+			BlockState current = PhysicsWorld.getBlockState(level, world);
+			// 只补"应为方块、现为空气"的格子；已有任何方块（含玩家手改）一律尊重现状
+			if (!current.isAir()) continue;
+
+			BlockState toPlace = placement.state(desired);
+			if (toPlace == null) continue;
+
+			// 依附方块：支撑尚未就位则跳过，下一轮再试（不白扣材料）
+			if (MaterialCalculator.isAttachedBlock(desired) && !toPlace.canSurvive(level, world)) continue;
+
+			// 材料：创造模式（2）完全不耗材，与建筑模盒一致
+			if (mode != 2 && MaterialCalculator.requiresMaterial(desired, mode))
+			{
+				if (chests == null)
+				{
+					chests = InventoryManager.findNearbyChests(level, boxPos);
+				}
+				Item item = desired.getBlock().asItem();
+				if (!takeOne(chests, item))
+				{
+					materialShort = true;
+					blockedInCycle = true;
+					break;
+				}
+			}
+
+			PhysicsWorld.setBlock(level, world, toPlace, Block.UPDATE_ALL);
+
+			// 双箱合并：纯 setBlock 不会触发原版合并逻辑
+			if (toPlace.getBlock() instanceof ChestBlock)
+			{
+				mergeDoubleChest(world, toPlace);
+			}
+
+			if (mode != 2)
+			{
+				creditDue += Config.REBUILD_CREDIT_PER_BLOCK.get();
+			}
+
+			placed++;
+			placedInCycle++;
+		}
+
+		if (placed > 0)
+		{
+			setState(State.RUNNING);
+			flushCredit();
+		}
+		else if (materialShort)
+		{
+			setState(State.WAITING);
+		}
+		else
+		{
+			setState(State.RUNNING);
+		}
+	}
+
+	// 解析蓝图与落地几何（含旧记录的定向探测）；失败则保持 UNBOUND 等待下次重试
+	private boolean prepare()
+	{
+		if (prepared) return true;
+
+		if (!(level.getBlockState(controlBoxPos).getBlock() instanceof ControlBox))
+		{
+			setState(State.UNBOUND);
+			return false;
+		}
+
+		if (schematic == null)
+		{
+			SchematicData sd = SchematicRegistry.getInstance().get(record.schematicName());
+			if (sd == null) return false;
+			schematic = sd;
+			container = sd.getBlockContainer();
+			sx = container.getSizeX();
+			sy = container.getSizeY();
+			sz = container.getSizeZ();
+			totalVolume = container.getTotalVolume();
+			if (sx <= 0 || sy <= 0 || sz <= 0) return false;
+		}
+
+		ensureChunks();
+
+		if (placement == null)
+		{
+			placement = resolvePlacement();
+			if (placement == null)
+			{
+				setState(State.UNBOUND);
+				return false;
+			}
+			// 探测出的几何写回记录，重启后不再探测
+			record = record.withGeometry(geoRotation, geoMirror, geoFacing);
+			RebuildBoxPersistence.updateRecord(level, cityName, record);
+		}
+
+		prepared = true;
+		setState(State.RUNNING);
+		return true;
+	}
+
+	// 用粗略包围盒强制加载建筑区块（覆盖所有旋转/镜像/朝向可能落点）
+	private void ensureChunks()
+	{
+		if (chunksRegistered) return;
+		chunksRegistered = true;
+		int r = Math.max(sx, sz) + 2;
+		BlockPos a = originPos.offset(-r, -sy - 2, -r);
+		BlockPos b = originPos.offset(r, sy + 2, r);
+		// 连同重建盒与控制箱所在区块一起纳入，保证下面 getBlockState 不会触发隐式加载
+		BlockPos min = new BlockPos(
+				Math.min(a.getX(), Math.min(b.getX(), Math.min(boxPos.getX(), controlBoxPos.getX()))),
+				Math.min(a.getY(), Math.min(b.getY(), Math.min(boxPos.getY(), controlBoxPos.getY()))),
+				Math.min(a.getZ(), Math.min(b.getZ(), Math.min(boxPos.getZ(), controlBoxPos.getZ()))));
+		BlockPos max = new BlockPos(
+				Math.max(a.getX(), Math.max(b.getX(), Math.max(boxPos.getX(), controlBoxPos.getX()))),
+				Math.max(a.getY(), Math.max(b.getY(), Math.max(boxPos.getY(), controlBoxPos.getY()))),
+				Math.max(a.getZ(), Math.max(b.getZ(), Math.max(boxPos.getZ(), controlBoxPos.getZ()))));
+		RebuildChunkLoader.register(level, boxPos, min, max);
+	}
+
+	private BlueprintPlacement resolvePlacement()
+	{
+		Rotation rotation = parseRotation(record.rotation());
+		Mirror mirror = parseMirror(record.mirror());
+		Direction facing = parseFacing(record.facing());
+
+		geoRotation = rotation.name();
+		geoMirror = mirror.name();
+		geoFacing = facing != null ? facing.name() : null;
+
+		if (facing != null)
+		{
+			return new BlueprintPlacement(schematic.frame(), sx, sz, originPos, facing, mirror, rotation);
+		}
+
+		// 旧记录无朝向：枚举 4 朝向 × 2 镜像 × 4 旋转，按"蓝图非空位在世界上有多少仍是同种方块"打分
+		BlueprintPlacement best = null;
+		int bestScore = -1;
+		Direction bestFacing = null;
+		Mirror bestMirror = Mirror.NONE;
+		Rotation bestRotation = Rotation.NONE;
+		int stride = Math.max(1, totalVolume / PROBE_SAMPLE_CELLS);
+		for (Direction f : new Direction[]{Direction.SOUTH, Direction.EAST, Direction.NORTH, Direction.WEST})
+		{
+			for (Mirror m : new Mirror[]{Mirror.NONE, Mirror.LEFT_RIGHT})
+			{
+				for (Rotation rt : Rotation.values())
+				{
+					BlueprintPlacement p = new BlueprintPlacement(schematic.frame(), sx, sz, originPos, f, m, rt);
+					int score = scorePlacement(p, stride);
+					if (score > bestScore)
+					{
+						bestScore = score;
+						best = p;
+						bestFacing = f;
+						bestMirror = m;
+						bestRotation = rt;
+					}
+				}
+			}
+		}
+		geoFacing = bestFacing != null ? bestFacing.name() : null;
+		geoMirror = bestMirror.name();
+		geoRotation = bestRotation.name();
+		if (bestScore <= 0)
+		{
+			LOGGER.warn("NeoSim-RebuildTask: cannot infer geometry for '{}' at {} — rebuild idle",
+					record.schematicName(), boxPos);
+			return null;
+		}
+		LOGGER.info("NeoSim-RebuildTask: inferred geometry for '{}' at {} (score {})",
+				record.schematicName(), boxPos, bestScore);
+		return best;
+	}
+
+	private int scorePlacement(BlueprintPlacement p, int stride)
+	{
+		int score = 0;
+		int tested = 0;
+		for (int idx = 0; idx < totalVolume; idx += stride)
+		{
+			int layer = idx / (sx * sz);
+			int depth = (idx / sx) % sz;
+			int width = idx % sx;
+			BlockState desired = container.get(width, layer, depth);
+			if (desired.isAir()) continue;
+			BlockPos world = p.pos(width, layer, depth);
+			if (!level.hasChunkAt(world)) continue;
+			tested++;
+			BlockState current = level.getBlockState(world);
+			if (!current.isAir() && current.getBlock() == p.state(desired).getBlock())
+			{
+				score++;
+			}
+		}
+		return tested == 0 ? -1 : score;
+	}
+
+	private void flushCredit()
+	{
+		if (creditDue <= 0) return;
+		double amount = creditDue;
+		creditDue = 0;
+		try
+		{
+			SimData.CityData data = SimData.CityData.read(level, cityName);
+			double now = Math.max(0.0, data.credit() - amount);
+			SimData.CityData.write(level, cityName, data.withCredit(now));
+			ModSavedData.get(level).syncCityToClients(level, cityName);
+		}
+		catch (Exception e)
+		{
+			LOGGER.error("NeoSim-RebuildTask: credit deduction failed", e);
+		}
+	}
+
+	// 双箱合并：相邻同朝向的 SINGLE 箱子互设 LEFT/RIGHT
+	private void mergeDoubleChest(BlockPos pos, BlockState state)
+	{
+		if (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) return;
+		Direction facing = state.getValue(ChestBlock.FACING);
+		for (int i = 0; i < 2; i++)
+		{
+			Direction dir = i == 0 ? facing.getClockWise() : facing.getCounterClockWise();
+			BlockPos partnerPos = pos.relative(dir);
+			BlockState partner = PhysicsWorld.getBlockState(level, partnerPos);
+			if (partner.is(state.getBlock())
+					&& partner.getValue(ChestBlock.TYPE) == ChestType.SINGLE
+					&& partner.getValue(ChestBlock.FACING) == facing)
+			{
+				ChestType thisType = i == 0 ? ChestType.LEFT : ChestType.RIGHT;
+				PhysicsWorld.setBlock(level, pos, state.setValue(ChestBlock.TYPE, thisType), 3);
+				PhysicsWorld.setBlock(level, partnerPos,
+						partner.setValue(ChestBlock.TYPE, thisType.getOpposite()), 3);
+				return;
+			}
+		}
+	}
+
+	private static boolean takeOne(List<ChestBlockEntity> chests, Item item)
+	{
+		if (chests.isEmpty()) return false;
+		if (InventoryManager.countItems(chests, item) <= 0) return false;
+		return InventoryManager.extractItem(chests, item, 1) > 0;
+	}
+
+	private void setState(State s)
+	{
+		if (state == s && s.name().equals(record.state())) return;
+		state = s;
+		record = record.withState(s.name());
+	}
+
+	private static Rotation parseRotation(String s)
+	{
+		try
+		{
+			return Rotation.valueOf(s);
+		}
+		catch (Exception e)
+		{
+			return Rotation.NONE;
+		}
+	}
+
+	private static Mirror parseMirror(String s)
+	{
+		try
+		{
+			return Mirror.valueOf(s);
+		}
+		catch (Exception e)
+		{
+			return Mirror.NONE;
+		}
+	}
+
+	private static Direction parseFacing(String s)
+	{
+		if (s == null || s.isEmpty()) return null;
+		try
+		{
+			return Direction.valueOf(s);
+		}
+		catch (Exception e)
+		{
+			return null;
+		}
+	}
+}

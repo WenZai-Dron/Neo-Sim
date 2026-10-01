@@ -166,9 +166,12 @@ public class ConstructionTask
 			}
 		}
 
-		// 夜晚
+		// 夜晚 / 休息时间：全体下班，工人可以自由走动
 		if (isNightTime())
 		{
+			resolveBuilderNpc();
+			if (builderNpc != null) builderNpc.setStayPut(false);
+
 			if (isWorkerOnShift())
 			{
 				goOffWork();
@@ -261,6 +264,10 @@ public class ConstructionTask
 		// 等待材料
 		if (currentState == BuildingInstance.BuildState.WAITING_FOR_RESOURCES)
 		{
+			// 待料：工人原地不动（不逃离玩家/怪物）；每 tick 重申，防解冻/重注册后漏掉
+			resolveBuilderNpc();
+			if (builderNpc != null) builderNpc.setStayPut(true);
+
 			long nowMs = System.currentTimeMillis();
 			if (nowMs - lastWaitCheck < WAITING_CHECK_DELAY) return;
 			lastWaitCheck = nowMs;
@@ -272,6 +279,10 @@ public class ConstructionTask
 				building.setState(currentState);
 				lastNotifiedMissingItem = null;
 				lastMissingMaterial = null;
+
+				// 材料补足：解除待命，恢复工作AI
+				resolveBuilderNpc();
+				if (builderNpc != null) builderNpc.setStayPut(false);
 
 				// 材料补足后抬手
 				animStartTime = System.currentTimeMillis();
@@ -837,8 +848,11 @@ public class ConstructionTask
 					building.getSchematicName(), boxPos);
 			return;
 		}
+		// 落地几何一并登记：重建模盒靠它把蓝图还原到世界（旧记录缺省由重建盒做定向探测）
 		ControlBoxPersistence.ControlBoxRecord rec = ControlBoxPersistence.ControlBoxRecord.of(
 				boxPos, building.getControlBoxPos(), building.getSchematicName(),
+				building.getRotation().name(), building.getMirror().name(),
+				building.getFacing() != null ? building.getFacing().name() : null,
 				building.getPlacerName(), building.getAuthor(),
 				livingPointsOf(building));
 
@@ -1447,6 +1461,8 @@ public class ConstructionTask
 		resolveBuilderNpc();
 		if (builderNpc != null)
 		{
+			// 休息时间：解除待命，允许自己走回家
+			builderNpc.setStayPut(false);
 			BlockPos home = homePosition();
 			if (home != null) builderNpc.setMoveTarget(home);
 		}

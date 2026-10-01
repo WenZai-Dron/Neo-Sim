@@ -68,6 +68,17 @@ public class Recipes extends RecipeProvider implements IConditionBuilder
 				.unlockedBy(getHasName(Blocks.CHEST), has(Blocks.CHEST))
 				.save(recipeOutput);
 
+		// 重建模盒
+		ShapedRecipeBuilder.shaped(RecipeCategory.BUILDING_BLOCKS, ModBlocks.REBUILD_BOX)
+				.pattern("XXX")
+				.pattern("YZY")
+				.pattern("YYY")
+				.define('X', ItemTags.PLANKS)
+				.define('Y', Blocks.COBBLESTONE)
+				.define('Z', ModBlocks.BUILDING_CONSTRUCTOR)
+				.unlockedBy(getHasName(ModBlocks.BUILDING_CONSTRUCTOR), has(ModBlocks.BUILDING_CONSTRUCTOR))
+				.save(recipeOutput);
+
 		super.buildRecipes(recipeOutput);
 	}
 }

@@ -30,6 +30,7 @@ public class LangZhCn extends LanguageProvider
 		add(ModBlocks.FARMING_BOX.get(), "农业盒");
 		add(ModBlocks.MINING_BOX.get(), "矿业盒");
 		add(ModBlocks.DELIVERY_BOX.get(), "快递盒");
+		add(ModBlocks.REBUILD_BOX.get(), "重建模盒");
 		add(ModBlocks.LIVING_POINT.get(), "生活点");
 
 		add("gui.neosim.DeliveryBox.title","快递盒");
@@ -234,9 +235,20 @@ public class LangZhCn extends LanguageProvider
 
 		add("config.neosim.deliveryCreditPerUnit","每件材料送达扣款");
 		add("config.neosim.deliveryChunkRadius","快递员区块窗口半径");
+		add("config.neosim.workboxEnabled","快递盒 / 重建模盒 总开关");
+		add("config.neosim.rebuildPerTick","重建模盒：每 tick 处理上限");
+		add("config.neosim.rebuildMaxChunks","重建模盒：强制加载区块上限");
+		add("config.neosim.rebuildCreditPerBlock","重建模盒：每补一块扣款");
+		add("neo_sim.configuration.workbox","工作盒总开关");
+		add("neo_sim.configuration.workbox.button","工作盒总开关");
+		add("neo_sim.configuration.workbox.tooltip","同时开启/关闭快递盒与重建模盒");
 		add("neo_sim.configuration.delivery","快递盒");
 		add("neo_sim.configuration.delivery.button","快递盒");
 		add("neo_sim.configuration.delivery.tooltip","每件送达扣款、滚动区块窗口半径");
+
+		add("neo_sim.configuration.rebuild","重建模盒");
+		add("neo_sim.configuration.rebuild.button","重建模盒");
+		add("neo_sim.configuration.rebuild.tooltip","每 tick 处理上限、强制加载区块上限、每块扣款；重建完成后自动终止任务");
 
 		add("config.neosim.announceSpawn","入城公告");
 		add("config.neosim.announceDeathTemplate","死亡公告模板");
@@ -709,6 +721,19 @@ public class LangZhCn extends LanguageProvider
 		add("msg.neosim.terraform.scanEmpty","§e该地块内没有可整地的目标");
 		add("msg.neosim.terraform.complete","§e整地完成！");
 		add("msg.neosim.terraform.missingMaterial","§c整地缺料：%s，请放入模盒旁的箱子");
+
+		// 重建模盒
+		add("msg.neosim.workbox.disabled","§e该工作盒已在配置中关闭");
+		add("msg.neosim.rebuild.noControlBox","§e请把重建模盒放在已登记的建筑控制箱旁");
+		add("msg.neosim.rebuild.noSchematic","§c蓝图不存在：%s");
+		add("msg.neosim.rebuild.bound","§a重建模盒已绑定：%s");
+		add("msg.neosim.rebuild.unbound","§e重建模盒：未绑定（请放在控制箱旁）");
+		add("msg.neosim.rebuild.idle","§e重建模盒：已完成或未绑定（重放可再次工作）");
+		add("msg.neosim.rebuild.status","§e重建模盒：%s（%s）");
+		add("msg.neosim.rebuild.state.running","运行中");
+		add("msg.neosim.rebuild.state.waiting","缺料，等待箱子补充");
+		add("msg.neosim.rebuild.state.complete","已完成");
+		add("msg.neosim.rebuild.state.unbound","未绑定");
 		add("msg.neosim.preview.overlap","§c无法放置：区域与已有建筑重叠");
 		add("msg.neosim.payload.rateLimited","§c请稍后再试");
 		add("msg.neosim.payload.invalidPlan","§c无效的整地方案");

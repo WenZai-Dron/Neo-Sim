@@ -24,6 +24,13 @@ For the algorithmic work behind it, see [算法改进](算法改进.md) (Chinese
 - **Workboxes** do the work for you: farming, mining, delivery, and land clearing
 - **Automatic mod-crop compatibility**: crops from Farmer's Delight and similar mods feed into the farming box with no manual setup
 
+### Signature Blocks
+
+| Block | Feature |
+| --- | --- |
+| **Delivery Box** `delivery_box` | When a build site runs short of materials, a courier fetches them from the station chest, walks them to the site, pays on drop-off, and announces it city-wide |
+| **Rebuild Box** `rebuild_box` | Place it next to a building's Control Box; it reads the adjacent chests for materials and automatically restores any blueprint block that has gone missing (turned to air); **no NPC, no GUI**, and it force-loads the building's chunks so rebuilding continues even when nobody is around |
+
 ### NPC
 
 - A wide variety of citizen appearances, with support for imported custom skins

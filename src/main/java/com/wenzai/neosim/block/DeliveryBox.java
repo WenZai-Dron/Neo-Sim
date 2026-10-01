@@ -1,7 +1,9 @@
 package com.wenzai.neosim.block;
 
+import com.wenzai.neosim.Config;
 import com.wenzai.neosim.client.ClientBlockInteractions;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
@@ -28,6 +30,11 @@ public class DeliveryBox extends Block
 		super.setPlacedBy(level, pos, state, placer, stack);
 		if (!level.isClientSide && placer instanceof Player player)
 		{
+			if (!Config.WORKBOX_ENABLED.get())
+			{
+				player.sendSystemMessage(Component.translatable("msg.neosim.workbox.disabled"));
+				return;
+			}
 			DeliveryEngine.createDeliveryBox((ServerLevel) level, pos, player.getName().getString());
 		}
 	}

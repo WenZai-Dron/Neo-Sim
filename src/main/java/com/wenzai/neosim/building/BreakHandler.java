@@ -40,6 +40,11 @@ public class BreakHandler
 			// 双保险：标记棒被破坏立即注销（正常玩家破坏已由 Marker.onDestroyedByPlayer 触发）
 			MarkerManager.onRemoved(level, pos);
 		}
+		else if (event.getState().getBlock() instanceof RebuildBox)
+		{
+			// 双保险：重建盒被破坏立即取消任务（正常玩家破坏已由 RebuildBox.onDestroyedByPlayer 触发）
+			RebuildBoxEngine.removeAt(level, pos);
+		}
 	}
 
 	// 爆炸炸掉工作盒/快递盒：同样清理任务与工人，否则NPC会保持工作AI永不恢复
@@ -57,6 +62,10 @@ public class BreakHandler
 			else if (b instanceof DeliveryBox)
 			{
 				DeliveryEngine.removeBoxAt(level, pos);
+			}
+			else if (b instanceof RebuildBox)
+			{
+				RebuildBoxEngine.removeAt(level, pos);
 			}
 			else if (b instanceof Marker)
 			{
@@ -100,7 +109,15 @@ public class BreakHandler
 		// 清理已选蓝图缓存
 		if (FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT)
 		{
-			ClientBlockInteractions.clearSelectedAt(pos);
+			try
+			{
+				ClientBlockInteractions.clearSelectedAt(pos);
+			}
+			catch (LinkageError e)
+			{
+				// 客户端类不可加载（开发期类文件正在重编译 / 客户端安装不完整）：跳过，别拖垮服务端 tick
+				LOGGER.warn("NeoSim-BreakHandler: clearSelectedAt skipped at {} ({})", pos, e.toString());
+			}
 		}
 
 		// 删除控制箱记录：已放置的控制箱方块保留，右键不可交互；居民失去家

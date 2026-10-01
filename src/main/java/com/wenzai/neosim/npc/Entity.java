@@ -401,8 +401,11 @@ public class Entity extends PathfinderMob
 	// 走向工地的寻路目标
 	private NpcGoals.MoveToSiteGoal moveToSiteGoal;
 
-	// 敌对生物逃离目标
+	// 安全AI：逃离敌对生物（顺带躲玩家）；最高优先级
 	private AvoidEntityGoal<LivingEntity> fleeHostileGoal;
+
+	// 工地待料：原地待命（只停住，不停安全AI）；休息时间由调用方解除
+	private boolean stayPut;
 
 	// 当前寻路目标，避免每tick重复设置重置卡住检测
 	private BlockPos currentMoveTarget;
@@ -827,6 +830,9 @@ public class Entity extends PathfinderMob
 		{
 			// 解冻时重新注册AI
 			registerGoals();
+			// 仍在工作：重新裁剪成工作AI（registerGoals 是完整AI，会带回闲逛/社交）
+			BlockPos site = getAssignedSite();
+			if (site != null) assignToSite(site);
 		}
 	}
 
@@ -904,10 +910,16 @@ public class Entity extends PathfinderMob
 		{
 			prevBuildAnim = getBuildAnim();
 		}
-		else if (tickCount % 100 == 0)
+		else
 		{
-			// 自愈检查：站点方块已不存在时解除工作状态（见 selfHealStaleSite）
-			selfHealStaleSite();
+			// 休息时间自动解除工地待命：NPC 可以自由走动（回家/在家附近溜达）
+			if (stayPut && isRestingNow()) stayPut = false;
+
+			if (tickCount % 100 == 0)
+			{
+				// 自愈检查：站点方块已不存在时解除工作状态（见 selfHealStaleSite）
+				selfHealStaleSite();
+			}
 		}
 		super.tick();
 	}
@@ -1099,11 +1111,13 @@ public class Entity extends PathfinderMob
 	{
 		this.goalSelector.addGoal(0, new FloatGoal(this));
 
-		// 敌对生物 + 玩家逃离（L8：合并为一个 AvoidEntityGoal，一次 8 格扫描按 predicate 分流，代替两个独立目标）
+		// 安全AI放最高级（0）：敌对生物一律逃；玩家也逃，但工地待料时只躲怪不躲玩家（防乱走）。
+		// L8：合并为一个 AvoidEntityGoal，一次 8 格扫描按 predicate 分流，代替两个独立目标
 		this.fleeHostileGoal = new AvoidEntityGoal<>(this, LivingEntity.class,
-				e -> e.getType().getCategory() == MobCategory.MONSTER || e instanceof Player,
+				e -> e.getType().getCategory() == MobCategory.MONSTER
+						|| (e instanceof Player && !isPlayerAvoidBlocked()),
 				8.0F, 0.6D, 0.8D, e -> true);
-		this.goalSelector.addGoal(1, fleeHostileGoal);
+		this.goalSelector.addGoal(0, fleeHostileGoal);
 		this.moveToSiteGoal = new NpcGoals.MoveToSiteGoal(this, 0.6D);
 		this.goalSelector.addGoal(1, moveToSiteGoal);
 		this.goalSelector.addGoal(2, new NpcGoals.GoHomeGoal(this, 0.5D));
@@ -1124,8 +1138,9 @@ public class Entity extends PathfinderMob
 		siteCacheValid = true;
 		cachedAssignedSite = site;
 
-		// 有工作：今日不休息
+		// 有工作：今日不休息；新岗位不继承待命状态
 		setRestToday(false);
+		this.stayPut = false;
 
 		// 寻路目标尚未注册（如从NBT加载时）则先注册
 		if (this.moveToSiteGoal == null)
@@ -1174,9 +1189,29 @@ public class Entity extends PathfinderMob
 		getNavigation().stop();
 	}
 
+	// 工地待料待命：停住不动。安全AI不摘（最高级，怪物照样逃）；只屏蔽"躲玩家"这一条。
+	// 休息时间不算待命：不拦寻路，NPC 可以自由走动
+	public void setStayPut(boolean v)
+	{
+		this.stayPut = v;
+		if (v && !isRestingNow()) getNavigation().stop();
+	}
+
+	public boolean isStayPut()
+	{
+		return stayPut;
+	}
+
+	// 工地待料且非休息时间：玩家不再触发逃离（避免工人被送料的玩家吓得乱走）
+	private boolean isPlayerAvoidBlocked()
+	{
+		return stayPut && !isRestingNow();
+	}
+
 	// 解雇NPC，恢复AI
 	public void releaseFromSite()
 	{
+		this.stayPut = false;
 		getPersistentData().remove(KEY_ASSIGNED_SITE_X);
 		getPersistentData().remove(KEY_ASSIGNED_SITE_Y);
 		getPersistentData().remove(KEY_ASSIGNED_SITE_Z);

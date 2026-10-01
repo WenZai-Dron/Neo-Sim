@@ -215,6 +215,18 @@ public class Config
 		BUILDER.pop();
 	}
 
+	// 工作盒总开关：同时作用于快递盒与重建模盒
+	static
+	{
+		BUILDER.push("workbox");
+
+		WORKBOX_ENABLED = BUILDER
+				.translation("config.neosim.workboxEnabled")
+				.define("enabled", true);
+
+		BUILDER.pop();
+	}
+
 	// 快递盒
 	static
 	{
@@ -229,6 +241,26 @@ public class Config
 		DELIVERY_CHUNK_RADIUS = BUILDER
 				.translation("config.neosim.deliveryChunkRadius")
 				.defineInRange("deliveryChunkRadius", 1, 0, 8);
+
+		BUILDER.pop();
+
+		// 重建模盒：与快递盒是两个方块，配置单列一段（同在 neo-sim.toml）
+		BUILDER.push("rebuild");
+
+		// 每 tick 处理上限：扫描与放置共用（总开关见 [workbox]）
+		REBUILD_PER_TICK = BUILDER
+				.translation("config.neosim.rebuildPerTick")
+				.defineInRange("rebuildPerTick", 16, 1, 4096);
+
+		// 强制加载区块数上限（整栋建筑全部区块；超出只加载距盒最近的）
+		REBUILD_MAX_CHUNKS = BUILDER
+				.translation("config.neosim.rebuildMaxChunks")
+				.defineInRange("rebuildMaxChunks", 256, 1, 8192);
+
+		// 每补一块扣款（0=免费；创造模式不扣）
+		REBUILD_CREDIT_PER_BLOCK = BUILDER
+				.translation("config.neosim.rebuildCreditPerBlock")
+				.defineInRange("rebuildCreditPerBlock", 0.0, 0.0, 100.0);
 
 		BUILDER.pop();
 
@@ -456,6 +488,18 @@ public class Config
 
 	// 快递盒：快递员滚动区块窗口半径（区块数）
 	public static final ModConfigSpec.IntValue DELIVERY_CHUNK_RADIUS;
+
+	// 工作盒总开关（快递盒 + 重建模盒）
+	public static final ModConfigSpec.BooleanValue WORKBOX_ENABLED;
+
+	// 重建模盒：每 tick 处理上限（扫描 + 放置共用）
+	public static final ModConfigSpec.IntValue REBUILD_PER_TICK;
+
+	// 重建模盒：强制加载区块数上限
+	public static final ModConfigSpec.IntValue REBUILD_MAX_CHUNKS;
+
+	// 重建模盒：每补一块扣款
+	public static final ModConfigSpec.DoubleValue REBUILD_CREDIT_PER_BLOCK;
 
 	// 整地：每块费用
 	public static final ModConfigSpec.DoubleValue TERRAFORM_CREDIT_PER_BLOCK;

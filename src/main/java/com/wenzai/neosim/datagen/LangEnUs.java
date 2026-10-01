@@ -21,6 +21,7 @@ public class LangEnUs extends LanguageProvider
 		add(ModBlocks.FARMING_BOX.get(),  "Farming Box");
 		add(ModBlocks.MINING_BOX.get(), "Mining Box");
 		add(ModBlocks.DELIVERY_BOX.get(), "Delivery Box");
+		add(ModBlocks.REBUILD_BOX.get(), "Rebuild Box");
 		add(ModBlocks.LIVING_POINT.get(), "Living Point");
 
 
@@ -225,9 +226,20 @@ public class LangEnUs extends LanguageProvider
 
 		add("config.neosim.deliveryCreditPerUnit","Credit per item delivered");
 		add("config.neosim.deliveryChunkRadius","Courier chunk window radius");
+		add("config.neosim.workboxEnabled","Delivery / Rebuild master switch");
+		add("config.neosim.rebuildPerTick","Rebuild Box: actions per tick");
+		add("config.neosim.rebuildMaxChunks","Rebuild Box: max force-loaded chunks");
+		add("config.neosim.rebuildCreditPerBlock","Rebuild Box: credit per block");
+		add("neo_sim.configuration.workbox","Workbox master switch");
+		add("neo_sim.configuration.workbox.button","Workbox master switch");
+		add("neo_sim.configuration.workbox.tooltip","Enables or disables both the Delivery Box and the Rebuild Box");
 		add("neo_sim.configuration.delivery","Delivery");
 		add("neo_sim.configuration.delivery.button","Delivery");
 		add("neo_sim.configuration.delivery.tooltip","Per-item delivery cost and courier chunk window radius");
+
+		add("neo_sim.configuration.rebuild","Rebuild Box");
+		add("neo_sim.configuration.rebuild.button","Rebuild Box");
+		add("neo_sim.configuration.rebuild.tooltip","Actions per tick, force-load chunk cap, credit per block; the task ends automatically once rebuilding is done");
 
 		add("config.neosim.announceSpawn","Arrival announcement");
 		add("config.neosim.announceDeathTemplate","Death announcement template");
@@ -700,6 +712,19 @@ public class LangEnUs extends LanguageProvider
 		add("msg.neosim.terraform.scanEmpty","§eNothing to terraform inside this plot");
 		add("msg.neosim.terraform.complete","§eTerraforming complete!");
 		add("msg.neosim.terraform.missingMaterial","§cTerraforming is short of %s — put it in the chest next to the constructor");
+
+		// Rebuild Box
+		add("msg.neosim.workbox.disabled","§eThis workbox is disabled in the config");
+		add("msg.neosim.rebuild.noControlBox","§ePlace the Rebuild Box next to a registered Control Box");
+		add("msg.neosim.rebuild.noSchematic","§cBlueprint not found: %s");
+		add("msg.neosim.rebuild.bound","§aRebuild Box bound: %s");
+		add("msg.neosim.rebuild.unbound","§eRebuild Box: not bound (place it next to a Control Box)");
+		add("msg.neosim.rebuild.idle","§eRebuild Box: finished or not bound (replace it to run again)");
+		add("msg.neosim.rebuild.status","§eRebuild Box: %s (%s)");
+		add("msg.neosim.rebuild.state.running","running");
+		add("msg.neosim.rebuild.state.waiting","waiting for materials");
+		add("msg.neosim.rebuild.state.complete","finished");
+		add("msg.neosim.rebuild.state.unbound","unbound");
 		add("msg.neosim.preview.overlap","§cCannot place: area overlaps an existing building");
 		add("msg.neosim.payload.rateLimited","§cPlease wait before trying again");
 		add("msg.neosim.payload.invalidPlan","§cInvalid terraform plan");

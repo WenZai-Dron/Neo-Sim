@@ -286,7 +286,15 @@ public class ConstructionEngine
 					// GUI已选蓝图缓存清理
 					if (FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT)
 					{
-						ClientBlockInteractions.clearSelectedAt(conPos);
+						try
+						{
+							ClientBlockInteractions.clearSelectedAt(conPos);
+						}
+						catch (LinkageError e)
+						{
+							LOGGER.warn("NeoSim-ConstructionEngine: clearSelectedAt skipped at {} ({})",
+									conPos, e.toString());
+						}
 					}
 				}
 

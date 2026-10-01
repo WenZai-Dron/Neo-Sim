@@ -21,7 +21,7 @@ public class ModBlocks
 	public static final DeferredBlock<Block> BUILDING_CONSTRUCTOR =
 			registerBlocks("building_constructor", () -> new BuildingConstructor(BlockBehaviour.Properties.of().strength(0.5F)));
 	public static final DeferredBlock<Block> CONTROL_BOX =
-			registerBlocks("control_box", () -> new ControlBox(BlockBehaviour.Properties.of().strength(2.5F)
+			registerBlocks("control_box", () -> new ControlBox(BlockBehaviour.Properties.of().strength(2.5F, 3_600_000.0F)
 					.noLootTable()));
 	public static final DeferredBlock<Block> MARKER =
 			registerBlocks("marker", () -> new Marker(BlockBehaviour.Properties.of().strength(0.5F)
@@ -32,6 +32,9 @@ public class ModBlocks
 			registerBlocks("mining_box", () -> new MiningBox(BlockBehaviour.Properties.of().strength(0.5F)));
 	public static final DeferredBlock<Block> DELIVERY_BOX =
 			registerBlocks("delivery_box", () -> new DeliveryBox(BlockBehaviour.Properties.of().strength(0.5F)));
+	public static final DeferredBlock<Block> REBUILD_BOX =
+			registerBlocks("rebuild_box", () -> new RebuildBox(BlockBehaviour.Properties.of().strength(0.5F)));
+	
 	// 生活点：可被替换（作者随手覆盖）、无碰撞（放站立点不挡路）、瞬破（易移除）、不掉落、不遮挡
 	public static final DeferredBlock<Block> LIVING_POINT =
 			registerBlocks("living_point", () -> new Block(BlockBehaviour.Properties.of()

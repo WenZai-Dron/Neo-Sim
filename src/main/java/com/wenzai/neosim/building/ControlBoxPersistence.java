@@ -66,25 +66,33 @@ public class ControlBoxPersistence
 		return false;
 	}
 
-	// 控制箱记录：位置<->建筑信息（含生活点与居民）
+	// 控制箱记录：位置<->建筑信息（含生活点与居民 / 落地几何）
+	// 落地几何（rotation/mirror/facing）供"重建模盒"还原蓝图到世界的映射；
+	// 旧存档缺这三个字段时读取为 NONE/NONE/null，由重建盒做定向探测兜底。
 	public record ControlBoxRecord(int x, int y, int z, String schematicName,
 								   int originX, int originY, int originZ,
+								   String rotation, String mirror, String facing,
 								   String placerName, String author,
 								   List<BlockPos> livingPoints, List<Resident> residents,
 								   double rent)
 	{
 		public static ControlBoxRecord of(BlockPos box, BlockPos origin, String schematicName,
+										  String rotation, String mirror, String facing,
 										  String placerName, String author, List<BlockPos> livingPoints)
 		{
 			return new ControlBoxRecord(box.getX(), box.getY(), box.getZ(), schematicName,
-					origin.getX(), origin.getY(), origin.getZ(), placerName, author,
-					livingPoints, new ArrayList<>(), 0.0);
+					origin.getX(), origin.getY(), origin.getZ(),
+					rotation == null ? "NONE" : rotation,
+					mirror == null ? "NONE" : mirror,
+					facing,
+					placerName, author, livingPoints, new ArrayList<>(), 0.0);
 		}
 
 		// 定价后返回新记录
 		public ControlBoxRecord withRent(double rent)
 		{
 			return new ControlBoxRecord(x, y, z, schematicName, originX, originY, originZ,
+					rotation, mirror, facing,
 					placerName, author, livingPoints, residents, rent);
 		}
 
@@ -96,6 +104,13 @@ public class ControlBoxPersistence
 		public BlockPos originPos()
 		{
 			return new BlockPos(originX, originY, originZ);
+		}
+
+		// 是否带可信的落地几何：facing 是关键（.txt 映射完全依赖它）
+		public boolean hasGeometry()
+		{
+			return facing != null && !facing.isEmpty()
+					&& rotation != null && mirror != null;
 		}
 	}
 
@@ -199,6 +214,43 @@ public class ControlBoxPersistence
 		catch (Exception e)
 		{
 			LOGGER.error("NeoSim-ControlBoxPersistence: removeAt failed", e);
+		}
+		return null;
+	}
+
+	// 跨城市按控制箱位置查找（重建盒绑定用）：返回记录 + 所属城市
+	public record Located(ControlBoxRecord record, String city)
+	{
+	}
+
+	@Nullable
+	public static Located findRecordAnywhere(ServerLevel level, BlockPos pos)
+	{
+		Path dataDir = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
+		if (!level.getServer().isDedicatedServer())
+		{
+			dataDir = dataDir.resolve(level.getServer().getWorldData().getLevelName());
+		}
+		if (!Files.isDirectory(dataDir)) return null;
+
+		try (Stream<Path> dirs = Files.list(dataDir))
+		{
+			for (Path dir : dirs.filter(Files::isDirectory).toList())
+			{
+				Path file = dir.resolve("ControlBox.json");
+				if (!Files.exists(file)) continue;
+				for (ControlBoxRecord r : readRecords(file))
+				{
+					if (r.boxPos().equals(pos))
+					{
+						return new Located(r, dir.getFileName().toString());
+					}
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			LOGGER.error("NeoSim-ControlBoxPersistence: findRecordAnywhere failed", e);
 		}
 		return null;
 	}
@@ -321,6 +373,10 @@ public class ControlBoxPersistence
 		obj.addProperty("originX", r.originX());
 		obj.addProperty("originY", r.originY());
 		obj.addProperty("originZ", r.originZ());
+		// 落地几何（旧版无此字段，读取端按 NONE/NONE/null 兜底）
+		obj.addProperty("rotation", r.rotation() != null ? r.rotation() : "NONE");
+		obj.addProperty("mirror", r.mirror() != null ? r.mirror() : "NONE");
+		if (r.facing() != null) obj.addProperty("facing", r.facing());
 		obj.addProperty("placerName", r.placerName());
 		obj.addProperty("author", r.author());
 
@@ -383,6 +439,14 @@ public class ControlBoxPersistence
 				}
 			}
 
+			// 落地几何（旧记录缺省：NONE/NONE/null，重建盒会做定向探测）
+			String rotation = obj.has("rotation") && !obj.get("rotation").isJsonNull()
+					? obj.get("rotation").getAsString() : "NONE";
+			String mirror = obj.has("mirror") && !obj.get("mirror").isJsonNull()
+					? obj.get("mirror").getAsString() : "NONE";
+			String facing = obj.has("facing") && !obj.get("facing").isJsonNull()
+					? obj.get("facing").getAsString() : null;
+
 			// 防删改：坐标钳制
 			return new ControlBoxRecord(
 					JsonUtil.clampX(obj.get("x").getAsInt()),
@@ -392,6 +456,7 @@ public class ControlBoxPersistence
 					JsonUtil.clampX(obj.get("originX").getAsInt()),
 					JsonUtil.clampY(obj.get("originY").getAsInt()),
 					JsonUtil.clampX(obj.get("originZ").getAsInt()),
+					rotation, mirror, facing,
 					obj.has("placerName") && !obj.get("placerName").isJsonNull()
 							? obj.get("placerName").getAsString() : null,
 					obj.has("author") && !obj.get("author").isJsonNull()
