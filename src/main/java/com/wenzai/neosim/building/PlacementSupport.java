@@ -13,7 +13,9 @@ import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.block.state.properties.DoorHingeSide;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
@@ -77,7 +79,7 @@ public final class PlacementSupport
 			return null;
 		}
 
-		// 地面类：下方需支撑（不含空气，水/岩浆也算支撑，与原逻辑一致）
+		// 地面类：下方需支撑（不含空气，水/岩浆也算支撑）
 		if (mode == AttachMode.GROUND)
 		{
 			return PhysicsWorld.getBlockState(level, worldPos.below()).isAir() ? null : state;
@@ -175,19 +177,19 @@ public final class PlacementSupport
 	public static void completeBed(ServerLevel level, BlockPos pos, BlockState placed, @Nullable BlockPos otherHalfHint)
 	{
 		if (!(placed.getBlock() instanceof BedBlock)) return;
-		net.minecraft.world.level.block.state.properties.BedPart part = placed.getValue(BedBlock.PART);
+		BedPart part = placed.getValue(BedBlock.PART);
 		BlockPos other = otherHalfHint;
 		if (other == null)
 		{
 			Direction facing = placed.getValue(BedBlock.FACING);
-			other = part == net.minecraft.world.level.block.state.properties.BedPart.HEAD
+			other = part == BedPart.HEAD
 					? pos.relative(facing.getOpposite())
 					: pos.relative(facing);
 		}
 		BlockState otherState = placed.setValue(BedBlock.PART,
-				part == net.minecraft.world.level.block.state.properties.BedPart.HEAD
-						? net.minecraft.world.level.block.state.properties.BedPart.FOOT
-						: net.minecraft.world.level.block.state.properties.BedPart.HEAD);
+				part == BedPart.HEAD
+						? BedPart.FOOT
+						: BedPart.HEAD);
 		if (!PhysicsWorld.getBlockState(level, other).equals(otherState))
 		{
 			PhysicsWorld.setBlock(level, other, otherState, Block.UPDATE_ALL);
@@ -349,7 +351,7 @@ public final class PlacementSupport
 	}
 
 	// 方向属性
-	private static net.minecraft.world.level.block.state.properties.BooleanProperty vineProperty(Direction d)
+	private static BooleanProperty vineProperty(Direction d)
 	{
 		return switch (d)
 		{

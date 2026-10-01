@@ -57,6 +57,7 @@ public class RebuildTask
 		RUNNING,
 		WAITING,
 		UNBOUND,
+
 		// 重建完成，任务终止（盒子方块保留，不再工作）
 		COMPLETE;
 
@@ -392,6 +393,7 @@ public class RebuildTask
 				setState(State.UNBOUND);
 				return false;
 			}
+
 			// 探测出的几何写回记录，重启后不再探测
 			record = record.withGeometry(geoRotation, geoMirror, geoFacing);
 			RebuildBoxPersistence.updateRecord(level, cityName, record);
@@ -410,6 +412,7 @@ public class RebuildTask
 		int r = Math.max(sx, sz) + 2;
 		BlockPos a = originPos.offset(-r, -sy - 2, -r);
 		BlockPos b = originPos.offset(r, sy + 2, r);
+
 		// 连同重建盒与控制箱所在区块一起纳入，保证下面 getBlockState 不会触发隐式加载
 		BlockPos min = new BlockPos(
 				Math.min(a.getX(), Math.min(b.getX(), Math.min(boxPos.getX(), controlBoxPos.getX()))),
@@ -538,13 +541,6 @@ public class RebuildTask
 		}
 	}
 
-	private static boolean takeOne(List<ChestBlockEntity> chests, Item item)
-	{
-		if (chests.isEmpty()) return false;
-		if (InventoryManager.countItems(chests, item) <= 0) return false;
-		return InventoryManager.extractItem(chests, item, 1) > 0;
-	}
-
 	private void setState(State s)
 	{
 		if (state == s && s.name().equals(record.state())) return;
@@ -587,5 +583,12 @@ public class RebuildTask
 		{
 			return null;
 		}
+	}
+
+	private static boolean takeOne(List<ChestBlockEntity> chests, Item item)
+	{
+		if (chests.isEmpty()) return false;
+		if (InventoryManager.countItems(chests, item) <= 0) return false;
+		return InventoryManager.extractItem(chests, item, 1) > 0;
 	}
 }

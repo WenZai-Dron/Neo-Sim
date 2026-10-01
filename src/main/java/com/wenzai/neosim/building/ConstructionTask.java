@@ -554,7 +554,8 @@ public class ConstructionTask
 				if (builderNpc != null)
 				{
 					builderNpc.setJobArchitect((byte) Math.min(aft, (int) MAX_LEVEL));
-					// 升级写盘走 D4 合并窗口（脏标记 + 周期 flush）
+
+					// 升级写盘走合并窗口（脏标记 + 周期 flush）
 					builderNpc.syncToJson();
 				}
 			}
@@ -763,7 +764,6 @@ public class ConstructionTask
 		}
 	}
 
-
 	// 写入控制箱记录，放置者未入城时跳过（与任务持久化一致）
 	private void recordControlBox(BlockPos boxPos)
 	{
@@ -774,6 +774,7 @@ public class ConstructionTask
 					building.getSchematicName(), boxPos);
 			return;
 		}
+
 		// 落地几何一并登记：重建模盒靠它把蓝图还原到世界（旧记录缺省由重建盒做定向探测）
 		ControlBoxPersistence.ControlBoxRecord rec = ControlBoxPersistence.ControlBoxRecord.of(
 				boxPos, building.getControlBoxPos(), building.getSchematicName(),
