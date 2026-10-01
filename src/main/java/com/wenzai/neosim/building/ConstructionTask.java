@@ -4,7 +4,6 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.*;
-import com.wenzai.neosim.compat.attached.AttachMode;
 import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.life.LifeSystem;
@@ -22,7 +21,6 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -419,7 +417,7 @@ public class ConstructionTask
 			// 依附性方块朝向贴着实际支撑
 			if (MaterialCalculator.isAttachedBlock(desired))
 			{
-				toPlace = fixAttachedFacing(worldPos, toPlace);
+				toPlace = PlacementSupport.fixAttachedFacing(level, worldPos, toPlace);
 				if (toPlace == null)
 				{
 					deferredThisRound++;
@@ -435,9 +433,9 @@ public class ConstructionTask
 			}
 
 			// 连接性方块：放置时按实际相邻方块重算连接
-			if (isConnectiveBlock(toPlace))
+			if (PlacementSupport.isConnective(toPlace))
 			{
-				toPlace = fixConnectiveConnections(worldPos, toPlace);
+				toPlace = PlacementSupport.fixConnectiveConnections(level, worldPos, toPlace);
 			}
 
 			if (current.equals(toPlace))
@@ -470,7 +468,7 @@ public class ConstructionTask
 
 			// 兜底预检：方块自身判定能否在当前世界存活
 			// （表未覆盖的模组依附方块也能正确推迟，且不会白扣一份材料）
-			if (AttachedBlockTable.precheck(toPlace) && !canSurviveAt(worldPos, toPlace))
+			if (AttachedBlockTable.precheck(toPlace) && !PlacementSupport.canSurviveAt(level, worldPos, toPlace))
 			{
 				deferredThisRound++;
 				if (deferredThisRound <= 8 || deferredThisRound % 64 == 0)
@@ -517,64 +515,20 @@ public class ConstructionTask
 			placedThisRound = true;
 
 			// 双箱合并：vanilla 的 getStateForPlacement 路径在纯 setBlock 下不触发，放置后手动合并
-			if (toPlace.getBlock() instanceof ChestBlock)
-			{
-				mergeDoubleChest(worldPos, toPlace);
-			}
+			PlacementSupport.mergeDoubleChest(level, worldPos, toPlace);
 
 			// 特殊方块放置后生效
 			activatePlacedSpecial(toPlace, worldPos);
 
-			// 双方块补齐：自动补另一半
+			// 双方块补齐：门补另一半并配对双开门；床按容器相邻床格补另一半
 			if (toPlace.getBlock() instanceof DoorBlock)
 			{
-				net.minecraft.world.level.block.state.properties.DoubleBlockHalf half =
-						toPlace.getValue(DoorBlock.HALF);
-				if (half == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
-				{
-					// 放下半格，补上半格
-					BlockState upper = toPlace.setValue(DoorBlock.HALF,
-							net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER);
-					if (PhysicsWorld.getBlockState(level, worldPos.above()).isAir())
-					{
-						PhysicsWorld.setBlock(level, worldPos.above(), upper, placeFlags);
-					}
-				}
-				else if (PhysicsWorld.getBlockState(level, worldPos.below()).isAir())
-				{
-					// 上半格先：补下半格
-					BlockState lower = toPlace.setValue(DoorBlock.HALF,
-							net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER);
-					PhysicsWorld.setBlock(level, worldPos.below(), lower, placeFlags);
-				}
-
-				// 双开门
-				fixDoubleDoor(worldPos);
-				LOGGER.debug("NeoSim-ConstructionTask: door placed at {} → {}", worldPos,
-						PhysicsWorld.getBlockState(level, worldPos));
+				PlacementSupport.completeDoor(level, worldPos, toPlace);
 			}
 			else if (toPlace.getBlock() instanceof BedBlock)
 			{
-				net.minecraft.world.level.block.state.properties.BedPart part =
-						toPlace.getValue(BedBlock.PART);
-
-				// 用容器相邻的床格定位另一半
-				BlockPos other = findAdjacentBedCellWorld(width, layer, depth, container, sx, sz);
-				if (other == null)
-				{
-					Direction bedFacing = toPlace.getValue(BedBlock.FACING);
-					other = part == net.minecraft.world.level.block.state.properties.BedPart.HEAD
-							? worldPos.relative(bedFacing.getOpposite())
-							: worldPos.relative(bedFacing);
-				}
-				BlockState otherState = toPlace.setValue(BedBlock.PART,
-						part == net.minecraft.world.level.block.state.properties.BedPart.HEAD
-								? net.minecraft.world.level.block.state.properties.BedPart.FOOT
-								: net.minecraft.world.level.block.state.properties.BedPart.HEAD);
-				if (!PhysicsWorld.getBlockState(level, other).equals(otherState))
-				{
-					PhysicsWorld.setBlock(level, other, otherState, placeFlags);
-				}
+				PlacementSupport.completeBed(level, worldPos, toPlace,
+						findAdjacentBedCellWorld(width, layer, depth, container, sx, sz));
 			}
 
 			// 放置音效（C6：创造模式静音，普通模式随机音高防单调）
@@ -785,34 +739,6 @@ public class ConstructionTask
 				pos, builderLevel);
 	}
 
-	// 双箱合并：相邻同朝向的 SINGLE 箱子互设 LEFT/RIGHT
-	private void mergeDoubleChest(BlockPos pos, BlockState state)
-	{
-		if (state.getValue(ChestBlock.TYPE) != net.minecraft.world.level.block.state.properties.ChestType.SINGLE)
-		{
-			return;
-		}
-		Direction facing = state.getValue(ChestBlock.FACING);
-		for (int i = 0; i < 2; i++)
-		{
-			Direction dir = i == 0 ? facing.getClockWise() : facing.getCounterClockWise();
-			BlockPos partnerPos = pos.relative(dir);
-			BlockState partner = PhysicsWorld.getBlockState(level, partnerPos);
-			if (partner.is(state.getBlock())
-					&& partner.getValue(ChestBlock.TYPE) == net.minecraft.world.level.block.state.properties.ChestType.SINGLE
-					&& partner.getValue(ChestBlock.FACING) == facing)
-			{
-				net.minecraft.world.level.block.state.properties.ChestType thisType =
-						i == 0 ? net.minecraft.world.level.block.state.properties.ChestType.LEFT
-								: net.minecraft.world.level.block.state.properties.ChestType.RIGHT;
-				PhysicsWorld.setBlock(level, pos, state.setValue(ChestBlock.TYPE, thisType), 3);
-				PhysicsWorld.setBlock(level, partnerPos,
-						partner.setValue(ChestBlock.TYPE, thisType.getOpposite()), 3);
-				return;
-			}
-		}
-	}
-
 	// 特殊方块生效：放置者为蓝图放置者
 	private void activatePlacedSpecial(BlockState placed, BlockPos pos)
 	{
@@ -940,259 +866,6 @@ public class ConstructionTask
 		InventoryManager.extractItem(nearbyChests, item, 1);
 	}
 
-	// 依附性方块朝向修正：按依附方式分派（贴墙 / 地面 / 悬挂 / 任意），找不到支撑返回 null（跳过并计入缺件）
-	// 依附方式来自可编辑的 AttachedBlockTable：内置类型规则（instanceof 注册）+ jar 内置 JSON + NeoSim/Json 外部覆盖
-	private BlockState fixAttachedFacing(BlockPos worldPos, BlockState state)
-	{
-		Block block = state.getBlock();
-		AttachMode mode = AttachedBlockTable.mode(state);
-
-		// 贴墙类
-		if (mode == AttachMode.WALL)
-		{
-			if (block instanceof VineBlock)
-			{
-				for (Direction d : Direction.Plane.HORIZONTAL)
-				{
-					if (state.getValue(vineProperty(d)) && hasSupport(worldPos, d))
-					{
-						// 蓝图方向已贴墙
-						return state;
-					}
-				}
-				for (Direction d : Direction.Plane.HORIZONTAL)
-				{
-					if (hasSupport(worldPos, d))
-					{
-						return state.setValue(vineProperty(d), true);
-					}
-				}
-				return null;
-			}
-
-			net.minecraft.world.level.block.state.properties.Property<Direction> facingProp = facingProperty(state);
-			if (facingProp == null) return state;
-			Direction facing = state.getValue(facingProp);
-
-			if (hasSupport(worldPos, facing.getOpposite())) return state;
-
-			for (Direction d : Direction.Plane.HORIZONTAL)
-			{
-				if (d != facing && hasSupport(worldPos, d.getOpposite()))
-				{
-					return state.setValue(facingProp, d);
-				}
-			}
-			return null;
-		}
-
-		// 地面类：下方需支撑（不含空气，水/岩浆也算支撑以外的实心判定与原逻辑一致）
-		if (mode == AttachMode.GROUND)
-		{
-			return PhysicsWorld.getBlockState(level, worldPos.below()).isAir() ? null : state;
-		}
-
-		// 悬挂类：上方需支撑（灯笼 / 锁链 / 挂式告示牌）
-		if (mode == AttachMode.CEILING)
-		{
-			return PhysicsWorld.getBlockState(level, worldPos.above()).isAir() ? null : state;
-		}
-
-		// ANY / AUTO / NONE：不做朝向与支撑修正
-		return state;
-	}
-
-	// 贴墙方块的朝向属性：先按数据规则的 facing 名称匹配，再回退原版水平朝向
-	private static net.minecraft.world.level.block.state.properties.Property<Direction> facingProperty(BlockState state)
-	{
-		for (String name : AttachedBlockTable.facingProperties(state.getBlock()))
-		{
-			for (net.minecraft.world.level.block.state.properties.Property<?> prop : state.getProperties())
-			{
-				if (prop.getName().equalsIgnoreCase(name)
-						&& prop.getValueClass() == Direction.class)
-				{
-					@SuppressWarnings("unchecked")
-					net.minecraft.world.level.block.state.properties.Property<Direction> dirProp =
-							(net.minecraft.world.level.block.state.properties.Property<Direction>) prop;
-					return dirProp;
-				}
-			}
-		}
-		return null;
-	}
-
-	// 放置前预检：方块自身判定能否在当前世界存活；模组实现可能抛异常，异常视为可放置，不阻断建造
-	private boolean canSurviveAt(BlockPos pos, BlockState state)
-	{
-		try
-		{
-			return state.canSurvive(level, pos);
-		}
-		catch (Throwable t)
-		{
-			LOGGER.debug("NeoSim-ConstructionTask: canSurvive check failed at {} — {}", pos, t.toString());
-			return true;
-		}
-	}
-
-	// 连接性方块
-	private static boolean isConnectiveBlock(BlockState state)
-	{
-		return state.getBlock() instanceof CrossCollisionBlock
-				|| state.getBlock() instanceof WallBlock;
-	}
-
-	// 逐个方向重算连接，使新放的连接块自动相连
-	private BlockState fixConnectiveConnections(BlockPos pos, BlockState state)
-	{
-		for (Direction dir : Direction.values())
-		{
-			BlockPos neighborPos = pos.relative(dir);
-			state = state.updateShape(dir, PhysicsWorld.getBlockState(level, neighborPos), level, pos, neighborPos);
-		}
-		return state;
-	}
-
-	// 双开门
-	private void fixDoubleDoor(BlockPos doorPos)
-	{
-		// 一律以下半格为准
-		BlockPos lowerPos = doorPos;
-		BlockState lower = PhysicsWorld.getBlockState(level, lowerPos);
-		if (!(lower.getBlock() instanceof DoorBlock))
-		{
-			LOGGER.info("NeoSim-ConstructionTask: fixDoubleDoor skip {} — not a door", lowerPos);
-			return;
-		}
-		if (lower.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER)
-		{
-			lowerPos = lowerPos.below();
-			lower = PhysicsWorld.getBlockState(level, lowerPos);
-			if (!(lower.getBlock() instanceof DoorBlock)) return;
-		}
-
-		Direction facing = lower.getValue(BlockStateProperties.HORIZONTAL_FACING);
-		LOGGER.info("NeoSim-ConstructionTask: fixDoubleDoor lower={} facing={} hinge={}",
-				lowerPos, facing, lower.getValue(BlockStateProperties.DOOR_HINGE));
-
-		// 门在朝向的垂直方向相邻、同朝向->铰链取反
-		for (Direction side : new Direction[] { facing.getCounterClockWise(), facing.getClockWise() })
-		{
-			BlockPos neighborPos = lowerPos.relative(side);
-			BlockState neighbor = PhysicsWorld.getBlockState(level, neighborPos);
-			LOGGER.debug("NeoSim-ConstructionTask: fixDoubleDoor side={} at {} → {}",
-					side, neighborPos, neighbor.getBlock().getDescriptionId());
-			if (neighbor.getBlock() instanceof DoorBlock
-					&& neighbor.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing
-					&& neighbor.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
-			{
-				net.minecraft.world.level.block.state.properties.DoorHingeSide neighborHinge =
-						neighbor.getValue(BlockStateProperties.DOOR_HINGE);
-
-				// 取反铰链
-				net.minecraft.world.level.block.state.properties.DoorHingeSide opposite =
-						neighborHinge == net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT
-								? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
-								: net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
-				LOGGER.debug("NeoSim-ConstructionTask: fixDoubleDoor pair with {} hinge={} → set {} to {}",
-						neighborPos, neighborHinge, lowerPos, opposite);
-				if (lower.getValue(BlockStateProperties.DOOR_HINGE) == opposite)
-				{
-					// 已配对
-					return;
-				}
-
-				// 本门两格一起改铰链，保持上下一致
-				PhysicsWorld.setBlock(level, lowerPos, lower.setValue(BlockStateProperties.DOOR_HINGE, opposite), Block.UPDATE_ALL);
-				BlockState upper = PhysicsWorld.getBlockState(level, lowerPos.above());
-				if (upper.getBlock() instanceof DoorBlock)
-				{
-					PhysicsWorld.setBlock(level, lowerPos.above(),
-							upper.setValue(BlockStateProperties.DOOR_HINGE, opposite), Block.UPDATE_ALL);
-				}
-				return;
-			}
-		}
-
-		// txt蓝图的门重定向成双开门
-		for (Direction side : new Direction[] { facing, facing.getOpposite() })
-		{
-			BlockPos neighborPos = lowerPos.relative(side);
-			BlockState neighbor = PhysicsWorld.getBlockState(level, neighborPos);
-			if (neighbor.getBlock() instanceof DoorBlock
-					&& neighbor.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing
-					&& neighbor.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
-			{
-				orientDoubleDoorPair(lowerPos, neighborPos, side);
-				return;
-			}
-		}
-	}
-
-	// 把同朝向、沿朝向轴相邻的两扇门重定向成真正对开门
-	private void orientDoubleDoorPair(BlockPos posA, BlockPos posB, Direction side)
-	{
-		BlockState lowerA = PhysicsWorld.getBlockState(level, posA);
-		Direction orig = lowerA.getValue(BlockStateProperties.HORIZONTAL_FACING);
-		Direction target = pickDoubleDoorFacing(posA, posB, orig);
-
-		// 铰链朝外侧
-		net.minecraft.world.level.block.state.properties.DoorHingeSide hingeA =
-				side == target.getCounterClockWise()
-						? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
-						: net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
-		net.minecraft.world.level.block.state.properties.DoorHingeSide hingeB =
-				hingeA == net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT
-						? net.minecraft.world.level.block.state.properties.DoorHingeSide.RIGHT
-						: net.minecraft.world.level.block.state.properties.DoorHingeSide.LEFT;
-
-		LOGGER.info("NeoSim-ConstructionTask: orientDoubleDoor {} + {} → facing={} hinge={}/{}",
-				posA, posB, target, hingeA, hingeB);
-		setDoorFacingHinge(posA, target, hingeA);
-		setDoorFacingHinge(posB, target, hingeB);
-	}
-
-	// 目标朝向：垂直于邻接轴，优先选正前方开阔的一侧
-	private Direction pickDoubleDoorFacing(BlockPos posA, BlockPos posB, Direction orig)
-	{
-		Direction a = orig.getClockWise();
-		Direction b = orig.getCounterClockWise();
-		int solidsA = solidsInFront(posA, posB, a);
-		int solidsB = solidsInFront(posA, posB, b);
-		if (solidsA != solidsB)
-		{
-			return solidsA < solidsB ? a : b;
-		}
-
-		// 平局：取逆时针候选
-		return b;
-	}
-
-	private int solidsInFront(BlockPos posA, BlockPos posB, Direction dir)
-	{
-		int n = 0;
-		if (!PhysicsWorld.getBlockState(level, posA.relative(dir)).isAir()) n++;
-		if (!PhysicsWorld.getBlockState(level, posB.relative(dir)).isAir()) n++;
-		return n;
-	}
-
-	// 改一扇门的朝向与铰链
-	private void setDoorFacingHinge(BlockPos pos, Direction facing,
-									net.minecraft.world.level.block.state.properties.DoorHingeSide hinge)
-	{
-		BlockState lower = PhysicsWorld.getBlockState(level, pos);
-		if (!(lower.getBlock() instanceof DoorBlock)) return;
-		PhysicsWorld.setBlock(level, pos, lower.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
-				.setValue(BlockStateProperties.DOOR_HINGE, hinge), Block.UPDATE_ALL);
-		BlockState upper = PhysicsWorld.getBlockState(level, pos.above());
-		if (upper.getBlock() instanceof DoorBlock)
-		{
-			PhysicsWorld.setBlock(level, pos.above(), upper.setValue(BlockStateProperties.HORIZONTAL_FACING, facing)
-					.setValue(BlockStateProperties.DOOR_HINGE, hinge), Block.UPDATE_ALL);
-		}
-	}
-
 	// 完工：把所有蓝图里的门都过一遍双开门配对
 	private void repairDoubleDoors()
 	{
@@ -1211,7 +884,7 @@ public class ConstructionTask
 							&& st.getValue(DoorBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.LOWER)
 					{
 						BlockPos worldPos = building.blueprintToWorld(x, y, z);
-						fixDoubleDoor(worldPos);
+						PlacementSupport.fixDoubleDoor(level, worldPos);
 						count++;
 					}
 				}
@@ -1221,23 +894,6 @@ public class ConstructionTask
 		{
 			LOGGER.info("NeoSim-ConstructionTask: repairDoubleDoors checked {} doors", count);
 		}
-	}
-
-	private boolean hasSupport(BlockPos pos, Direction dir)
-	{
-		return !PhysicsWorld.getBlockState(level, pos.relative(dir)).isAir();
-	}
-
-	// 方向属性
-	private static net.minecraft.world.level.block.state.properties.BooleanProperty vineProperty(Direction d)
-	{
-		return switch (d)
-		{
-			case NORTH -> VineBlock.NORTH;
-			case SOUTH -> VineBlock.SOUTH;
-			case EAST -> VineBlock.EAST;
-			default -> VineBlock.WEST;
-		};
 	}
 
 	// C6d：缺料扫描结果缓存（resumeIndex/phaseTwo 未变时复用，避免每 3 秒/每次派单全量重扫）

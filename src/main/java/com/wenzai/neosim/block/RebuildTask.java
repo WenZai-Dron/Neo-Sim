@@ -5,6 +5,8 @@ import com.wenzai.neosim.Config;
 import com.wenzai.neosim.building.BuildingInstance;
 import com.wenzai.neosim.building.ConstructionEngine;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.building.PlacementSupport;
+import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.schematic.BlueprintPlacement;
 import com.wenzai.neosim.schematic.LightweightBlockContainer;
@@ -18,23 +20,25 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.block.state.properties.ChestType;
 import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
+
 // 重建任务：不需要 NPC，按蓝图把"应为方块却成了空气"的格子补回去。
 // - 与控制箱同一套落地链（BlueprintPlacement），保证与建造时位置/朝向一致
+// - 与建筑模盒同一套放置收尾（PlacementSupport）：依附朝向、连接性方块、双方块、双开门
+// - 两轮：先实心方块，后依附 / 连接性方块；每轮扫完还有被推迟的方块就回卷重试
 // - 材料从重建盒相邻箱子取；创造模式（mode 2）完全不耗材
-// - 两轮：先普通方块，后依附方块（火把/梯子等），支撑就位后再放
-// - 一轮无缺失后进入冷却，冷却结束重扫（被破坏了就再补）
 public class RebuildTask
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
@@ -44,6 +48,9 @@ public class RebuildTask
 
 	// 旧记录（缺落地几何）定向探测的采样格数上限；蓝图体积超过它时按 stride 抽样
 	private static final int PROBE_SAMPLE_CELLS = 8000;
+
+	// 依附表兜底：一轮扫完仍有被推迟的方块（支撑 / 连接还没就位）时的回卷重试上限
+	private static final int MAX_RETRY_ROUNDS = 4;
 
 	public enum State
 	{
@@ -81,15 +88,21 @@ public class RebuildTask
 	private BlueprintPlacement placement;
 	private int sx, sy, sz, totalVolume;
 
-	// 扫描游标：phase 0 = 普通方块，phase 1 = 依附方块
+	// 扫描游标：phase 0 = 实心轮，phase 1 = 依附 / 连接性方块轮
 	private int cursor;
 	private int phase;
 
-	// 本轮进度：放过方块 / 被材料卡住 / 实际检查过多少格。
-	// 整轮既没进度又不缺料且确实扫过方块 -> 无事可做，终止
-	private int placedInCycle;
-	private boolean blockedInCycle;
-	private int checkedInCycle;
+	// 本轮结果：放置数 / 被推迟数 / 命中该轮的格数 / 读到已加载区块的格数
+	private int placedInRound;
+	private int deferredInRound;
+	private int phaseCellsInRound;
+	private int loadedInRound;
+
+	// 当前轮回卷次数；一个完整循环（第一轮 + 第二轮）里是否放置过
+	private int retryRound;
+	private boolean placedInCycle;
+
+	// 区块未加载的等待剩余 tick
 	private int retryTicks;
 
 	// 本轮累计应付费用（每 tick 只落盘一次）
@@ -176,41 +189,52 @@ public class RebuildTask
 		{
 			if (cursor >= totalVolume)
 			{
-				// 一轮结束：先依附方块轮，再把整轮结果结算
+				// 命中该轮却没有一格区块已加载：回到本轮起点，等区块加载好后整轮重扫
+				if (phaseCellsInRound > 0 && loadedInRound == 0)
+				{
+					retryTicks = CHUNK_RETRY_TICKS;
+					cursor = 0;
+					placedInRound = 0;
+					deferredInRound = 0;
+					phaseCellsInRound = 0;
+					loadedInRound = 0;
+					return;
+				}
+
+				// 本轮结算
+				boolean placedRound = placedInRound > 0;
+				boolean deferred = deferredInRound > 0;
+				placedInRound = 0;
+				deferredInRound = 0;
+				phaseCellsInRound = 0;
+				loadedInRound = 0;
+
+				// 有被推迟的方块且本轮确实放过：回卷重试（支撑 / 连接可能刚刚才就位）
+				if (deferred && placedRound && retryRound < MAX_RETRY_ROUNDS)
+				{
+					retryRound++;
+					cursor = 0;
+					continue;
+				}
+
+				// 第一轮（实心）扫完：进入第二轮（依附 / 连接性方块）
 				if (phase == 0)
 				{
 					phase = 1;
 					cursor = 0;
+					retryRound = 0;
 					continue;
 				}
+
+				// 第二轮扫完：整个循环里有过进展就再来一轮，否则判定无事可做
 				phase = 0;
 				cursor = 0;
-
-				boolean progress = placedInCycle > 0;
-				boolean blocked = blockedInCycle;
-				boolean checked = checkedInCycle > 0;
-				placedInCycle = 0;
-				blockedInCycle = false;
-				checkedInCycle = 0;
-
-				if (blocked)
+				retryRound = 0;
+				if (placedInCycle)
 				{
-					// 缺料：保持任务存活，等箱子补料后下一轮继续（不终止）
-					setState(State.WAITING);
-					return;
-				}
-				if (!checked)
-				{
-					// 一格都没读到：区块还没加载好，稍后重试
-					retryTicks = CHUNK_RETRY_TICKS;
-					return;
-				}
-				if (progress)
-				{
-					// 本轮有进展：再走一轮确认是否补完
+					placedInCycle = false;
 					continue;
 				}
-				// 整轮既没缺料、也放不下任何方块：无事可做，终止任务
 				setState(State.COMPLETE);
 				return;
 			}
@@ -237,25 +261,46 @@ public class RebuildTask
 				if (desired.isAir()) continue;
 			}
 
-			// 两轮：先非依附，后依附
+			// 两轮：先实心，后依附 / 连接性方块
 			if (MaterialCalculator.isAttachedBlock(desired) != (phase == 1)) continue;
 
 			BlockPos world = placement.pos(width, layer, depth);
 			if (world.equals(boxPos)) continue;
+			phaseCellsInRound++;
 
 			// 只处理已加载区块（强制加载由 RebuildChunkLoader 负责）
 			if (!level.hasChunkAt(world)) continue;
-			checkedInCycle++;
+			loadedInRound++;
 
-			BlockState current = PhysicsWorld.getBlockState(level, world);
 			// 只补"应为方块、现为空气"的格子；已有任何方块（含玩家手改）一律尊重现状
-			if (!current.isAir()) continue;
+			if (!PhysicsWorld.getBlockState(level, world).isAir()) continue;
 
 			BlockState toPlace = placement.state(desired);
 			if (toPlace == null) continue;
 
-			// 依附方块：支撑尚未就位则跳过，下一轮再试（不白扣材料）
-			if (MaterialCalculator.isAttachedBlock(desired) && !toPlace.canSurvive(level, world)) continue;
+			// 依附性方块：朝向贴着实际支撑；支撑没就位则推迟，下一轮再试（不白扣材料）
+			if (MaterialCalculator.isAttachedBlock(desired))
+			{
+				toPlace = PlacementSupport.fixAttachedFacing(level, world, toPlace);
+				if (toPlace == null)
+				{
+					deferredInRound++;
+					continue;
+				}
+			}
+
+			// 连接性方块：放置时按实际相邻方块重算连接
+			if (PlacementSupport.isConnective(toPlace))
+			{
+				toPlace = PlacementSupport.fixConnectiveConnections(level, world, toPlace);
+			}
+
+			// 兜底预检：表未覆盖的模组依附方块也能正确推迟，且不白扣一份材料
+			if (AttachedBlockTable.precheck(toPlace) && !PlacementSupport.canSurviveAt(level, world, toPlace))
+			{
+				deferredInRound++;
+				continue;
+			}
 
 			// 材料：创造模式（2）完全不耗材，与建筑模盒一致
 			if (mode != 2 && MaterialCalculator.requiresMaterial(desired, mode))
@@ -268,7 +313,6 @@ public class RebuildTask
 				if (!takeOne(chests, item))
 				{
 					materialShort = true;
-					blockedInCycle = true;
 					break;
 				}
 			}
@@ -276,9 +320,16 @@ public class RebuildTask
 			PhysicsWorld.setBlock(level, world, toPlace, Block.UPDATE_ALL);
 
 			// 双箱合并：纯 setBlock 不会触发原版合并逻辑
-			if (toPlace.getBlock() instanceof ChestBlock)
+			PlacementSupport.mergeDoubleChest(level, world, toPlace);
+
+			// 双方块补齐：门补另一半并配对双开门；床按容器相邻床格补另一半
+			if (toPlace.getBlock() instanceof DoorBlock)
 			{
-				mergeDoubleChest(world, toPlace);
+				PlacementSupport.completeDoor(level, world, toPlace);
+			}
+			else if (toPlace.getBlock() instanceof BedBlock)
+			{
+				PlacementSupport.completeBed(level, world, toPlace, adjacentBedWorld(width, layer, depth));
 			}
 
 			if (mode != 2)
@@ -287,7 +338,8 @@ public class RebuildTask
 			}
 
 			placed++;
-			placedInCycle++;
+			placedInRound++;
+			placedInCycle = true;
 		}
 
 		if (placed > 0)
@@ -297,6 +349,7 @@ public class RebuildTask
 		}
 		else if (materialShort)
 		{
+			// 缺料：保持任务存活，等箱子补料后下一轮继续（不终止）
 			setState(State.WAITING);
 		}
 		else
@@ -447,6 +500,26 @@ public class RebuildTask
 		return tested == 0 ? -1 : score;
 	}
 
+	// 在容器局部坐标中查找相邻的床格，返回其世界坐标（用于补齐床的另一半）
+	@Nullable
+	private BlockPos adjacentBedWorld(int width, int layer, int depth)
+	{
+		int[][] dirs = { {1, 0}, {-1, 0}, {0, 1}, {0, -1} };
+		for (int[] d : dirs)
+		{
+			int nx = width + d[0];
+			int nz = depth + d[1];
+			if (nx >= 0 && nx < sx && nz >= 0 && nz < sz)
+			{
+				if (container.get(nx, layer, nz).getBlock() instanceof BedBlock)
+				{
+					return placement.pos(nx, layer, nz);
+				}
+			}
+		}
+		return null;
+	}
+
 	private void flushCredit()
 	{
 		if (creditDue <= 0) return;
@@ -462,29 +535,6 @@ public class RebuildTask
 		catch (Exception e)
 		{
 			LOGGER.error("NeoSim-RebuildTask: credit deduction failed", e);
-		}
-	}
-
-	// 双箱合并：相邻同朝向的 SINGLE 箱子互设 LEFT/RIGHT
-	private void mergeDoubleChest(BlockPos pos, BlockState state)
-	{
-		if (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE) return;
-		Direction facing = state.getValue(ChestBlock.FACING);
-		for (int i = 0; i < 2; i++)
-		{
-			Direction dir = i == 0 ? facing.getClockWise() : facing.getCounterClockWise();
-			BlockPos partnerPos = pos.relative(dir);
-			BlockState partner = PhysicsWorld.getBlockState(level, partnerPos);
-			if (partner.is(state.getBlock())
-					&& partner.getValue(ChestBlock.TYPE) == ChestType.SINGLE
-					&& partner.getValue(ChestBlock.FACING) == facing)
-			{
-				ChestType thisType = i == 0 ? ChestType.LEFT : ChestType.RIGHT;
-				PhysicsWorld.setBlock(level, pos, state.setValue(ChestBlock.TYPE, thisType), 3);
-				PhysicsWorld.setBlock(level, partnerPos,
-						partner.setValue(ChestBlock.TYPE, thisType.getOpposite()), 3);
-				return;
-			}
 		}
 	}
 
