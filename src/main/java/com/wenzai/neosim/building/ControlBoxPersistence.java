@@ -33,12 +33,35 @@ public class ControlBoxPersistence
 		}
 	}
 
+	// (x,z) 列打包成唯一 long key。生活点的占用判定全部按列：同一列只算一个位
+	// （蓝图里同一列不同高度各放一个生活点是很常见的写法，按点算会出现"一个住户占两个位置"）
+	public static long columnKey(int x, int z)
+	{
+		return ((long) x << 32) | (z & 0xFFFFFFFFL);
+	}
+
+	// 生活点按列去重（保留首次出现）
+	public static List<BlockPos> uniqueColumns(List<BlockPos> points)
+	{
+		List<BlockPos> out = new ArrayList<>();
+		java.util.Set<Long> seen = new java.util.HashSet<>();
+		for (BlockPos p : points)
+		{
+			if (seen.add(columnKey(p.getX(), p.getZ())))
+			{
+				out.add(p);
+			}
+		}
+		return out;
+	}
+
 	// 生活点（按列 x/z）是否已被居民占用：兼容旧存档中居民记录了抬升后坐标（y 不同）的情况
 	public static boolean isLivingPointOccupied(ControlBoxRecord rec, BlockPos lp)
 	{
+		long key = columnKey(lp.getX(), lp.getZ());
 		for (Resident r : rec.residents())
 		{
-			if (r.x() == lp.getX() && r.z() == lp.getZ()) return true;
+			if (columnKey(r.x(), r.z()) == key) return true;
 		}
 		return false;
 	}
@@ -178,6 +201,57 @@ public class ControlBoxPersistence
 			LOGGER.error("NeoSim-ControlBoxPersistence: removeAt failed", e);
 		}
 		return null;
+	}
+
+	// 扫全部城市目录，按姓名 或 与家同一列(x,z) 移除住户；返回是否有改动
+	// 退房兜底：家可能登记在别的城市文件里，或者 NPC 中途改过名，只按"本城+姓名"会漏
+	public static boolean removeResidentAnywhere(ServerLevel level, String name, @Nullable BlockPos home)
+	{
+		Path dataDir = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
+		if (!level.getServer().isDedicatedServer())
+		{
+			dataDir = dataDir.resolve(level.getServer().getWorldData().getLevelName());
+		}
+		if (!Files.isDirectory(dataDir)) return false;
+
+		boolean changed = false;
+		try (Stream<Path> dirs = Files.list(dataDir))
+		{
+			for (Path dir : dirs.filter(Files::isDirectory).toList())
+			{
+				Path file = dir.resolve("ControlBox.json");
+				if (!Files.exists(file)) continue;
+
+				List<ControlBoxRecord> records = readRecords(file);
+				boolean fileChanged = false;
+				for (ControlBoxRecord r : records)
+				{
+					// 占用按列(x,z)判定，同一列只会有一个住户，按列命中不会误伤别人
+					fileChanged |= r.residents().removeIf(res ->
+								res.name().equals(name)
+								|| (home != null && columnKey(res.x(), res.z()) == columnKey(home.getX(), home.getZ())));
+				}
+				if (fileChanged)
+				{
+					writeRecords(file, records);
+					changed = true;
+					LOGGER.info("NeoSim-ControlBoxPersistence: released resident '{}' (city '{}')",
+								name, dir.getFileName());
+				}
+			}
+		}
+		catch (Exception e)
+		{
+			LOGGER.error("NeoSim-ControlBoxPersistence: removeResidentAnywhere failed", e);
+		}
+		return changed;
+	}
+
+	// 客户端列出某城市全部控制箱记录（只读文件，不依赖 ServerLevel）
+	public static List<ControlBoxRecord> loadClient(@Nullable String saveName, String cityName)
+	{
+		Path file = getCityPath(saveName, cityName);
+		return Files.exists(file) ? readRecords(file) : List.of();
 	}
 
 	// 客户端查找

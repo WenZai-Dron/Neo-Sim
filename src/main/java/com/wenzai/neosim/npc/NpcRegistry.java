@@ -51,7 +51,7 @@ public final class NpcRegistry
 		}
 	}
 
-	// 按名字查已加载实体（等价于原全服线性扫描的语义：已死/已移除视为未找到）
+	// 按名字查已加载实体（已死/已移除视为未找到）
 	@Nullable
 	public static Entity findByName(String name)
 	{

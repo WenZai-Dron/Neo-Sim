@@ -36,6 +36,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.portal.DimensionTransition;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
@@ -109,6 +110,23 @@ public class Entity extends PathfinderMob
 		return tag.contains(KEY_GIVEN_NAME) ? tag.getString(KEY_GIVEN_NAME) : "";
 	}
 
+	// 命名风格：优先读存档；旧档无该字段时按当前名字推断（中文名→ZH，英文名→EN）
+	public NameLocale getNameLocale()
+	{
+		CompoundTag tag = getPersistentData();
+		if (tag.contains(KEY_NAME_LOCALE))
+		{
+			NameLocale stored = NameLocale.fromKey(tag.getString(KEY_NAME_LOCALE));
+			if (stored != null) return stored;
+		}
+		return NpcNames.infer(getNpcName());
+	}
+
+	public void setNameLocale(NameLocale locale)
+	{
+		getPersistentData().putString(KEY_NAME_LOCALE, locale.key());
+	}
+
 	// 设置姓名，同步文件
 	public void setNpcName(String surname, String givenName)
 	{
@@ -118,7 +136,7 @@ public class Entity extends PathfinderMob
 		CompoundTag tag = getPersistentData();
 		tag.putString(KEY_SURNAME, surname);
 		tag.putString(KEY_GIVEN_NAME, givenName);
-		String fullName = surname + givenName;
+		String fullName = NpcNames.format(getNameLocale(), surname, givenName);
 		tag.putString(KEY_FULL_NAME, fullName);
 		setCustomName(Component.literal(fullName));
 		setCustomNameVisible(true);
@@ -332,6 +350,8 @@ public class Entity extends PathfinderMob
 	static final String KEY_SURNAME = "nsnpc_surname";
 	static final String KEY_GIVEN_NAME = "nsnpc_givenName";
 	static final String KEY_SEX = "nsnpc_sex";
+	// 命名风格（zh/en）：决定全名语序，出生继承、改名沿用
+	static final String KEY_NAME_LOCALE = "nsnpc_nameLocale";
 
 	// NPC位置持久化
 	private static final String KEY_ASSIGNED_SITE_X = "nsnpc_site_x";
@@ -406,57 +426,7 @@ public class Entity extends PathfinderMob
 			"khristinatina.png", "lunatique.png", "mewlee.png", "osukaari.png", "prueli.png"
 	};
 
-	// 姓
-	private static final String[] SURNAMES = {
-			"张", "李", "王", "刘", "陈", "杨", "赵", "黄", "周", "吴",
-			"徐", "孙", "胡", "朱", "高", "林", "何", "郭", "马", "罗",
-			"梁", "宋", "郑", "谢", "韩", "唐", "冯", "于", "董", "萧",
-			"程", "曹", "袁", "邓", "许", "傅", "沈", "曾", "彭", "吕",
-			"苏", "卢", "蒋", "蔡", "贾", "丁", "魏", "薛", "叶", "阎",
-			"余", "潘", "杜", "戴", "夏", "钟", "汪", "田", "任", "姜",
-			"范", "方", "石", "姚", "谭", "廖", "邹", "熊", "金", "陆",
-			"郝", "孔", "白", "崔", "康", "毛", "邱", "秦", "江", "史",
-			"顾", "侯", "邵", "孟", "龙", "万", "段", "雷", "钱", "汤",
-			"尹", "黎", "易", "常", "武", "乔", "贺", "赖", "龚", "文",
-			"严", "华", "金", "魏", "陶", "姜", "戚", "谢", "邹", "喻",
-			"柏", "水", "窦", "章", "云", "苏", "潘", "葛", "奚", "范",
-			"彭", "郎", "鲁", "韦", "昌", "马", "苗", "凤", "花", "方",
-			"俞", "任", "袁", "柳", "酆", "鲍", "史", "唐", "费", "廉",
-			"岑", "薛", "雷", "贺", "倪", "汤", "滕", "殷", "罗", "毕",
-			"郝", "邬", "安", "常", "乐", "于", "时", "傅", "皮", "卞",
-			"齐", "康", "伍", "余", "元", "卜", "顾", "孟", "平", "黄",
-			"和", "穆", "萧", "尹", "姚", "邵", "湛", "汪", "祁", "毛",
-			"禹", "狄", "米", "贝", "明", "臧", "计", "伏", "成", "戴",
-			"谈", "宋", "茅", "庞", "熊", "纪", "舒", "屈", "项", "祝"
-	};
-
-	// 偏男字
-	private static final String[] MALE_NAME_CHARS = {
-			"铮", "朔", "渊", "澈", "辰", "琅", "霄", "翊", "珩", "晏",
-			"临", "峥", "恪", "洵", "灏", "珣", "璁", "岑", "靳", "砚",
-			"肃", "衍", "霁", "鹤", "曜", "冕", "乾", "勋", "铎", "璟",
-			"伟", "宏", "宇", "轩", "毅", "恒", "博", "铭", "哲", "皓",
-			"峻", "峰", "霖", "睿", "瀚", "鹏", "翔", "骏", "鲲", "鸿",
-			"宸", "熙", "煜", "烨", "灿", "昊", "晟", "昱", "昀", "昂",
-			"杰", "豪", "英", "雄", "威", "武", "刚", "勇", "猛", "锐",
-			"志", "远", "承", "启", "开", "拓", "建", "立", "兴", "盛",
-			"文", "章", "学", "思", "明", "达", "通", "彦", "儒", "贤",
-			"景", "泰", "安", "宁", "康", "瑞", "祥", "德", "仁", "义"
-	};
-
-	// 偏女字
-	private static final String[] FEMALE_NAME_CHARS = {
-			"瑜", "瑶", "璇", "琳", "玥", "珞", "瑟", "绮", "素", "蘅",
-			"黛", "漪", "汐", "澜", "琬", "琼", "蕙", "芸", "芊", "霜",
-			"鸾", "笙", "岚", "浅", "晚", "晴", "初", "舞", "胭", "微",
-			"婷", "婉", "慧", "雅", "静", "芳", "妍", "倩", "婵", "娟",
-			"淑", "贤", "洁", "清", "滢", "澜", "溪", "润", "涵", "沐",
-			"诗", "画", "琴", "棋", "书", "墨", "韵", "音", "歌", "语",
-			"兰", "莲", "荷", "菊", "梅", "桂", "杏", "桃", "樱", "薇",
-			"燕", "莺", "鹃", "凤", "凰", "鸾", "雀", "雁", "鹤", "鸳",
-			"思", "念", "忆", "怀", "梦", "幻", "悦", "欣", "怡", "欢",
-			"若", "如", "依", "曼", "柔", "秀", "丽", "美", "佳", "妙"
-	};
+	// 姓名池已移至 NpcNames（中文/英文双语池 + 语序格式化，见 NpcNames.format）
 
 	// 获取所属城市
 	public String getCityName()
@@ -493,7 +463,8 @@ public class Entity extends PathfinderMob
 	// 获取家所在建筑名（生活点入住时登记；L6：随 getHomePos 一并缓存）
 	public String getHomeBuilding()
 	{
-		getHomePos();  // 确保缓存已构建
+		// 确保缓存已构建
+		getHomePos();
 		return cachedHomeBuilding;
 	}
 
@@ -546,6 +517,13 @@ public class Entity extends PathfinderMob
 	public void setRestToday(boolean rest)
 	{
 		getPersistentData().putBoolean(KEY_REST_TODAY, rest);
+	}
+
+	// 现在是不是休息时间：夜里(12000~24000) 或 抽到"今天休息"。
+	// 休息期间不工作（赴工/干活全停）、也不许被兜底传送（宁可站着走回去，不要凭空拽）
+	public boolean isRestingNow()
+	{
+		return isRestToday() || level().getDayTime() % 24000L >= 12000L;
 	}
 
 	// 同居/婚姻对象名（等待Phase 3婚姻填充）
@@ -741,37 +719,92 @@ public class Entity extends PathfinderMob
 		return "skins/" + sex + "/" + randomSkinFile(sex);
 	}
 
-	// 生成姓名、性别并写入NBT，在NPC生成时调用
-	public static void generateAndSetName(Entity entity)
+	// 生成姓名、性别并写入NBT，在NPC生成时调用（命名风格按配置/客户端语言解析）
+	public static void generateAndSetName(ServerLevel level, Entity entity, String cityName)
 	{
-		generateAndSetName(entity, SURNAMES[RANDOM.nextInt(SURNAMES.length)]);
+		generateAndSetName(level, entity, cityName, null, resolveNameLocale(cityName, null));
 	}
 
-	// 以指定姓氏生成姓名，性别随机
-	public static void generateAndSetName(Entity entity, String surname)
+	// 生成姓名：触发玩家已知时用该玩家的语言池
+	public static void generateAndSetName(ServerLevel level, Entity entity, String cityName, @Nullable UUID triggerPlayer)
+	{
+		generateAndSetName(level, entity, cityName, null, resolveNameLocale(cityName, triggerPlayer));
+	}
+
+	// 以指定姓氏与命名风格生成姓名（出生继承用），性别随机
+	public static void generateAndSetName(ServerLevel level, Entity entity, String cityName,
+			@Nullable String surname, NameLocale locale)
 	{
 		CompoundTag tag = entity.getPersistentData();
 		String sex = RANDOM.nextBoolean() ? "male" : "female";
-		String[] pool = "female".equals(sex) ? FEMALE_NAME_CHARS : MALE_NAME_CHARS;
-		String givenName;
-		if (RANDOM.nextDouble() < 0.3)
+
+		// 查重：姓名是身份主键（档案文件名/索引键），英文池组合数远小于中文，必须避免撞名
+		String pickedSurname = surname != null && !surname.isEmpty() ? surname : NpcNames.randomSurname(locale);
+		Set<String> taken = takenNames(level, cityName);
+		String givenName = NpcNames.randomGiven(locale, sex);
+		for (int attempt = 0; attempt < 48 && taken.contains(NpcNames.format(locale, pickedSurname, givenName)); attempt++)
 		{
-			givenName = pool[RANDOM.nextInt(pool.length)];
+			if (surname == null || surname.isEmpty()) pickedSurname = NpcNames.randomSurname(locale);
+			givenName = NpcNames.randomGiven(locale, sex);
 		}
-		else
+		if (taken.contains(NpcNames.format(locale, pickedSurname, givenName)))
 		{
-			int i = RANDOM.nextInt(pool.length);
-			int j;
-			do
-			{
-				j = RANDOM.nextInt(pool.length);
-			} while (j == i);
-			givenName = pool[i] + pool[j];
+			LOGGER.warn("NeoSim-Entity: name pool exhausted for city '{}', reuse {}",
+					cityName, NpcNames.format(locale, pickedSurname, givenName));
 		}
-		tag.putString(KEY_SURNAME, surname);
+
+		tag.putString(KEY_NAME_LOCALE, locale.key());
+		tag.putString(KEY_SURNAME, pickedSurname);
 		tag.putString(KEY_GIVEN_NAME, givenName);
-		tag.putString(KEY_FULL_NAME, surname + givenName);
+		tag.putString(KEY_FULL_NAME, NpcNames.format(locale, pickedSurname, givenName));
 		tag.putString(KEY_SEX, sex);
+	}
+
+	// 解析命名风格：配置强制 zh/en 优先；否则用触发玩家语言；再退到城市最近一次玩家语言；最后中文
+	public static NameLocale resolveNameLocale(String cityName, @Nullable UUID triggerPlayer)
+	{
+		NameLocale forced;
+		try
+		{
+			forced = NameLocale.fromKey(Config.NPC_NAME_LOCALE.get());
+		}
+		catch (IllegalStateException ignored)
+		{
+			// 配置尚未加载（早期生成路径）→ 按 auto 处理
+			forced = null;
+		}
+		if (forced != null) return forced;
+
+		if (triggerPlayer != null)
+		{
+			NameLocale byPlayer = PlayerLocales.of(triggerPlayer);
+			if (byPlayer != null) return byPlayer;
+		}
+		NameLocale byCity = PlayerLocales.ofCity(cityName);
+		if (byCity != null) return byCity;
+
+		// 城市未记录（玩家先上报语言、之后才入城）→ 取该城市在线玩家的语言
+		NameLocale online = PlayerLocales.firstOnlineInCity(cityName);
+		return online != null ? online : NameLocale.ZH;
+	}
+
+	// 城市内已占用的姓名（已加载实体 + 未加载档案文件名）
+	private static Set<String> takenNames(ServerLevel level, String cityName)
+	{
+		Set<String> taken = new HashSet<>();
+		if (cityName == null || cityName.isEmpty()) return taken;
+		for (Entity npc : NpcRegistry.byCity(cityName))
+		{
+			taken.add(npc.getNpcName());
+		}
+		if (level != null)
+		{
+			for (String name : NpcData.listNpcNames(level, cityName))
+			{
+				taken.add(name);
+			}
+		}
+		return taken;
 	}
 
 	// GUI出现时冻结NPC
@@ -985,22 +1018,22 @@ public class Entity extends PathfinderMob
 		if (npcName.isEmpty() || cityName.isEmpty()) return;
 
 		boolean oldAge = source.is(DamageTypes.GENERIC_KILL);
-		String cause;
+		Component cause;
 		if (oldAge)
 		{
-			cause = Config.ANNOUNCE_DEATH_CAUSE_OLD_AGE.get();
+			cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_OLD_AGE);
 		}
-		else if (source.is(DamageTypes.DROWN)) cause = Config.ANNOUNCE_DEATH_CAUSE_DROWN.get();
-		else if (source.is(DamageTypes.LAVA)) cause = Config.ANNOUNCE_DEATH_CAUSE_LAVA.get();
-		else if (source.is(DamageTypes.IN_WALL)) cause = Config.ANNOUNCE_DEATH_CAUSE_SUFFOCATE.get();
-		else if (source.is(DamageTypes.FALL) || source.is(DamageTypes.FALLING_BLOCK)) cause = Config.ANNOUNCE_DEATH_CAUSE_FALL.get();
-		else if (source.is(DamageTypes.STARVE)) cause = Config.ANNOUNCE_DEATH_CAUSE_STARVE.get();
-		else if (source.is(DamageTypes.ON_FIRE) || source.is(DamageTypes.IN_FIRE)) cause = Config.ANNOUNCE_DEATH_CAUSE_FIRE.get();
-		else if (source.is(DamageTypes.LIGHTNING_BOLT)) cause = Config.ANNOUNCE_DEATH_CAUSE_LIGHTNING.get();
-		else if (source.is(DamageTypes.CACTUS)) cause = Config.ANNOUNCE_DEATH_CAUSE_CACTUS.get();
-		else cause = Config.ANNOUNCE_DEATH_CAUSE_OTHER.get();
+		else if (source.is(DamageTypes.DROWN)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_DROWN);
+		else if (source.is(DamageTypes.LAVA)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_LAVA);
+		else if (source.is(DamageTypes.IN_WALL)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_SUFFOCATE);
+		else if (source.is(DamageTypes.FALL) || source.is(DamageTypes.FALLING_BLOCK)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_FALL);
+		else if (source.is(DamageTypes.STARVE)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_STARVE);
+		else if (source.is(DamageTypes.ON_FIRE) || source.is(DamageTypes.IN_FIRE)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_FIRE);
+		else if (source.is(DamageTypes.LIGHTNING_BOLT)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_LIGHTNING);
+		else if (source.is(DamageTypes.CACTUS)) cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_CACTUS);
+		else cause = LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_OTHER);
 
-		String remark = oldAge
+		Component remark = oldAge
 				? LifeSystem.tpl(Config.ANNOUNCE_DEATH_REMARK_OLD, getAge())
 				: LifeSystem.tpl(Config.ANNOUNCE_DEATH_REMARK_YOUNG, getAge());
 
@@ -1100,9 +1133,11 @@ public class Entity extends PathfinderMob
 			this.registerGoals();
 		}
 
-		// 移除AI：保留赴工、游泳、看向玩家、环视，以及敌对生物逃离
+		// 移除AI：保留赴工、夜晚回家、游泳、看向玩家、环视，以及敌对生物逃离。
+		// 夜晚回家必须留着：休息时间赴工目标停掉后，工人得能自己走回家（不许被传送）
 		this.goalSelector.getAvailableGoals().stream()
 				.filter(w -> !(w.getGoal() instanceof NpcGoals.MoveToSiteGoal)
+						  && !(w.getGoal() instanceof NpcGoals.GoHomeGoal)
 						  && !(w.getGoal() instanceof FloatGoal)
 						  && !(w.getGoal() instanceof LookAtPlayerGoal)
 						  && !(w.getGoal() instanceof RandomLookAroundGoal)
@@ -1110,21 +1145,11 @@ public class Entity extends PathfinderMob
 				.toList()
 				.forEach(w -> goalSelector.removeGoal(w.getGoal()));
 
-		double distSqr = this.blockPosition().distSqr(site);
-		if (distSqr > 320.0 * 320.0)
-		{
-			// 相距≥320格：直接传送
-			this.teleportTo(site.getX() + 0.5, site.getY() + 1, site.getZ() + 0.5);
-			this.getNavigation().stop();
-			this.moveToSiteGoal.setTarget(null);
-			this.currentMoveTarget = null;
-		}
-		else
-		{
-			// 相距<320格：走路
-			this.moveToSiteGoal.setTarget(site);
-			this.currentMoveTarget = site;
-		}
+		// 赴工一律交给寻路：能走到就步行过去，不再按固定 320 格传送。
+		// 够不到的情况（超出 FOLLOW_RANGE，或沿途区块未加载导致无路）
+		// 交给 MoveToSiteGoal 的兜底逻辑，那里会先确认确实无路可走才传送。
+		this.moveToSiteGoal.setTarget(site);
+		this.currentMoveTarget = site;
 	}
 
 	// 设置寻路目标；目标不变时不重复设置
@@ -1185,11 +1210,57 @@ public class Entity extends PathfinderMob
 	}
 
 	// 全服按名字查找已加载的NPC。解雇/释放必须全图搜，限半径会在工人离家/远走时漏掉。
-	// 走 NpcRegistry 索引 O(1)（C1），等价于原全服线性扫描语义。
+	// 走 NpcRegistry 索引 O(1)（C1）。
 	@Nullable
 	public static Entity findByNpcName(ServerLevel level, String name)
 	{
 		return NpcRegistry.findByName(name);
+	}
+
+	// ---- 维度隔离 ----
+	// NPC 绑定城市与住宅坐标，跨维度后回家、寻路、寻站、按城市索引全部失效，
+	// 所以这里三道口全堵：传送门、直接 changeDimension、指令传送。
+
+	// 下界门/末地门：vanilla 在 handlePortal 里先问 canChangeDimensions
+	@Override
+	public boolean canChangeDimensions(Level oldLevel, Level newLevel)
+	{
+		if (oldLevel.dimension() != newLevel.dimension())
+		{
+			LOGGER.warn("NeoSim-NPC: '{}' blocked from portal travel {} -> {}",
+				getNpcName(), oldLevel.dimension().location(), newLevel.dimension().location());
+			return false;
+		}
+		return super.canChangeDimensions(oldLevel, newLevel);
+	}
+
+	// 兜底：其它模组或代码直接调 changeDimension 时同样拒绝
+	// 返回类型必须写全限定名：本类就叫 Entity，直接写 Entity 会解析成 com.wenzai.neosim.npc.Entity
+	@Nullable
+	@Override
+	public net.minecraft.world.entity.Entity changeDimension(DimensionTransition transition)
+	{
+		if (transition.newLevel().dimension() != level().dimension())
+		{
+			LOGGER.warn("NeoSim-NPC: '{}' blocked from dimension change {} -> {}",
+				getNpcName(), level().dimension().location(), transition.newLevel().dimension().location());
+			return null;
+		}
+		return super.changeDimension(transition);
+	}
+
+	// 指令 /tp 与 /execute in 走的是 teleportTo，不经过 changeDimension，必须单独拦
+	@Override
+	public boolean teleportTo(ServerLevel level, double x, double y, double z,
+		Set<RelativeMovement> relativeMovements, float yRot, float xRot)
+	{
+		if (level != level())
+		{
+			LOGGER.warn("NeoSim-NPC: '{}' blocked from cross-dimension teleport to {}",
+				getNpcName(), level.dimension().location());
+			return false;
+		}
+		return super.teleportTo(level, x, y, z, relativeMovements, yRot, xRot);
 	}
 
 	// ---- NpcRegistry 索引维护（C1）----
@@ -1246,10 +1317,16 @@ public class Entity extends PathfinderMob
 	{
 		// 使用默认值，因为 EntityAttributeCreationEvent 在配置加载之前触发。
 		// 如需运行时修改属性，应在实体生成后通过其他方式覆盖。
+		// FOLLOW_RANGE 同时决定三件事（见 PathNavigation / PathFinder）：
+		//   1. 寻路探索区域半径 FOLLOW_RANGE + 8 格；
+		//   2. 单条路径的最大行走距离（PathFinder 用 maxRange 硬截断，超出的节点不展开）；
+		//   3. 搜索节点预算 FOLLOW_RANGE × 16。
+		// 原版村民是 48；放大到 128 是为了让市民能跨城步行通勤而不是靠传送。
+		// 注意：节点预算在 PathNavigation 构造时读取一次，运行时改属性不会生效。
 		return Mob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, 20.0D)
 				.add(Attributes.MOVEMENT_SPEED, 0.5D)
-				.add(Attributes.FOLLOW_RANGE, 16.0D);
+				.add(Attributes.FOLLOW_RANGE, 128.0D);
 	}
 
 	public static void register(IEventBus eventBus)

@@ -4,6 +4,8 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.client.ui.UiSettings;
+import com.wenzai.neosim.client.ui.WhiteTexture;
 import com.wenzai.neosim.schematic.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GameRenderer;
@@ -13,9 +15,9 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.resources.model.BakedModel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.block.Mirror;
-import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.api.distmarker.Dist;
@@ -83,8 +85,8 @@ public class GhostBlockRenderer
 		RenderSystem.enableBlend();
 		RenderSystem.defaultBlendFunc();
 
-		// 直接绘制缓存的VBO
-		cache.render(pose, event.getProjectionMatrix());
+		// 直接绘制缓存的VBO（染色 / 透明度 / 纹理显示度都是 uniform，拖滑块不需要重建网格）
+		cache.render(pose, event.getProjectionMatrix(), UiSettings.preview());
 
 		RenderSystem.depthMask(true);
 		RenderSystem.disableBlend();
@@ -97,6 +99,7 @@ public class GhostBlockRenderer
 		private int lastRotationOrdinal;
 		private int lastMirrorOrdinal;
 		private String lastSchematicName;
+		private SchematicData lastSchematic;
 
 		// 缓存是否仍有效（顶点存为相对 origin 的局部坐标，origin 变化不重建，渲染时每帧用当前 origin 平移矩阵）
 		public boolean isValid(PreviewState state)
@@ -104,7 +107,8 @@ public class GhostBlockRenderer
 			if (vertexBuffer == null) return false;
 			SchematicData s = state.getSchematic();
 			if (s == null) return false;
-			if (!s.getName().equals(lastSchematicName)) return false;
+			// 蓝图重载后名字不变但对象会换新：只比名字会一直画旧网格
+			if (s != lastSchematic) return false;
 			if (state.getRotation().ordinal() != lastRotationOrdinal) return false;
 			if (state.getMirror().ordinal() != lastMirrorOrdinal) return false;
 			return true;
@@ -127,13 +131,12 @@ public class GhostBlockRenderer
 			BufferBuilder buf = new BufferBuilder(byteBuffer,
 					VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
-			// 覆盖色
-			int overlayColor = 0x80 << 24 | 0xFB << 16 | 0xFD << 8 | 0xFF;
+			// 顶点色恒为不透明白：真正的染色与透明度由渲染时的 ColorModulator 给，
+			// 颜色进网格的话每改一次颜色都要重建整份 VBO，大体量蓝图会卡
+			int overlayColor = 0xFFFFFFFF;
 			RandomSource random = RandomSource.create();
 
 			BlockPos origin = state.getOrigin();
-			Rotation rotation = state.getRotation();
-			Mirror mirror = state.getMirror();
 
 			for (int y = 0; y < container.getSizeY(); y++)
 			{
@@ -144,19 +147,11 @@ public class GhostBlockRenderer
 						BlockState blockState = container.get(x, y, z);
 						if (blockState.isAir()) continue;
 
-						// 应用镜像/旋转
-						blockState = CoordTransform.transformState(blockState, state.getFacing());
-						if (mirror != Mirror.NONE)
-						{
-							blockState = blockState.mirror(mirror);
-						}
-						if (rotation != Rotation.NONE)
-						{
-							blockState = blockState.rotate(rotation);
-						}
+						// 朝向与位置都走同一条落地链（BlueprintPlacement），与实际建造逐格一致
+						blockState = state.placement().state(blockState);
 
 						// 顶点存为相对origin的坐标
-						BlockPos world = state.blueprintToWorld(x, y, z);
+						BlockPos world = state.placement().pos(x, y, z);
 						float wx = world.getX() - origin.getX();
 						float wy = world.getY() - origin.getY();
 						float wz = world.getZ() - origin.getZ();
@@ -209,7 +204,7 @@ public class GhostBlockRenderer
 					if (markerState == null) continue;
 
 					BlockPos local = entry.getKey();
-					BlockPos world = state.blueprintToWorld(local.getX(), local.getY(), local.getZ());
+					BlockPos world = state.placement().pos(local.getX(), local.getY(), local.getZ());
 					float wx = world.getX() - origin.getX();
 					float wy = world.getY() - origin.getY();
 					float wz = world.getZ() - origin.getZ();
@@ -241,16 +236,51 @@ public class GhostBlockRenderer
 			this.lastRotationOrdinal = state.getRotation().ordinal();
 			this.lastMirrorOrdinal = state.getMirror().ordinal();
 			this.lastSchematicName = schematic.getName();
+			this.lastSchematic = schematic;
 		}
 
-		// 每帧绘制缓存的VBO
-		public void render(Matrix4f modelView, Matrix4f projection)
+		// 每帧绘制缓存的VBO：贴图层 + 纯色层按「纹理显示度」分摊透明度
+		public void render(Matrix4f modelView, Matrix4f projection, UiSettings.Preview settings)
 		{
 			if (vertexBuffer == null) return;
-			RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
-			RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_BLOCKS);
-			vertexBuffer.bind();
-			vertexBuffer.drawWithShader(modelView, projection, RenderSystem.getShader());
+
+			double mix = Mth.clamp(settings.textureMix, 0.0D, 1.0D);
+			float alpha = Mth.clamp(settings.alpha, 0, 255) / 255.0F;
+			float red = ((settings.tint >> 16) & 0xFF) / 255.0F;
+			float green = ((settings.tint >> 8) & 0xFF) / 255.0F;
+			float blue = (settings.tint & 0xFF) / 255.0F;
+
+			if (alpha <= 0.0F) return;
+
+			ResourceLocation white = mix < 0.999D ? WhiteTexture.location() : null;
+
+			try
+			{
+				// 纯色层：采样 1×1 纯白纹理，剩下的正好是染色 × 透明度（纹理显示度越低这层越重）
+				if (white != null)
+				{
+					RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+					RenderSystem.setShaderTexture(0, white);
+					RenderSystem.setShaderColor(red, green, blue, (float) (alpha * (1.0D - mix)));
+					vertexBuffer.bind();
+					vertexBuffer.drawWithShader(modelView, projection, RenderSystem.getShader());
+				}
+
+				// 贴图层：方块图集原样，纹理显示度为 1 时这一层就是全部
+				if (mix > 0.001D)
+				{
+					RenderSystem.setShader(GameRenderer::getPositionTexColorShader);
+					RenderSystem.setShaderTexture(0, TextureAtlas.LOCATION_BLOCKS);
+					RenderSystem.setShaderColor(red, green, blue, (float) (alpha * mix));
+					vertexBuffer.bind();
+					vertexBuffer.drawWithShader(modelView, projection, RenderSystem.getShader());
+				}
+			}
+			finally
+			{
+				// setShaderColor 是全局状态：不复位会污染之后的世界与 GUI 渲染
+				RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+			}
 		}
 
 		// 预览结束/失效时释放显存

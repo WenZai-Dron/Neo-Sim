@@ -17,8 +17,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.BonemealableBlock;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.loot.LootParams;
@@ -679,8 +679,9 @@ public class FarmTask extends PlotTask
 			{
 				long now = System.currentTimeMillis();
 				if (animateHand(now)) return;
-				if (processChopBatch()) return;   // 仍有剩余：本 tick 结束
-				continue;                          // 队列清空：重新取当前格
+				// 本 tick 只处理一批：还有剩余就结束本 tick，队列清空则重新取当前格
+				if (processChopBatch()) return;
+				continue;
 			}
 
 			BlockPos pos = cellPos(cursorRow, cursorCol);
@@ -944,7 +945,8 @@ public class FarmTask extends PlotTask
 			BlockState st = level.getBlockState(p);
 			if (st.isAir())
 			{
-				continue;   // 已被砍/已衰变消失
+				// 已被砍/已衰变消失
+				continue;
 			}
 			List<ItemStack> drops = InventoryManager.getBlockDrops(level, p, st);
 			boolean room = true;
@@ -999,14 +1001,16 @@ public class FarmTask extends PlotTask
 		{
 			List<Animal> animals = penAnimals(t);
 			int adults = adultCount(animals);
-			if (adults > Config.WORK_FARM_MAX_ADULTS.get()) return true;      // 需屠宰
-			if (adults < 2) return true;                                       // 需补种（免费，不算缺料）
+			// 待办判定：成畜超上限需屠宰；不足 2 只需补种（免费，不算缺料）
+			if (adults > Config.WORK_FARM_MAX_ADULTS.get()) return true;
+			if (adults < 2) return true;
 			List<Animal> adultsList = animals.stream().filter(a -> !a.isBaby()).toList();
 			if (adultsList.size() >= 2 && animals.size() < Config.WORK_FARM_MAX_TOTAL.get()
 					&& !onBreedCooldown(t)
 					&& (currentMode() == 2 || InventoryManager.countItems(nearbyChests, feedOf(t)) > 0))
 			{
-				return true;                                                   // 可繁殖且有料
+				// 可繁殖且有料
+				return true;
 			}
 		}
 		return false;
@@ -1026,19 +1030,21 @@ public class FarmTask extends PlotTask
 				if (cellOutsideBuildHeight(pos)) continue;
 				BlockState bs = level.getBlockState(pos);
 				BlockState below = level.getBlockState(pos.below());
-				if (isSelectedLog(bs)) return true;                            // 有树可砍
+				// 该格作业判定：有树可砍 / 有成熟作物 / 有杂物可清
+				if (isSelectedLog(bs)) return true;
 				if (bs.getBlock() instanceof CropBlock cb
 						&& cb.getAge(bs) >= cb.getMaxAge()
-						&& isSelectedCrop(bs.getBlock())) return true;         // 有成熟作物
-				if (isRemovableVegetation(bs)) return true;                    // 有杂物可清
+						&& isSelectedCrop(bs.getBlock())) return true;
+				if (isRemovableVegetation(bs)) return true;
 				if (bs.isAir())
 				{
+					// 空位作业判定：林场可种树（有树苗）/ 可翻地 / 可种植（有种子）
 					if (forestry && isTreeSpot(row, col) && isSoilForSapling(below)
-							&& pickPlantableTree() != null) return true;       // 可种树（有树苗）
+							&& pickPlantableTree() != null) return true;
 					if (hasCrops() && isTillableSoil(below)
-							&& (!forestry || !isTreeSpot(row, col))) return true; // 可翻地
+							&& (!forestry || !isTreeSpot(row, col))) return true;
 					if (hasCrops() && below.is(Blocks.FARMLAND)
-							&& pickPlantable() != null) return true;           // 可种植（有种子）
+							&& pickPlantable() != null) return true;
 				}
 			}
 		}

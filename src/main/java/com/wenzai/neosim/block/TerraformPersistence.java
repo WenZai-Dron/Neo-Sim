@@ -24,12 +24,21 @@ public class TerraformPersistence
 
 	// 记录：模盒 + 地块快照 + 方案 + 雇佣 + 游标/状态
 	public record TerraformRecord(
-			int bx, int by, int bz,             // 模盒位置
-			String plan,                        // TerraformPlan 枚举名
-			int minX, int minZ, int maxX, int maxZ, int baselineY,  // 地块快照
+			// 模盒位置
+			int bx, int by, int bz,
+
+			// TerraformPlan 枚举名
+			String plan,
+
+			// 地块快照
+			int minX, int minZ, int maxX, int maxZ, int baselineY,
+
 			String worker,
 			boolean paused,
-			int progress, int total,            // 目标列表游标 / 总数（展示用，恢复时重扫）
+
+			// 目标列表游标 / 总数（展示用，恢复时重扫）
+			int progress, int total,
+
 			String state,
 			String placer)
 	{

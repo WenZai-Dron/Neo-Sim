@@ -10,6 +10,7 @@ import com.wenzai.neosim.client.BuildingNameLocalizer;
 import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.network.ClientToServerPayloads;
 import com.wenzai.neosim.npc.Entity;
+import com.wenzai.neosim.npc.NpcNames;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -45,7 +46,7 @@ public class NPC extends Screen
 	private int skinPage = 0;
 	private static final int SKINS_PER_PAGE = 6;
 	private String[] currentSkinList;
-	private int btnW, btnH;
+	private int btnSizeW, btnSizeH;
 
 	// 皮肤下载
 	private EditBox inputPlayerName;
@@ -73,8 +74,8 @@ public class NPC extends Screen
 	@Override
 	protected void init()
 	{
-		btnW = this.width / 3;
-		btnH = this.height / 13;
+		btnSizeW = this.width / 3;
+		btnSizeH = this.height / 13;
 		showPage();
 	}
 
@@ -102,9 +103,9 @@ public class NPC extends Screen
 	// 主页面
 	private void buildMainPage()
 	{
-		int rightX = this.width - btnW - this.width / 12;
-		int startY = this.height / 8;
-		int gap = btnH + 6;
+		int btnPosX = this.width - btnSizeW - this.width / 12;
+		int startPosY = this.height / 8;
+		int gap = btnSizeH + 6;
 
 		// 设置皮肤
 		this.addRenderableWidget(Button.builder(
@@ -114,8 +115,8 @@ public class NPC extends Screen
 					refreshSkinList();
 					showPage();
 				})
-				.pos(rightX, startY)
-				.size(btnW, btnH)
+				.pos(btnPosX, startPosY)
+				.size(btnSizeW, btnSizeH)
 				.build());
 
 		// 重命名
@@ -124,8 +125,8 @@ public class NPC extends Screen
 					currentPage = "rename";
 					showPage();
 				})
-				.pos(rightX, startY + gap)
-				.size(btnW, btnH)
+				.pos(btnPosX, startPosY + gap)
+				.size(btnSizeW, btnSizeH)
 				.build());
 
 		// 族谱
@@ -134,17 +135,17 @@ public class NPC extends Screen
 					currentPage = "family";
 					showPage();
 				})
-				.pos(rightX, startY + gap * 2)
-				.size(btnW, btnH)
+				.pos(btnPosX, startPosY + gap * 2)
+				.size(btnSizeW, btnSizeH)
 				.build());
 	}
 
 	// 族谱页面
 	private void buildFamilyPage()
 	{
-		int rightX = this.width - btnW - this.width / 12;
-		int startY = this.height / 8;
-		int gap = btnH + 6;
+		int btnPosX = this.width - btnSizeW - this.width / 12;
+		int startPosY = this.height / 8;
+		int gap = btnSizeH + 6;
 
 		// 返回
 		this.addRenderableWidget(Button.builder(
@@ -152,8 +153,8 @@ public class NPC extends Screen
 					currentPage = "main";
 					showPage();
 				})
-				.pos(rightX, startY)
-				.size(btnW, btnH)
+				.pos(btnPosX, startPosY)
+				.size(btnSizeW, btnSizeH)
 				.build());
 
 		// 复位视图
@@ -161,8 +162,8 @@ public class NPC extends Screen
 				Component.translatable("gui.neosim.npc.family.reset"), btn-> {
 					if (familyRenderer != null) familyRenderer.resetView();
 				})
-				.pos(rightX, startY + gap)
-				.size(btnW, btnH)
+				.pos(btnPosX, startPosY + gap)
+				.size(btnSizeW, btnSizeH)
 				.build());
 
 		// 初始化渲染器
@@ -202,18 +203,18 @@ public class NPC extends Screen
 	// 皮肤选择页面
 	private void buildSetSkinPage()
 	{
-		int rightX = this.width - btnW - this.width / 12;
-		int startY = this.height / 12;
-		int gap = btnH + 4;
+		int btnPosX = this.width - btnSizeW - this.width / 12;
+		int startPosY = this.height / 12;
+		int gap = btnSizeH + 4;
 
 		// 搜索玩家皮肤
-		int searchBtnW = btnW / 3;
-		int searchInputW = btnW - searchBtnW - 4;
+		int searchBtnSizeW = btnSizeW / 3;
+		int inputSizeW = btnSizeW - searchBtnSizeW - 4;
 
 		inputPlayerName = new EditBox(
 				this.font,
-				rightX, startY,
-				searchInputW, btnH,
+				btnPosX, startPosY,
+				inputSizeW, btnSizeH,
 				Component.translatable("gui.neosim.npc.skin.searchPlayer"));
 		inputPlayerName.setMaxLength(16);
 		this.addRenderableWidget(inputPlayerName);
@@ -226,8 +227,8 @@ public class NPC extends Screen
 						downloadAndApplySkin(playerName);
 					}
 				})
-				.pos(rightX + searchInputW + 4, startY)
-				.size(searchBtnW, btnH)
+				.pos(btnPosX + inputSizeW + 4, startPosY)
+				.size(searchBtnSizeW, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonConfirmSkinDownload);
 
@@ -238,7 +239,7 @@ public class NPC extends Screen
 		}
 
 		// 皮肤列表从搜索栏下方开始
-		int skinStartY = startY + btnH + 16;
+		int listPosY = startPosY + btnSizeH + 16;
 
 		if (currentSkinList == null)
 		{
@@ -277,8 +278,8 @@ public class NPC extends Screen
 						currentPage = "main";
 						showPage();
 					})
-					.pos(rightX, skinStartY + gap * i)
-					.size(btnW, btnH)
+					.pos(btnPosX, listPosY + gap * i)
+					.size(btnSizeW, btnSizeH)
 					.build();
 			this.addRenderableWidget(skinBtn);
 
@@ -286,8 +287,8 @@ public class NPC extends Screen
 			skinButtonMap.put(skinBtn, skinPath);
 		}
 
-		int navY = skinStartY + gap * SKINS_PER_PAGE;
-		int navBtnW = btnW / 2 - 2;
+		int navPosY = listPosY + gap * SKINS_PER_PAGE;
+		int navBtnSizeW = btnSizeW / 2 - 2;
 
 		// 上一页
 		if (skinPage > 0)
@@ -297,8 +298,8 @@ public class NPC extends Screen
 						skinPage--;
 						showPage();
 					})
-					.pos(rightX, navY)
-					.size(navBtnW, btnH)
+					.pos(btnPosX, navPosY)
+					.size(navBtnSizeW, btnSizeH)
 					.build());
 		}
 
@@ -310,12 +311,13 @@ public class NPC extends Screen
 						skinPage++;
 						showPage();
 					})
-					.pos(rightX + navBtnW + 4, navY)
-					.size(navBtnW, btnH)
+					.pos(btnPosX + navBtnSizeW + 4, navPosY)
+					.size(navBtnSizeW, btnSizeH)
 					.build());
 		}
 
 		// 打开皮肤文件夹
+		int folderPosY = navPosY + btnSizeH + 4;
 		this.addRenderableWidget(Button.builder(
 				Component.translatable("gui.neosim.npc.skin.openFolder"), btn -> {
 					Path skinsDir = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("Skins");
@@ -332,8 +334,8 @@ public class NPC extends Screen
 						LOGGER.error("NeoSim: Failed to open skins folder", e);
 					}
 				})
-				.pos(rightX, navY + btnH + 4)
-				.size(btnW, btnH)
+				.pos(btnPosX, folderPosY)
+				.size(btnSizeW, btnSizeH)
 				.build());
 
 		// 返回
@@ -342,23 +344,23 @@ public class NPC extends Screen
 					currentPage = "main";
 					showPage();
 				})
-				.pos(rightX, navY + btnH + 4 + btnH + 4)
-				.size(btnW, btnH)
+				.pos(btnPosX, folderPosY + btnSizeH + 4)
+				.size(btnSizeW, btnSizeH)
 				.build());
 	}
 
 	// 重命名页面
 	private void buildRenamePage()
 	{
-		int rightX = this.width - btnW - this.width / 12;
-		int startY = this.height / 8;
-		int inputW = btnW / 2 - 4;
+		int btnPosX = this.width - btnSizeW - this.width / 12;
+		int startPosY = this.height / 8;
+		int colSizeW = btnSizeW / 2 - 4;
 
 		// 姓输入框
 		inputSurname = new EditBox(
 				this.font,
-				rightX, startY,
-				inputW, btnH,
+				btnPosX, startPosY,
+				colSizeW, btnSizeH,
 				Component.translatable("gui.neosim.npc.rename.surname"));
 		inputSurname.setMaxLength(10);
 		inputSurname.setValue(npc.getNpcSurname());
@@ -368,15 +370,15 @@ public class NPC extends Screen
 		// 名输入框
 		inputGivenName = new EditBox(
 				this.font,
-				rightX + inputW + 4, startY,
-				inputW, btnH,
+				btnPosX + colSizeW + 4, startPosY,
+				colSizeW, btnSizeH,
 				Component.translatable("gui.neosim.npc.rename.givenName"));
 		inputGivenName.setMaxLength(10);
 		inputGivenName.setValue(npc.getNpcGivenName());
 		inputGivenName.setResponder(text -> updateConfirmButtonState());
 		this.addRenderableWidget(inputGivenName);
 
-		int smallBtnW = btnW / 2 - 4;
+		int rowPosY = startPosY + btnSizeH + 6;
 
 		// 确认
 		buttonConfirmRename = Button.builder(
@@ -385,7 +387,8 @@ public class NPC extends Screen
 					String newGivenName = inputGivenName.getValue().trim();
 					if (!newSurname.isEmpty() && !newGivenName.isEmpty())
 					{
-						String fullName = newSurname + newGivenName;
+						// 按该 NPC 的命名风格拼名（英文：名 空格 姓），避免本地乐观显示与服务端不一致
+						String fullName = NpcNames.format(npc.getNameLocale(), newSurname, newGivenName);
 						npc.setNpcName(fullName);
 
 						// 同步到服务端，更新文件
@@ -394,8 +397,8 @@ public class NPC extends Screen
 					currentPage = "main";
 					showPage();
 				})
-				.pos(rightX, startY + btnH + 6)
-				.size(smallBtnW, btnH)
+				.pos(btnPosX, rowPosY)
+				.size(colSizeW, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonConfirmRename);
 
@@ -408,8 +411,8 @@ public class NPC extends Screen
 					currentPage = "main";
 					showPage();
 				})
-				.pos(rightX + smallBtnW + 4, startY + btnH + 6)
-				.size(smallBtnW, btnH)
+				.pos(btnPosX + colSizeW + 4, rowPosY)
+				.size(colSizeW, btnSizeH)
 				.build());
 	}
 
@@ -461,11 +464,8 @@ public class NPC extends Screen
 			// 渲染下载状态文字
 			if (skinDownloadStatus != null)
 			{
-				int rightX = this.width - btnW - this.width / 12;
-				int startY = this.height / 8;
-				int statusY = startY + btnH + 4;
 				guiGraphics.drawString(this.font, Component.literal(skinDownloadStatus),
-						rightX, statusY, 0xFF5555);
+						this.width - btnSizeW - this.width / 12, this.height / 8 + btnSizeH + 4, 0xFF5555);
 			}
 		}
 		else
@@ -495,34 +495,34 @@ public class NPC extends Screen
 	// 信息
 	private void renderNpcInfo(GuiGraphics guiGraphics)
 	{
-		int leftX = this.width / 12;
-		int col2X = leftX + this.width / 5;
-		int startY = this.height / 8;
-		int lineH = (int)(this.height / 14 * 1.2f);
+		int colPosX = this.width / 12;
+		int col2PosX = colPosX + this.width / 5;
+		int startPosY = this.height / 8;
+		int lineSizeH = (int)(this.height / 14 * 1.2f);
 		int color = 0xFFFFFF;
 
 		// 姓名（金色）
-		drawInfoLine(guiGraphics, leftX, startY, Component.literal(npc.getNpcName()), 0xFFD700);
+		drawInfoLine(guiGraphics, colPosX, startPosY, Component.literal(npc.getNpcName()), 0xFFD700);
 
 		// 性别
 		String sexDisplay = "male".equals(npc.getSex())
 				? Component.translatable("gui.neosim.npc.info.male").getString()
 				: Component.translatable("gui.neosim.npc.info.female").getString();
-		drawInfoLine(guiGraphics, leftX, startY + lineH, Component.translatable("gui.neosim.npc.info.sex", sexDisplay), color);
+		drawInfoLine(guiGraphics, colPosX, startPosY + lineSizeH, Component.translatable("gui.neosim.npc.info.sex", sexDisplay), color);
 
 		// 年龄
-		drawInfoLine(guiGraphics, col2X, startY + lineH, Component.translatable("gui.neosim.npc.info.age", npc.getAge()), color);
+		drawInfoLine(guiGraphics, col2PosX, startPosY + lineSizeH, Component.translatable("gui.neosim.npc.info.age", npc.getAge()), color);
 
 		// 城市
 		String city = npc.getCityName();
 		if (city.isEmpty()) city = Component.translatable("gui.neosim.npc.info.noCity").getString();
-		drawInfoLine(guiGraphics, leftX, startY + lineH * 2, Component.translatable("gui.neosim.npc.info.city", city), color);
+		drawInfoLine(guiGraphics, colPosX, startPosY + lineSizeH * 2, Component.translatable("gui.neosim.npc.info.city", city), color);
 
 		// 关系
 		String relationship = npc.getPartner().isEmpty()
 				? Component.translatable("gui.neosim.npc.info.single").getString()
 				: Component.translatable("gui.neosim.npc.info.livingWithSomeone").getString();
-		drawInfoLine(guiGraphics, col2X, startY + lineH * 2, Component.translatable("gui.neosim.npc.info.relationship", relationship), color);
+		drawInfoLine(guiGraphics, col2PosX, startPosY + lineSizeH * 2, Component.translatable("gui.neosim.npc.info.relationship", relationship), color);
 
 		// 生活点所在建筑
 		String homeBuilding = npc.getHomeBuilding();
@@ -534,20 +534,20 @@ public class NPC extends Screen
 		{
 			homeBuilding = Component.translatable("gui.neosim.npc.info.noHome").getString();
 		}
-		drawInfoLine(guiGraphics, leftX, startY + lineH * 3, Component.translatable("gui.neosim.npc.info.home", homeBuilding), color);
+		drawInfoLine(guiGraphics, colPosX, startPosY + lineSizeH * 3, Component.translatable("gui.neosim.npc.info.home", homeBuilding), color);
 
 		// 产假状态
 		if (npc.getPregnancyStage() > 0.0F)
 		{
-			drawInfoLine(guiGraphics, col2X, startY + lineH * 3, Component.translatable("gui.neosim.npc.info.maternityLeave"), color);
+			drawInfoLine(guiGraphics, col2PosX, startPosY + lineSizeH * 3, Component.translatable("gui.neosim.npc.info.maternityLeave"), color);
 		}
 	}
 
 	// 绘制一行信息（1.2倍放大）
-	private void drawInfoLine(GuiGraphics guiGraphics, int x, int y, Component text, int color)
+	private void drawInfoLine(GuiGraphics guiGraphics, int posX, int posY, Component text, int color)
 	{
 		guiGraphics.pose().pushPose();
-		guiGraphics.pose().translate(x, y, 0);
+		guiGraphics.pose().translate(posX, posY, 0);
 		guiGraphics.pose().scale(1.2f, 1.2f, 1.0f);
 		guiGraphics.drawString(this.font, text, 0, 0, color);
 		guiGraphics.pose().popPose();
@@ -607,19 +607,19 @@ public class NPC extends Screen
 
 		// 位置
 		int previewSize = (int)(this.height * 0.22);
-		int previewX = this.width / 7;
-		int previewY = this.height - previewSize / 6;
+		int previewPosX = this.width / 7;
+		int previewPosY = this.height - previewSize / 6;
 
 		// 计算模型朝向鼠标的角度
-		double dx = previewX - mouseX;
-		double dy = mouseY - previewY;
+		double dx = previewPosX - mouseX;
+		double dy = mouseY - previewPosY;
 		float faceAngle = (float) Math.toDegrees(Math.atan2(dx, dy));
 
 		// 渲染
 		var poseStack = guiGraphics.pose();
 		poseStack.pushPose();
 
-		poseStack.translate(previewX, previewY, 1050.0F);
+		poseStack.translate(previewPosX, previewPosY, 1050.0F);
 		poseStack.scale(1.0F, 1.0F, -1.0F);
 		poseStack.translate(0.0, 0.0, 1000.0);
 		poseStack.scale(previewSize, previewSize, previewSize);

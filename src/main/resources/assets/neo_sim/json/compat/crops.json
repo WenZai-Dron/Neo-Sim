@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "_comment": "模组作物表：detected 由模组自动扫描写入（新增模组后自动更新，玩家不必手写）；rules 是覆盖规则：mature 成熟目标 / needsWater 需水 / excluded 排除 / enabled 停用。规则后写覆盖先写，外部文件优先于本内置文件。",
+  "rules": [
+    { "id": "farmersdelight:budding_tomatoes", "mature": "farmersdelight:tomatoes", "note": "番茄两阶段：幼苗 → 成株" },
+    { "id": "farmersdelight:rice", "needsWater": true, "note": "水稻需水，农业盒无水源，仅检测不种植" },
+    { "id": "farmersdelight:brown_mushroom_colony", "excluded": true, "note": "蘑菇群非农田作物" },
+    { "id": "farmersdelight:red_mushroom_colony", "excluded": true, "note": "蘑菇群非农田作物" }
+  ],
+  "detected": []
+}

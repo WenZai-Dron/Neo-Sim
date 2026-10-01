@@ -12,9 +12,14 @@ import java.util.EnumSet;
 
 public class SocialGoal extends Goal
 {
-	private static final double SEPARATE_DIST = 8.0;  // 分开结束串门判定（格）
-	private static final int MEDDLE_TICKS = 12;       // 凑在一起每 12 tick 结算一次关系
-	private static final int REPATH_INTERVAL = 20;    // 每 20 tick 重新寻路（目标会移动）
+	// 分开结束串门判定（格）
+	private static final double SEPARATE_DIST = 8.0;
+
+	// 凑在一起每 12 tick 结算一次关系
+	private static final int MEDDLE_TICKS = 12;
+
+	// 每 20 tick 重新寻路（目标会移动）
+	private static final int REPATH_INTERVAL = 20;
 
 	private final Entity npc;
 	private Entity target;

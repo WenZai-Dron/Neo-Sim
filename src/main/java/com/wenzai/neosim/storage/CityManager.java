@@ -2,6 +2,7 @@ package com.wenzai.neosim.storage;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.npc.Manage;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
@@ -72,16 +73,16 @@ public final class CityManager
 
 	// ---- 城市操作（服务端权威；替代客户端 City.java 的本地文件写入）----
 
-	// 创建城市：建目录 + 写 player.json + 初始化 CityData + 补第一个市民。返回 null=成功，否则为提示文本
-	public static String createCity(ServerLevel level, Player player, String cityName)
+	// 创建城市：建目录 + 写 player.json + 初始化 CityData + 补第一个市民。返回 null=成功，否则为按客户端语言显示的提示组件
+	public static Component createCity(ServerLevel level, Player player, String cityName)
 	{
-		if (cityName == null || cityName.isBlank()) return "§c城市名不能为空";
+		if (cityName == null || cityName.isBlank()) return Component.translatable("msg.neosim.city.nameEmpty");
 		if (cityName.contains("/") || cityName.contains("\\") || cityName.contains(".."))
 		{
-			return "§c城市名含有非法字符";
+			return Component.translatable("msg.neosim.city.illegalChars");
 		}
-		if (Manage.cityExists(level, cityName)) return "§c城市已存在";
-		if (!getCity(player.getUUID()).isEmpty()) return "§c你已经加入了城市";
+		if (Manage.cityExists(level, cityName)) return Component.translatable("msg.neosim.city.exists");
+		if (!getCity(player.getUUID()).isEmpty()) return Component.translatable("msg.neosim.city.alreadyJoined");
 
 		FileCreater.createCityFolder(level, cityName);
 		FileCreater.savePlayerToCity(level, cityName, player.getName().getString());
@@ -95,13 +96,13 @@ public final class CityManager
 		return null;
 	}
 
-	// 加入已有城市。返回 null=成功，否则为提示文本
-	public static String joinCity(ServerLevel level, Player player, String cityName)
+	// 加入已有城市。返回 null=成功，否则为按客户端语言显示的提示组件
+	public static Component joinCity(ServerLevel level, Player player, String cityName)
 	{
-		if (cityName == null || cityName.isBlank()) return "§c城市名不能为空";
-		if (!Manage.cityExists(level, cityName)) return "§c城市不存在";
+		if (cityName == null || cityName.isBlank()) return Component.translatable("msg.neosim.city.nameEmpty");
+		if (!Manage.cityExists(level, cityName)) return Component.translatable("msg.neosim.city.notFound");
 		String mine = getCity(player.getUUID());
-		if (!mine.isEmpty()) return mine.equals(cityName) ? null : "§c你已经加入了其他城市";
+		if (!mine.isEmpty()) return mine.equals(cityName) ? null : Component.translatable("msg.neosim.city.joinedOther");
 
 		FileCreater.savePlayerToCity(level, cityName, player.getName().getString());
 		CITY_BY_PLAYER.put(player.getUUID(), cityName);

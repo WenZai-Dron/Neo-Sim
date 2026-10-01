@@ -124,7 +124,8 @@ public enum TerraformPlan
 					}
 					else if (!column.isEmpty())
 					{
-						break; // 水面以下遇非水即列底
+						// 水面以下遇非水即列底
+						break;
 					}
 				}
 				// 底→顶，保证整列封死不回流

@@ -15,6 +15,7 @@ import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.storage.CityManager;
 import com.wenzai.neosim.storage.NpcData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
@@ -28,21 +29,21 @@ public final class WorkerService
 	{
 	}
 
-	// 返回 null=成功，否则为提示文本
-	public static String tryHire(ServerLevel level, ServerPlayer player, BlockPos boxPos, String npcName)
+	// 返回 null=成功，否则为按客户端语言显示的提示组件
+	public static Component tryHire(ServerLevel level, ServerPlayer player, BlockPos boxPos, String npcName)
 	{
 		String city = CityManager.getCity(player.getUUID());
-		if (city.isEmpty()) return "§c请先加入城市";
-		if (npcName == null || npcName.isBlank()) return "§c无效的市民";
-		if (NeoSim.WORKER_MAP.containsValue(npcName)) return "§c该市民已在别处工作";
+		if (city.isEmpty()) return Component.translatable("msg.neosim.worker.noCity");
+		if (npcName == null || npcName.isBlank()) return Component.translatable("msg.neosim.worker.invalidCitizen");
+		if (NeoSim.WORKER_MAP.containsValue(npcName)) return Component.translatable("msg.neosim.worker.alreadyWorking");
 
 		// 档案校验：存在、成年、非产假
 		JsonObject json = NpcData.load(level, city, npcName);
-		if (json == null) return "§c市民档案不存在";
+		if (json == null) return Component.translatable("msg.neosim.worker.noProfile");
 		if (json.has("age") && json.get("age").getAsInt() < Config.LIFE_ADULT_AGE.get())
-			return "§c未成年不可雇佣";
+			return Component.translatable("msg.neosim.worker.underage");
 		if (json.has("pregnancy") && json.get("pregnancy").getAsFloat() > 0.0F)
-			return "§c产假中不可雇佣";
+			return Component.translatable("msg.neosim.worker.maternity");
 
 		// 实体（可能未加载）：未加载则从档案恢复到岗位位置（世界坐标：模盒在子世界时投影到甲板，
 		// 避免实体生成在 20.48M 局部坐标——那是保存卸载自旋的触发源）
@@ -51,11 +52,11 @@ public final class WorkerService
 		{
 			npc = Manage.spawnSingle(level, city, npcName,
 					PhysicsWorld.toWorld(level, boxPos));
-			if (npc == null) return "§c市民恢复失败";
+			if (npc == null) return Component.translatable("msg.neosim.worker.restoreFailed");
 		}
 		else if (!city.equals(npc.getCityName()))
 		{
-			return "§c该市民不属于你的城市";
+			return Component.translatable("msg.neosim.worker.notYourCity");
 		}
 
 		// 按岗位类型雇佣
@@ -101,11 +102,11 @@ public final class WorkerService
 		LOGGER.warn("NeoSim-WorkerService: no hireable position at {} (buildings={}, block={}, npc='{}')",
 				boxPos, ConstructionEngine.getActiveBuildings().size(),
 				level.getBlockState(boxPos).getBlock(), npcName);
-		return "§c此处没有可雇佣的岗位";
+		return Component.translatable("msg.neosim.worker.noHirePost");
 	}
 
-	// 解雇：返回 null=成功，否则为提示文本
-	public static String tryFire(ServerLevel level, BlockPos boxPos)
+	// 解雇：返回 null=成功，否则为按客户端语言显示的提示组件
+	public static Component tryFire(ServerLevel level, BlockPos boxPos)
 	{
 		ConstructionTask ct = ConstructionEngine.findTask(boxPos);
 		if (ct != null && ct.getState() != BuildingInstance.BuildState.COMPLETE)
@@ -155,6 +156,6 @@ public final class WorkerService
 			}
 			return null;
 		}
-		return "§c此处没有可解雇的岗位";
+		return Component.translatable("msg.neosim.worker.noFirePost");
 	}
 }

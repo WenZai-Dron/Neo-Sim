@@ -134,15 +134,15 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 	private void showPage()
 	{
 		clearWidgets();
-		int cx = width / 2;
+		int centerPosX = width / 2;
 
 		if (currentPage == 0)
 		{
-			addButton(1, cx - 100, height - 30, 100, 20,
+			addButton(1, centerPosX - 100, height - 30, 100, 20,
 					Component.translatable(P + "close"), b -> onClose());
 
 			boolean hasWorker = task != null && !task.getWorkerName().isEmpty();
-			addButton(2, cx, height - 30, 100, 20,
+			addButton(2, centerPosX, height - 30, 100, 20,
 					hasWorker
 							? Component.translatable(P + "fire", task.getWorkerName())
 							: Component.translatable(P + "hire"),
@@ -156,7 +156,7 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 						}
 					});
 
-			addButton(3, cx - 100, height - 56, 200, 20,
+			addButton(3, centerPosX - 100, height - 56, 200, 20,
 					Component.translatable(P + "discards"),
 					b ->
 					{
@@ -164,7 +164,7 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 						showPage();
 					});
 
-			addButton(4, cx - 100, height - 80, 200, 20,
+			addButton(4, centerPosX - 100, height - 80, 200, 20,
 					task != null && task.isPaused()
 							? Component.translatable(P + "resume")
 							: Component.translatable(P + "pause"),
@@ -180,25 +180,25 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 		}
 		else if (currentPage == 2)
 		{
-			addButton(999, cx - 150, height - 25, 100, 20,
+			addButton(999, centerPosX - 150, height - 25, 100, 20,
 					Component.translatable(P + "goBack"),
 					b ->
 					{
 						currentPage = 0;
 						showPage();
 					});
-			addButton(998, cx - 50, height - 25, 100, 20,
+			addButton(998, centerPosX - 50, height - 25, 100, 20,
 					Component.translatable(P + "apply"),
 					b -> selectDiscards());
 
-			int x = cx - 120;
-			int y = 40;
+			int colPosX = centerPosX - 120;
+			int colPosY = 40;
 			draftMask = discards();
-			addDiscardCheckbox(x, y, 1);
-			y += 24;
-			addDiscardCheckbox(x, y, 2);
-			y += 24;
-			addDiscardCheckbox(x, y, 4);
+			addDiscardCheckbox(colPosX, colPosY, 1);
+			colPosY += 24;
+			addDiscardCheckbox(colPosX, colPosY, 2);
+			colPosY += 24;
+			addDiscardCheckbox(colPosX, colPosY, 4);
 		}
 		else
 		{
@@ -217,66 +217,58 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 			return;
 		}
 
-		int x = width / 2 - 120;
-		int y = 45;
+		WorkBoxText text = new WorkBoxText(gfx, font, width);
 
 		// 绑定矩形
 		if (record.bound())
 		{
-			int w = record.rx2() - record.rx1() + 1;
-			int h = record.rz2() - record.rz1() + 1;
-			w = w > 2 ? w - 2 : w;
-			h = h > 2 ? h - 2 : h;
-			gfx.drawString(font, Component.translatable(P + "rect", w, h), x, y, 0xFFFFFF);
+			int sizeW = record.rx2() - record.rx1() + 1;
+			int sizeH = record.rz2() - record.rz1() + 1;
+			sizeW = sizeW > 2 ? sizeW - 2 : sizeW;
+			sizeH = sizeH > 2 ? sizeH - 2 : sizeH;
+			text.line(Component.translatable(P + "rect", sizeW, sizeH), 0xFFFFFF);
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "unbound"), x, y, 0xFFAA55);
+			text.line(Component.translatable(P + "unbound"), 0xFFAA55);
 		}
-		y += 18;
 
 		// 深度
-		gfx.drawString(font, Component.translatable(P + "depth", depth()), x, y, 0xFFFFFF);
-		y += 18;
+		text.line(Component.translatable(P + "depth", depth()), 0xFFFFFF);
 
 		// 矿工
 		String worker = record.worker() != null ? record.worker() : "";
 		if (!worker.isEmpty())
 		{
-			gfx.drawString(font, Component.translatable(P + "worker", worker), x, y, 0xFFFFFF);
-			y += 14;
-			gfx.drawString(font, Component.translatable(P + "workerLevel", workerLevel()), x + 12, y, 0xCCCCCC);
-			y += 18;
+			text.workerLine(Component.translatable(P + "worker", worker),
+					Component.translatable(P + "workerLevel", workerLevel()));
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "workerNone"), x, y, 0xAAAAAA);
-			y += 18;
+			text.line(Component.translatable(P + "workerNone"), 0xAAAAAA);
 		}
 
 		// 状态
-		gfx.drawString(font, Component.translatable(P + "state",
-				stateLabel()), x, y, 0xFFFFFF);
+		text.line(Component.translatable(P + "state", stateLabel()), 0xFFFFFF);
 	}
 
 	// 主页丢弃按钮右侧图标
 	private void drawDiscardButtonIcons(GuiGraphics gfx)
 	{
-		int bx = width / 2 - 100;
-		int by = height - 56;
-		int iy = by + (20 - 16) / 2;
+		int btnPosX = width / 2 - 100;
+		int btnPosY = height - 56;
+		int iconPosY = btnPosY + (20 - 16) / 2;
 		java.util.List<java.util.List<ItemStack>> selected = new java.util.ArrayList<>();
 		for (int bit : new int[] { 1, 2, 4 })
 		{
 			if ((discards() & bit) != 0) selected.add(categoryIcons(bit));
 		}
-		int n = selected.size();
-		int ix = bx + 200 - 4 - n * 18;
+		int iconPosX = btnPosX + 200 - 4 - selected.size() * 18;
 		long idx = System.currentTimeMillis() / 1000L;
 		for (java.util.List<ItemStack> icons : selected)
 		{
-			gfx.renderItem(icons.get((int) (idx % icons.size())), ix, iy);
-			ix += 18;
+			gfx.renderItem(icons.get((int) (idx % icons.size())), iconPosX, iconPosY);
+			iconPosX += 18;
 		}
 	}
 
@@ -345,10 +337,10 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 	}
 
 	// 丢弃类别复选框
-	private void addDiscardCheckbox(int x, int y, int bit)
+	private void addDiscardCheckbox(int posX, int posY, int bit)
 	{
 		Checkbox cb = Checkbox.builder(Component.translatable(P + catKey(bit)), font)
-				.pos(x, y).selected((draftMask & bit) != 0)
+				.pos(posX, posY).selected((draftMask & bit) != 0)
 				.onValueChange((c, v) ->
 				{
 					if (v) draftMask |= bit;
@@ -377,19 +369,18 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 	// 丢弃选择页
 	private void drawDiscardIcons(GuiGraphics gfx)
 	{
-		int cx = width / 2;
-		int x = cx - 120;
-		int y = 40;
+		int colPosX = width / 2 - 120;
+		int colPosY = 40;
 		for (int bit : new int[] { 1, 2, 4 })
 		{
 			List<ItemStack> icons = categoryIcons(bit);
-			int px = x + 240 - 6 - icons.size() * 16 - (icons.size() - 1) * 2;
+			int iconPosX = colPosX + 240 - 6 - icons.size() * 16 - (icons.size() - 1) * 2;
 			for (ItemStack icon : icons)
 			{
-				gfx.renderItem(icon, px, y + 2);
-				px += 18;
+				gfx.renderItem(icon, iconPosX, colPosY + 2);
+				iconPosX += 18;
 			}
-			y += 24;
+			colPosY += 24;
 		}
 	}
 
@@ -479,10 +470,10 @@ public class MiningBoxGui extends Screen implements HireListPanel.HostScreen
 		return Component.translatable(P + key).getString();
 	}
 
-	private Button addButton(int id, int x, int y, int w, int h, Component label, Button.OnPress action)
+	private Button addButton(int id, int posX, int posY, int sizeW, int sizeH, Component label, Button.OnPress action)
 	{
 		Button btn = Button.builder(label, action != null ? action : b -> { })
-				.pos(x, y).size(w, h).build();
+				.pos(posX, posY).size(sizeW, sizeH).build();
 		return addRenderableWidget(btn);
 	}
 

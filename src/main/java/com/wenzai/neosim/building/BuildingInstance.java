@@ -1,7 +1,9 @@
 package com.wenzai.neosim.building;
 
+import com.wenzai.neosim.schematic.BlueprintPlacement;
 import com.wenzai.neosim.schematic.CoordTransform;
 import com.wenzai.neosim.schematic.SchematicData;
+import com.wenzai.neosim.schematic.SchematicFrame;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
@@ -25,6 +27,9 @@ public class BuildingInstance
 
 	// 玩家面朝方向
 	private Direction facing;
+
+	// 落地链缓存（位置 + 朝向的唯一实现，见 BlueprintPlacement）：setter 改动即失效
+	private BlueprintPlacement placement;
 
 	// 建造进度
 	private int buildProgress;
@@ -70,14 +75,28 @@ public class BuildingInstance
 		return cachedCity != null ? cachedCity : "";
 	}
 
+	// 该建筑用的坐标系算法（.txt 与 .litematic 分开，见 SchematicFrame）
+	public SchematicFrame frame()
+	{
+		return SchematicFrame.of(schematic);
+	}
+
+	// 落地链（与 PreviewState 用的是同一个 BlueprintPlacement，绝不走第二条路）：缓存，setter 一改就重建
+	public BlueprintPlacement placement()
+	{
+		if (placement == null)
+		{
+			int sx = schematic != null ? schematic.getSizeX() : 0;
+			int sz = schematic != null ? schematic.getSizeZ() : 0;
+			placement = new BlueprintPlacement(frame(), sx, sz, controlBoxPos, facing, mirror, rotation);
+		}
+		return placement;
+	}
+
 	// 蓝图局部坐标同步到世界坐标
 	public BlockPos blueprintToWorld(int bx, int by, int bz)
 	{
-		BlockPos base = facing != null
-				? CoordTransform.simukraftPos(bx, by, bz, facing)
-				: new BlockPos(bx, by, bz);
-		BlockPos transformed = CoordTransform.transformPos(base, mirror, rotation);
-		return controlBoxPos.offset(transformed);
+		return placement().pos(bx, by, bz);
 	}
 
 	// 访问
@@ -99,6 +118,7 @@ public class BuildingInstance
 	public void setSchematic(SchematicData v)
 	{
 		this.schematic = v;
+		this.placement = null;
 	}
 
 	public BlockPos getControlBoxPos()
@@ -109,6 +129,7 @@ public class BuildingInstance
 	public void setControlBoxPos(BlockPos v)
 	{
 		this.controlBoxPos = v;
+		this.placement = null;
 	}
 
 	public Rotation getRotation()
@@ -119,6 +140,7 @@ public class BuildingInstance
 	public void setRotation(Rotation v)
 	{
 		this.rotation = v;
+		this.placement = null;
 	}
 
 	public Mirror getMirror()
@@ -129,6 +151,7 @@ public class BuildingInstance
 	public void setMirror(Mirror v)
 	{
 		this.mirror = v;
+		this.placement = null;
 	}
 
 	public Direction getFacing()
@@ -139,6 +162,7 @@ public class BuildingInstance
 	public void setFacing(Direction v)
 	{
 		this.facing = v;
+		this.placement = null;
 	}
 
 	public int getBuildProgress()

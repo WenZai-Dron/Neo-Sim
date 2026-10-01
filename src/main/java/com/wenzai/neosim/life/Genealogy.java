@@ -36,7 +36,7 @@ public class Genealogy
 	// 单棵树节点数上限（防异常数据撑爆 payload/渲染）
 	private static final int MAX_FAMILY_NODES = 50;
 
-	// 血亲判定固定回溯深度（替代已删除的配置项）
+	// 血亲判定固定回溯深度
 	private static final int BLOOD_RELATION_DEPTH = 3;
 
 	// 解析某名字的族谱：优先已加载实体NBT，未加载则读NpcData文件
@@ -190,9 +190,14 @@ public class Genealogy
 		if (a == null || b == null || a.isEmpty() || b.isEmpty() || a.equals(b)) return false;
 
 		FamilyData fa = getFamily(level, city, a);
-		if (fa.parents().contains(b)) return true; // b 是 a 的父母
+
+		// b 是 a 的父母
+		if (fa.parents().contains(b)) return true;
+
 		FamilyData fb = getFamily(level, city, b);
-		if (fb.parents().contains(a)) return true; // a 是 b 的父母
+
+		// a 是 b 的父母
+		if (fb.parents().contains(a)) return true;
 
 		int depth = BLOOD_RELATION_DEPTH;
 

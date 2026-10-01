@@ -2,7 +2,10 @@ package com.wenzai.neosim;
 
 import net.neoforged.neoforge.common.ModConfigSpec;
 
+import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Config
 {
@@ -25,6 +28,11 @@ public class Config
 				.translation("config.neosim.maxPopulation")
 				.defineInRange("maxPopulation", 200, 1, 1024);
 
+		// 打开任意界面时隐藏 HUD（原版无条件渲染 HUD，界面叠加在它之后）
+		HIDE_HUD_IN_GUI = BUILDER
+				.translation("config.neosim.hideHudInGui")
+				.define("hideHudInGui", true);
+
 		// NPC
 		NPC_MIN_AGE = BUILDER
 				.translation("config.neosim.npcMinAge")
@@ -33,6 +41,14 @@ public class Config
 		NPC_MAX_AGE = BUILDER
 				.translation("config.neosim.npcMaxAge")
 				.defineInRange("npcMaxAge", 25, 20, 25);
+
+		// NPC 姓名池语言：auto=跟随创建该 NPC 的玩家语言；zh=永远中文；en=永远英文
+		// 候选值必须用 Arrays.asList 而非 List.of：旧配置文件缺少该键时读出 null，
+		// List.of(...).contains(null) 会抛 NPE（ImmutableCollections 拒绝 null），ArrayList 则安全返回 false
+		NPC_NAME_LOCALE = BUILDER
+				.translation("config.neosim.npcNameLocale")
+				.comment("auto / zh / en")
+				.defineInList("npcNameLocale", "auto", Arrays.asList("auto", "zh", "en"));
 		BUILDER.pop();
 	}
 
@@ -315,6 +331,21 @@ public class Config
 		BUILDER.pop();
 
 		BUILDER.pop();
+
+	}
+
+	// 公告模板 → 语言键（仅在模板保持默认值时生效）
+	private static final Map<ModConfigSpec.ConfigValue<String>, String> ANNOUNCE_LANG = new IdentityHashMap<>();
+
+	private static void reg(ModConfigSpec.ConfigValue<String> value, String name)
+	{
+		ANNOUNCE_LANG.put(value, "announce.neosim." + name);
+	}
+
+	// 取公告模板对应的语言键；未登记的模板返回 null
+	public static String announceLangKey(ModConfigSpec.ConfigValue<String> value)
+	{
+		return ANNOUNCE_LANG.get(value);
 	}
 
 	// 通用
@@ -325,10 +356,16 @@ public class Config
 
 	public static final ModConfigSpec.IntValue MAX_POPULATION;
 
+	// 打开界面时隐藏 HUD
+	public static final ModConfigSpec.BooleanValue HIDE_HUD_IN_GUI;
+
 	// NPC
 	public static final ModConfigSpec.IntValue NPC_MIN_AGE;
 
 	public static final ModConfigSpec.IntValue NPC_MAX_AGE;
+
+	// NPC 姓名池语言（auto/zh/en）
+	public static final ModConfigSpec.ConfigValue<String> NPC_NAME_LOCALE;
 
 	// 租金
 	public static final ModConfigSpec.DoubleValue LIFE_RENT_DEFAULT;
@@ -469,6 +506,39 @@ public class Config
 	public static final ModConfigSpec.ConfigValue<String> ANNOUNCE_DEATH_REMARK_OLD;
 
 	public static final ModConfigSpec.ConfigValue<String> ANNOUNCE_DEATH_REMARK_YOUNG;
+
+	// 公告文案 → 语言键登记：
+	// 玩家未改动模板（值仍等于默认值）时按客户端语言翻译；自定义过的模板原样使用玩家文本
+	static
+	{
+		reg(ANNOUNCE_SPAWN, "spawn");
+		reg(ANNOUNCE_DEATH_TEMPLATE, "deathTemplate");
+		reg(ANNOUNCE_EVICT_RESIDENT, "evictResident");
+		reg(ANNOUNCE_EVICT_ALL, "evictAll");
+		reg(ANNOUNCE_MOVE_IN, "moveIn");
+		reg(ANNOUNCE_PREGNANCY, "pregnancy");
+		reg(ANNOUNCE_BIRTH, "birth");
+		reg(ANNOUNCE_MARRIAGE, "marriage");
+		reg(ANNOUNCE_COHABIT, "cohabit");
+		reg(ANNOUNCE_BREAKUP, "breakup");
+		reg(ANNOUNCE_RENT, "rent");
+		reg(ANNOUNCE_DELIVERY_DISPATCH, "deliveryDispatch");
+		reg(ANNOUNCE_ADULT_LEAVE, "adultLeave");
+		reg(ANNOUNCE_MISSING_MATERIAL, "missingMaterial");
+		reg(ANNOUNCE_BUILDING_COMPLETE, "buildingComplete");
+		reg(ANNOUNCE_DEATH_CAUSE_OLD_AGE, "deathCause.oldAge");
+		reg(ANNOUNCE_DEATH_CAUSE_DROWN, "deathCause.drown");
+		reg(ANNOUNCE_DEATH_CAUSE_LAVA, "deathCause.lava");
+		reg(ANNOUNCE_DEATH_CAUSE_SUFFOCATE, "deathCause.suffocate");
+		reg(ANNOUNCE_DEATH_CAUSE_FALL, "deathCause.fall");
+		reg(ANNOUNCE_DEATH_CAUSE_STARVE, "deathCause.starve");
+		reg(ANNOUNCE_DEATH_CAUSE_FIRE, "deathCause.fire");
+		reg(ANNOUNCE_DEATH_CAUSE_LIGHTNING, "deathCause.lightning");
+		reg(ANNOUNCE_DEATH_CAUSE_CACTUS, "deathCause.cactus");
+		reg(ANNOUNCE_DEATH_CAUSE_OTHER, "deathCause.other");
+		reg(ANNOUNCE_DEATH_REMARK_OLD, "deathRemark.old");
+		reg(ANNOUNCE_DEATH_REMARK_YOUNG, "deathRemark.young");
+	}
 
 	static final ModConfigSpec SPEC = BUILDER.build();
 

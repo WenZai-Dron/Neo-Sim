@@ -122,40 +122,40 @@ public class HireListPanel
 	public void render(GuiGraphics gfx)
 	{
 		Minecraft mc = Minecraft.getInstance();
-		int w = mc.getWindow().getGuiScaledWidth();
-		int h = mc.getWindow().getGuiScaledHeight();
-		gfx.drawCenteredString(mc.font, Component.translatable(langPrefix + "hireTitle"), w / 2, 10, 0xFFFFFF);
+		int screenWidth = mc.getWindow().getGuiScaledWidth();
+		int screenHeight = mc.getWindow().getGuiScaledHeight();
+		gfx.drawCenteredString(mc.font, Component.translatable(langPrefix + "hireTitle"), screenWidth / 2, 10, 0xFFFFFF);
 
 		if (filtered.isEmpty())
 		{
-			gfx.drawCenteredString(mc.font, Component.translatable(H + "none"), w / 2, h / 2, 0xAAAAAA);
+			gfx.drawCenteredString(mc.font, Component.translatable(H + "none"), screenWidth / 2, screenHeight / 2, 0xAAAAAA);
 			return;
 		}
 
 		int pages = (filtered.size() + PER_PAGE - 1) / PER_PAGE;
 		gfx.drawCenteredString(mc.font,
-				Component.translatable(H + "page", page + 1, pages), w / 2, h - 22, 0xFFFFFF);
+				Component.translatable(H + "page", page + 1, pages), screenWidth / 2, screenHeight - 44, 0xFFFFFF);
 
-		int colW = (w - 20) / 2;
+		int colSizeW = (screenWidth - 20) / 2;
 		int start = page * PER_PAGE;
 		for (int i = 0; i < PER_PAGE && start + i < filtered.size(); i++)
 		{
 			NpcEntry e = filtered.get(start + i);
 			int col = i % 2;
 			int row = i / 2;
-			int x = 5 + col * (colW + 10);
-			int y = GRID_TOP + row * ROW_H;
+			int cellPosX = 5 + col * (colSizeW + 10);
+			int cellPosY = GRID_TOP + row * ROW_H;
 
-			// 等级文本紧挨名字按钮右缘（按钮宽 nameW = colW - 96）
+			// 等级文本紧挨名字按钮右缘（按钮宽 nameSizeW = colSizeW - 96）
 			Component level = Component.translatable(H + "level", e.level());
-			gfx.drawString(mc.font, level, x + colW - 92, y + 6, 0xCCCCCC);
+			gfx.drawString(mc.font, level, cellPosX + colSizeW - 92, cellPosY + 6, 0xCCCCCC);
 
 			// 置灰原因短标跟在等级文本之后（仅不可雇佣时显示）
 			if (!e.hireable())
 			{
 				Component reason = Component.translatable(reasonKey(e));
 				gfx.drawString(mc.font, mc.font.plainSubstrByWidth(reason.getString(), 44, true),
-						x + colW - 92 + mc.font.width(level) + 4, y + 6, 0x888888);
+						cellPosX + colSizeW - 92 + mc.font.width(level) + 4, cellPosY + 6, 0x888888);
 			}
 		}
 	}
@@ -189,8 +189,8 @@ public class HireListPanel
 	private void rebuild()
 	{
 		Minecraft mc = Minecraft.getInstance();
-		int w = mc.getWindow().getGuiScaledWidth();
-		int h = mc.getWindow().getGuiScaledHeight();
+		int screenWidth = mc.getWindow().getGuiScaledWidth();
+		int screenHeight = mc.getWindow().getGuiScaledHeight();
 
 		boolean searchFocused = searchField != null && searchField.isFocused();
 		boolean levelFocused = levelField != null && levelField.isFocused();
@@ -243,21 +243,21 @@ public class HireListPanel
 		// 名字按钮网格（两列，每格一名字按钮；置灰时 active=false + tooltip 原因）
 		if (!filtered.isEmpty())
 		{
-			int colW = (w - 20) / 2;
-			int nameW = colW - 96;
+			int colSizeW = (screenWidth - 20) / 2;
+			int nameSizeW = colSizeW - 96;
 			int start = page * PER_PAGE;
 			for (int i = 0; i < PER_PAGE && start + i < filtered.size(); i++)
 			{
 				NpcEntry e = filtered.get(start + i);
 				int col = i % 2;
 				int row = i / 2;
-				int x = 5 + col * (colW + 10);
-				int y = GRID_TOP + row * ROW_H;
+				int cellPosX = 5 + col * (colSizeW + 10);
+				int cellPosY = GRID_TOP + row * ROW_H;
 
 				Button btn = Button.builder(
-						Component.literal(mc.font.plainSubstrByWidth(e.name(), nameW - 4, true)),
+						Component.literal(mc.font.plainSubstrByWidth(e.name(), nameSizeW - 4, true)),
 						b -> hireAction.accept(e.name()))
-						.pos(x, y).size(nameW, 20).build();
+						.pos(cellPosX, cellPosY).size(nameSizeW, 20).build();
 				btn.active = e.hireable();
 				if (!e.hireable())
 				{
@@ -275,7 +275,7 @@ public class HireListPanel
 					page = Math.max(0, page - 1);
 					rebuild();
 				})
-				.pos(5, h - 24).size(75, 20).build();
+				.pos(5, screenHeight - 24).size(75, 20).build();
 		prev.active = page > 0;
 		host.add(prev);
 
@@ -285,13 +285,13 @@ public class HireListPanel
 					page = Math.min(pages - 1, page + 1);
 					rebuild();
 				})
-				.pos(w - 80, h - 24).size(75, 20).build();
+				.pos(screenWidth - 80, screenHeight - 24).size(75, 20).build();
 		next.active = page < pages - 1;
 		host.add(next);
 
-		// 返回
+		// 返回：与上一页 / 下一页同一行居中
 		host.add(Button.builder(Component.translatable(H + "back"),
-				b -> goBack.run()).pos(w / 2 - 50, h - 48).size(100, 20).build());
+				b -> goBack.run()).pos(screenWidth / 2 - 50, screenHeight - 24).size(100, 20).build());
 	}
 
 	private static String reasonKey(NpcEntry e)

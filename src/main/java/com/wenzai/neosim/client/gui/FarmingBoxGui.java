@@ -143,15 +143,15 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	private void showPage()
 	{
 		clearWidgets();
-		int cx = width / 2;
+		int centerPosX = width / 2;
 
 		if (currentPage == 0)
 		{
-			addButton(1, cx - 100, height - 30, 100, 20,
+			addButton(1, centerPosX - 100, height - 30, 100, 20,
 					Component.translatable(P + "close"), b -> onClose());
 
 			boolean hasWorker = task != null && !task.getWorkerName().isEmpty();
-			addButton(2, cx, height - 30, 100, 20,
+			addButton(2, centerPosX, height - 30, 100, 20,
 					hasWorker
 							? Component.translatable(P + "fire", task.getWorkerName())
 							: Component.translatable(P + "hire"),
@@ -165,7 +165,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 						}
 					});
 
-			addButton(3, cx - 100, height - 56, 200, 20,
+			addButton(3, centerPosX - 100, height - 56, 200, 20,
 					Component.translatable(P + "target"),
 					b ->
 					{
@@ -173,7 +173,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 						showPage();
 					});
 
-			addButton(4, cx - 100, height - 80, 200, 20,
+			addButton(4, centerPosX - 100, height - 80, 200, 20,
 					task != null && task.isPaused()
 							? Component.translatable(P + "resume")
 							: Component.translatable(P + "pause"),
@@ -189,52 +189,52 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		}
 		else if (currentPage == 2)
 		{
-			addButton(999, cx - 150, height - 25, 100, 20,
+			addButton(999, centerPosX - 150, height - 25, 100, 20,
 					Component.translatable(P + "goBack"),
 					b ->
 					{
 						currentPage = 0;
 						showPage();
 					});
-			addButton(998, cx - 50, height - 25, 100, 20,
+			addButton(998, centerPosX - 50, height - 25, 100, 20,
 					Component.translatable(P + "apply"),
 					b -> applyCrops());
 			// 使用骨粉开关：确认按钮右侧（带图标）
-			addUseBoneMealCheckbox(cx + 56, height - 25);
+			addUseBoneMealCheckbox(centerPosX + 56, height - 25);
 
 			// 目标页：种植业/畜牧业/林业 三列等间距（-210 / -40 / +130，整体偏左）
-			int left = cx - 210;
-			int right = cx - 40;
-			int y = 80;
+			int left = centerPosX - 210;
+			int right = centerPosX - 40;
+			int rowPosY = 80;
 			for (FarmTask.FarmType t : new FarmTask.FarmType[] {
 					FarmTask.FarmType.WHEAT, FarmTask.FarmType.CARROT, FarmTask.FarmType.POTATO })
 			{
-				addCropCheckbox(left, y, t);
-				y += 24;
+				addCropCheckbox(left, rowPosY, t);
+				rowPosY += 24;
 			}
 			// 模组作物列：自动检测的可种植作物（排除需水条目，如 FD 水稻）；防超屏最多 8 行
 			int modRows = 0;
 			for (CropEntry e : CropRegistry.plantable())
 			{
-				if (modRows >= 8 || y > height - 60) break;
-				addModCropCheckbox(left, y, e);
-				y += 24;
+				if (modRows >= 8 || rowPosY > height - 60) break;
+				addModCropCheckbox(left, rowPosY, e);
+				rowPosY += 24;
 				modRows++;
 			}
-			y = 80;
+			rowPosY = 80;
 			for (FarmTask.LivestockType t : FarmTask.LivestockType.values())
 			{
-				addLivestockCheckbox(right, y, t);
-				y += 24;
+				addLivestockCheckbox(right, rowPosY, t);
+				rowPosY += 24;
 			}
 
 			// 林业列
-			int forest = cx + 130;
-			y = 80;
+			int forestryColPosX = centerPosX + 130;
+			rowPosY = 80;
 			for (FarmTask.TreeType t : FarmTask.TreeType.values())
 			{
-				addTreeCheckbox(forest, y, t);
-				y += 24;
+				addTreeCheckbox(forestryColPosX, rowPosY, t);
+				rowPosY += 24;
 			}
 		}
 		else
@@ -254,104 +254,96 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			return;
 		}
 
-		int x = width / 2 - 120;
-		int y = 45;
+		WorkBoxText text = new WorkBoxText(gfx, font, width);
 
 		// 绑定矩形
 		if (record.bound())
 		{
-			int w = record.rx2() - record.rx1() + 1;
-			int h = record.rz2() - record.rz1() + 1;
-			w = w > 2 ? w - 2 : w;
-			h = h > 2 ? h - 2 : h;
-			gfx.drawString(font, Component.translatable(P + "rect", w, h), x, y, 0xFFFFFF);
+			int sizeW = record.rx2() - record.rx1() + 1;
+			int sizeH = record.rz2() - record.rz1() + 1;
+			sizeW = sizeW > 2 ? sizeW - 2 : sizeW;
+			sizeH = sizeH > 2 ? sizeH - 2 : sizeH;
+			text.line(Component.translatable(P + "rect", sizeW, sizeH), 0xFFFFFF);
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "unbound"), x, y, 0xFFAA55);
+			text.line(Component.translatable(P + "unbound"), 0xFFAA55);
 		}
-		y += 18;
 
 		// 显示牲畜
 		if (isLivestockMode())
 		{
-			gfx.drawString(font, Component.translatable(P + "livestock"), x, y, 0xFFFFFF);
-			y += 18;
+			text.line(Component.translatable(P + "livestock"), 0xFFFFFF);
 		}
 
 		// 林业
 		if (isForestryMode())
 		{
-			gfx.drawString(font, Component.translatable(P + "forestry", forestrySummary()), x, y, 0xFFFFFF);
-			y += 18;
+			text.line(Component.translatable(P + "forestry", forestrySummary()), 0xFFFFFF);
 		}
 
 		// 农夫
 		String worker = record.worker() != null ? record.worker() : "";
 		if (!worker.isEmpty())
 		{
-			gfx.drawString(font, Component.translatable(P + "worker", worker), x, y, 0xFFFFFF);
-			y += 14;
-			gfx.drawString(font, Component.translatable(P + "workerLevel", workerLevel()), x + 12, y, 0xCCCCCC);
-			y += 18;
+			text.workerLine(Component.translatable(P + "worker", worker),
+					Component.translatable(P + "workerLevel", workerLevel()));
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "workerNone"), x, y, 0xAAAAAA);
-			y += 18;
+			text.line(Component.translatable(P + "workerNone"), 0xAAAAAA);
 		}
 
 		// 状态
-		gfx.drawString(font, Component.translatable(P + "state",
-				stateLabel()), x, y, 0xFFFFFF);
+		text.line(Component.translatable(P + "state", stateLabel()), 0xFFFFFF);
 	}
 
 	// 主页图标（作物产物 + 牲畜产物 + 原木）；>7 个时缩小至 10px 分 2 排
 	private void drawCropButtonIcons(GuiGraphics gfx)
 	{
-		int bx = width / 2 - 100;
-		int by = height - 56;
+		int btnPosX = width / 2 - 100;
+		int btnPosY = height - 56;
 		List<ItemStack> icons = selectedHomeIcons();
 		int total = icons.size();
-		int right = bx + 200 - 4;
+		int right = btnPosX + 200 - 4;
 
 		if (total <= 7)
 		{
 			int pitch = 12;
-			int iy = by + (20 - 16) / 2;
-			int ix = right - total * pitch;
+			int iconPosY = btnPosY + (20 - 16) / 2;
+			int iconPosX = right - total * pitch;
 			for (ItemStack icon : icons)
 			{
-				gfx.renderItem(icon, ix, iy, 0);
-				ix += pitch;
+				gfx.renderItem(icon, iconPosX, iconPosY, 0);
+				iconPosX += pitch;
 			}
 			return;
 		}
 
 		// >7：缩小至 10px、分 2 排右对齐
-		int small = 10;
+		int iconSize = 10;
 		int gap = 1;
 		int row1 = (total + 1) / 2;
 		int row2 = total - row1;
-		int rowHeight = small + gap + small;
-		int y0 = by + (20 - rowHeight) / 2;
-		drawHomeIconRow(gfx, icons.subList(0, row1), right, y0, small);
-		drawHomeIconRow(gfx, icons.subList(row1, total), right, y0 + small + gap, small);
+		int rowSizeH = iconSize + gap + iconSize;
+		int startPosY = btnPosY + (20 - rowSizeH) / 2;
+		drawHomeIconRow(gfx, icons.subList(0, row1), right, startPosY, iconSize);
+		drawHomeIconRow(gfx, icons.subList(row1, total), right, startPosY + iconSize + gap, iconSize);
 	}
 
 	// 单排小图标（pose 缩放渲染）
-	private void drawHomeIconRow(GuiGraphics gfx, List<ItemStack> icons, int right, int y, int small)
+	private void drawHomeIconRow(GuiGraphics gfx, List<ItemStack> icons, int right, int iconPosY, int iconSize)
 	{
-		int pitch = small + 1;
-		int ix = right - ((icons.size() - 1) * pitch + small);
+		int pitch = iconSize + 1;
+		int iconPosX = right - ((icons.size() - 1) * pitch + iconSize);
 		for (ItemStack icon : icons)
 		{
 			gfx.pose().pushPose();
-			gfx.pose().translate(ix, y, 0.0D);
-			gfx.pose().scale(small / 16.0F, small / 16.0F, 1.0F);
+			gfx.pose().translate(iconPosX, iconPosY, 0.0D);
+			gfx.pose().scale(iconSize / 16.0F, iconSize / 16.0F, 1.0F);
 			gfx.renderItem(icon, 0, 0, 0);
 			gfx.pose().popPose();
-			ix += pitch;
+			iconPosX += pitch;
 		}
 	}
 
@@ -505,10 +497,10 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	}
 
 	// 作物复选框
-	private void addCropCheckbox(int x, int y, FarmTask.FarmType t)
+	private void addCropCheckbox(int posX, int posY, FarmTask.FarmType t)
 	{
 		Checkbox cb = Checkbox.builder(Component.translatable(P + "type" + t.name()), font)
-				.pos(x, y).selected(selectedCrops.contains(t))
+				.pos(posX, posY).selected(selectedCrops.contains(t))
 				.onValueChange((c, v) ->
 				{
 					if (v) selectedCrops.add(t);
@@ -519,11 +511,11 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	}
 
 	// 模组作物复选框（标签用种子物品显示名，无翻译键）
-	private void addModCropCheckbox(int x, int y, CropEntry entry)
+	private void addModCropCheckbox(int posX, int posY, CropEntry entry)
 	{
 		String id = entry.plantBlockId().toString();
 		Checkbox cb = Checkbox.builder(new ItemStack(entry.seed()).getHoverName(), font)
-				.pos(x, y).selected(selectedModCrops.contains(id))
+				.pos(posX, posY).selected(selectedModCrops.contains(id))
 				.onValueChange((c, v) ->
 				{
 					if (v) selectedModCrops.add(id);
@@ -534,20 +526,20 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	}
 
 	// 使用骨粉开关复选框
-	private void addUseBoneMealCheckbox(int x, int y)
+	private void addUseBoneMealCheckbox(int posX, int posY)
 	{
 		Checkbox cb = Checkbox.builder(Component.translatable(P + "useBoneMeal"), font)
-				.pos(x, y).selected(useBoneMeal)
+				.pos(posX, posY).selected(useBoneMeal)
 				.onValueChange((c, v) -> useBoneMeal = v)
 				.build();
 		addRenderableWidget(cb);
 	}
 
 	// 牲畜复选框
-	private void addLivestockCheckbox(int x, int y, FarmTask.LivestockType t)
+	private void addLivestockCheckbox(int posX, int posY, FarmTask.LivestockType t)
 	{
 		Checkbox cb = Checkbox.builder(Component.translatable(P + "animal" + t.name()), font)
-				.pos(x, y).selected(selectedLivestock.contains(t))
+				.pos(posX, posY).selected(selectedLivestock.contains(t))
 				.onValueChange((c, v) ->
 				{
 					if (v) selectedLivestock.add(t);
@@ -558,10 +550,10 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	}
 
 	// 树种复选框
-	private void addTreeCheckbox(int x, int y, FarmTask.TreeType t)
+	private void addTreeCheckbox(int posX, int posY, FarmTask.TreeType t)
 	{
 		Checkbox cb = Checkbox.builder(Component.translatable(P + "tree" + t.name()), font)
-				.pos(x, y).selected(selectedTrees.contains(t))
+				.pos(posX, posY).selected(selectedTrees.contains(t))
 				.onValueChange((c, v) ->
 				{
 					if (v) selectedTrees.add(t);
@@ -661,21 +653,21 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 	{
 		int left = width / 2 - 210;
 		int right = width / 2 - 40;
-		int forest = width / 2 + 130;
-		int y = 80;
+		int forestryColPosX = width / 2 + 130;
+		int rowPosY = 80;
 		for (FarmTask.FarmType t : new FarmTask.FarmType[] {
 				FarmTask.FarmType.WHEAT, FarmTask.FarmType.CARROT, FarmTask.FarmType.POTATO })
 		{
 			Component label = Component.translatable(P + "type" + t.name());
-			gfx.renderItem(cropIcon(t), left + 30 + font.width(label) + 4, y + 2, 16);
-			y += 24;
+			gfx.renderItem(cropIcon(t), left + 30 + font.width(label) + 4, rowPosY + 2, 16);
+			rowPosY += 24;
 		}
 		// 模组作物图标：与复选框同列同节奏（种子物品图标）
 		for (CropEntry e : CropRegistry.plantable())
 		{
 			ItemStack icon = new ItemStack(e.seed());
-			gfx.renderItem(icon, left + 30 + font.width(icon.getHoverName()) + 4, y + 2, 16);
-			y += 24;
+			gfx.renderItem(icon, left + 30 + font.width(icon.getHoverName()) + 4, rowPosY + 2, 16);
+			rowPosY += 24;
 		}
 		// 使用骨粉图标：确认按钮右侧，与复选框对齐
 		{
@@ -683,22 +675,22 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			gfx.renderItem(new ItemStack(Items.BONE_MEAL),
 					width / 2 + 56 + 30 + font.width(label) + 4, height - 23, 16);
 		}
-		y = 80;
+		rowPosY = 80;
 		for (FarmTask.LivestockType t : FarmTask.LivestockType.values())
 		{
 			Component label = Component.translatable(P + "animal" + t.name());
-			int ix = right + 30 + font.width(label) + 4;
-			gfx.renderItem(livestockIcon(t), ix, y + 2, 16);
-			gfx.renderItem(livestockFeedIcon(t), ix + 20, y + 2, 16);
-			y += 24;
+			int iconPosX = right + 30 + font.width(label) + 4;
+			gfx.renderItem(livestockIcon(t), iconPosX, rowPosY + 2, 16);
+			gfx.renderItem(livestockFeedIcon(t), iconPosX + 20, rowPosY + 2, 16);
+			rowPosY += 24;
 		}
-		y = 80;
+		rowPosY = 80;
 		for (FarmTask.TreeType t : FarmTask.TreeType.values())
 		{
 			Component label = Component.translatable(P + "tree" + t.name());
-			int ix = forest + 30 + font.width(label) + 4;
-			gfx.renderItem(treeIcon(t), ix, y + 2, 16);
-			y += 24;
+			int iconPosX = forestryColPosX + 30 + font.width(label) + 4;
+			gfx.renderItem(treeIcon(t), iconPosX, rowPosY + 2, 16);
+			rowPosY += 24;
 		}
 	}
 
@@ -814,10 +806,10 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		return Component.translatable(P + key).getString();
 	}
 
-	private Button addButton(int id, int x, int y, int w, int h, Component label, Button.OnPress action)
+	private Button addButton(int id, int posX, int posY, int sizeW, int sizeH, Component label, Button.OnPress action)
 	{
 		Button btn = Button.builder(label, action != null ? action : b -> { })
-				.pos(x, y).size(w, h).build();
+				.pos(posX, posY).size(sizeW, sizeH).build();
 		return addRenderableWidget(btn);
 	}
 

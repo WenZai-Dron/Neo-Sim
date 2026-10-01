@@ -54,16 +54,16 @@ public class City extends Screen
 	// 主菜单：新增城市/选择城市
 	private void initMainMenu()
 	{
-		int btnW = this.width / 3 + this.width / 7;
-		int btnH = this.height / 13;
-		int btnX = this.width / 2 - btnW / 2;
+		int btnSizeW = this.width / 3 + this.width / 7;
+		int btnSizeH = this.height / 13;
+		int btnPosX = this.width / 2 - btnSizeW / 2;
 
 		Button buttonAdd = Button.builder(Component.translatable("gui.neosim.city.add"), btn -> {
 			mode = 1;
 			rebuildWidgets();
 		})
-				.pos(btnX, this.height / 2 - this.height / 7)
-				.size(btnW, btnH)
+				.pos(btnPosX, this.height / 2 - this.height / 7)
+				.size(btnSizeW, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonAdd);
 
@@ -71,8 +71,8 @@ public class City extends Screen
 			mode = 2;
 			rebuildWidgets();
 		})
-				.pos(btnX, this.height / 2 + this.height / 7)
-				.size(btnW, btnH)
+				.pos(btnPosX, this.height / 2 + this.height / 7)
+				.size(btnSizeW, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonChoose);
 	}
@@ -80,23 +80,23 @@ public class City extends Screen
 	// 新增城市
 	private void initAddMode()
 	{
-		int inputW = this.width / 3;
-		int inputH = this.height / 13;
-		int btnW = this.width * 5 / 24;
-		int btnH = this.height / 13;
-		int centerX = this.width / 2;
-		int centerY = this.height / 2;
+		int inputSizeW = this.width / 3;
+		int inputSizeH = this.height / 13;
+		int btnSizeW = this.width * 5 / 24;
+		int btnSizeH = this.height / 13;
+		int centerPosX = this.width / 2;
+		int centerPosY = this.height / 2;
 
-		inputBox = new EditBox(this.font, centerX - inputW / 2, centerY - inputH * 3 / 2,
-				inputW, inputH, Component.translatable("gui.neosim.city.title"));
+		inputBox = new EditBox(this.font, centerPosX - inputSizeW / 2, centerPosY - inputSizeH * 3 / 2,
+				inputSizeW, inputSizeH, Component.translatable("gui.neosim.city.title"));
 		inputBox.setMaxLength(50);
 		this.addRenderableWidget(inputBox);
 
 		buttonConfirm = Button.builder(Component.translatable("gui.neosim.city.buttonConfirm"), btn -> {
 			onConfirm();
 		})
-				.pos(centerX - btnW / 2, centerY)
-				.size(btnW, btnH)
+				.pos(centerPosX - btnSizeW / 2, centerPosY)
+				.size(btnSizeW, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonConfirm);
 	}
@@ -112,21 +112,20 @@ public class City extends Screen
 			PacketDistributor.sendToServer(new ClientToServerPayloads.CityListRequestPayload());
 		}
 
-		int chooseBtnW = this.width / 3 + this.width / 7;
-		int chooseBtnH = this.height / 13;
-		int chooseBtnX = this.width / 2 - chooseBtnW / 2;
-		int totalHeight = Math.min(cities.size(), MAX_CITY_BUTTONS) * (chooseBtnH + 5);
-		int startY = this.height / 2 - totalHeight / 2;
+		int btnSizeW = this.width / 3 + this.width / 7;
+		int btnSizeH = this.height / 13;
+		int btnPosX = this.width / 2 - btnSizeW / 2;
+		int totalSizeH = Math.min(cities.size(), MAX_CITY_BUTTONS) * (btnSizeH + 5);
+		int startPosY = this.height / 2 - totalSizeH / 2;
 
 		for (int i = 0; i < Math.min(cities.size(), MAX_CITY_BUTTONS); i++)
 		{
 			String cityName = cities.get(i);
-			int btnY = startY + i * (chooseBtnH + 5);
 			Button cityButton = Button.builder(Component.literal(cityName), btn -> {
 				onSelectCity(cityName);
 			})
-					.pos(chooseBtnX, btnY)
-					.size(chooseBtnW, chooseBtnH)
+					.pos(btnPosX, startPosY + i * (btnSizeH + 5))
+					.size(btnSizeW, btnSizeH)
 					.build();
 			this.addRenderableWidget(cityButton);
 		}
@@ -136,8 +135,8 @@ public class City extends Screen
 			cachedCities = null;
 			rebuildWidgets();
 		})
-				.pos(chooseBtnX, startY + Math.min(cities.size(), MAX_CITY_BUTTONS) * (chooseBtnH + 5) + 8)
-				.size(chooseBtnW, chooseBtnH)
+				.pos(btnPosX, startPosY + totalSizeH + 8)
+				.size(btnSizeW, btnSizeH)
 				.build();
 		this.addRenderableWidget(refreshBtn);
 	}

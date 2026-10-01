@@ -35,54 +35,52 @@ public class PreviewAdjustGui extends Screen
 	@Override
 	protected void init()
 	{
-		int bw = 28;
-		int bh = 20;
-		int gap = 2;
+		int btnSizeW = 28;
+		int btnSizeH = 20;
+		int btnGap = 2;
 		int left = 10;
-		int rightCol = width - 70;
+		int centerPosY = height / 2;
 
 		// 操作按钮
-		addButton(left, height / 2 - bh * 2, 60, bh, Component.translatable(P + "adjustUp"),
+		addButton(left, centerPosY - btnSizeH * 2, 60, btnSizeH, Component.translatable(P + "adjustUp"),
 				b -> nudge(0, 1, 0));
-		addButton(left, height / 2 - bh, 60, bh, Component.translatable(P + "adjustDown"),
+		addButton(left, centerPosY - btnSizeH, 60, btnSizeH, Component.translatable(P + "adjustDown"),
 				b -> nudge(0, -1, 0));
-		addButton(left, height / 2 + gap, 60, bh, Component.translatable(P + "adjustMirror"),
+		addButton(left, centerPosY + btnGap, 60, btnSizeH, Component.translatable(P + "adjustMirror"),
 				b -> mirror());
-		addButton(left, height / 2 + bh + gap, 60, bh, Component.translatable(P + "adjustRotate"),
+		addButton(left, centerPosY + btnSizeH + btnGap, 60, btnSizeH, Component.translatable(P + "adjustRotate"),
 				b -> rotate());
 
 		// 方向十字
-		int baseX = rightCol;
-		int baseY = height - 70;
-		int cg = 12;
-		int cx2 = baseX + bw;
-		int cy2 = baseY + bh / 2;
-		addButton(cx2 - bw / 2, cy2 - bh - cg, bw, bh, Component.translatable(P + "dirNorth"),
+		int crossGap = 12;
+		int crossPosX = width - 70 + btnSizeW;
+		int crossPosY = height - 70 + btnSizeH / 2;
+		addButton(crossPosX - btnSizeW / 2, crossPosY - btnSizeH - crossGap, btnSizeW, btnSizeH, Component.translatable(P + "dirNorth"),
 				b -> nudge(0, 0, -1));
-		addButton(cx2 - bw / 2, cy2 + cg, bw, bh, Component.translatable(P + "dirSouth"),
+		addButton(crossPosX - btnSizeW / 2, crossPosY + crossGap, btnSizeW, btnSizeH, Component.translatable(P + "dirSouth"),
 				b -> nudge(0, 0, 1));
-		addButton(cx2 - bw - cg, cy2 - bh / 2, bw, bh, Component.translatable(P + "dirWest"),
+		addButton(crossPosX - btnSizeW - crossGap, crossPosY - btnSizeH / 2, btnSizeW, btnSizeH, Component.translatable(P + "dirWest"),
 				b -> nudge(-1, 0, 0));
-		addButton(cx2 + cg, cy2 - bh / 2, bw, bh, Component.translatable(P + "dirEast"),
+		addButton(crossPosX + crossGap, crossPosY - btnSizeH / 2, btnSizeW, btnSizeH, Component.translatable(P + "dirEast"),
 				b -> nudge(1, 0, 0));
 
 		// 居中底部
-		int cx = width / 2;
+		int centerPosX = width / 2;
 		int bottomY = height - 60;
-		addButton(cx - 130, bottomY, 80, 20,
+		addButton(centerPosX - 130, bottomY, 80, 20,
 				Component.translatable(P + "goBack"),
 				b -> onGoBack());
-		addButton(cx - 50, bottomY, 80, 20,
+		addButton(centerPosX - 50, bottomY, 80, 20,
 				Component.translatable(P + "soulOut"),
 				b -> onSoulOut());
-		buildButton = addButton(cx + 30, bottomY, 80, 20,
+		buildButton = addButton(centerPosX + 30, bottomY, 80, 20,
 				Component.translatable(P + "buildIt"),
 				b -> onBuildIt());
 
 		// 旧版蓝图：显示"旋转方块朝向"按钮
 		if (selectedBuilding.getFormat() == SchematicFormat.SIM_UKRAFT_TXT)
 		{
-			addButton(cx + 30, bottomY + 20, 80, 20,
+			addButton(centerPosX + 30, bottomY + 20, 80, 20,
 					Component.translatable(P + "rotateBlockOrientation"),
 					b -> rotateBlockOrientations());
 		}
@@ -159,14 +157,10 @@ public class PreviewAdjustGui extends Screen
 		if (selectedBuilding.getFormat() == SchematicFormat.SIM_UKRAFT_TXT)
 		{
 			Component warn = Component.translatable(P + "oldBlueprintWarning");
-			int cx = width / 2;
 			int bottomY = height - 60;
-			int btnX = cx + 30;
-			int btnY = bottomY + 20;
-			int tw = font.width(warn);
-			int wx = Math.max(4, btnX - tw - 6);
-			int wy = btnY + (20 - font.lineHeight) / 2;
-			gfx.drawString(font, warn, wx, wy, 0xFF5555);
+			int warnPosX = Math.max(4, width / 2 + 30 - font.width(warn) - 6);
+			int warnPosY = bottomY + 20 + (20 - font.lineHeight) / 2;
+			gfx.drawString(font, warn, warnPosX, warnPosY, 0xFF5555);
 		}
 	}
 
@@ -270,9 +264,9 @@ public class PreviewAdjustGui extends Screen
 		}
 	}
 
-	private Button addButton(int x, int y, int w, int h, Component label, Button.OnPress action)
+	private Button addButton(int posX, int posY, int sizeW, int sizeH, Component label, Button.OnPress action)
 	{
 		return addRenderableWidget(Button.builder(label, action)
-				.pos(x, y).size(w, h).build());
+				.pos(posX, posY).size(sizeW, sizeH).build());
 	}
 }

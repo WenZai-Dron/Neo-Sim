@@ -119,7 +119,9 @@ public class RelationshipPersistence
 		String key = pairKey(a, b);
 		Map<String, Relationship.RelationshipData> cache = cityCache(level, city);
 		cache.remove(key);
-		deleteFile(dir, key);   // 删除即时落盘（关系清理正确性）
+
+		// 删除即时落盘（关系清理正确性）
+		deleteFile(dir, key);
 	}
 
 	// 删除含该居民名的全部关系文件（死亡清理：即时删除 + 缓存移除）

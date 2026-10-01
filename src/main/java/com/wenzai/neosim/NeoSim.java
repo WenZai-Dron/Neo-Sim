@@ -55,6 +55,9 @@ public class NeoSim
 	// 持久化合并窗口 flush 计时（每 100 tick = 5 秒：CityData 缓存 + NPC 写盘去抖）
 	private int persistFlushTimer = 0;
 
+	// 内容表热重载计时（每 100 tick 检查一次 NeoSim/Json/）
+	private int contentCheckTimer = 0;
+
 	// 模组类的构造方法是模组加载时最先运行的代码。
 	// FML 会识别一些参数类型（如 IEventBus 或 ModContainer）并自动传入。
 	public NeoSim(IEventBus modEventBus, ModContainer modContainer)
@@ -230,6 +233,14 @@ public class NeoSim
 		// 标记棒定时对账（非玩家破坏的角点即时剔除，光幕不残留）
 		MarkerManager.tick(level);
 
+		// 内容表热重载：每 5 秒比对一次 NeoSim/Json/ 的修改时间，变化才重建
+		contentCheckTimer++;
+		if (contentCheckTimer >= 100)
+		{
+			contentCheckTimer = 0;
+			com.wenzai.neosim.json.ContentReloader.reloadIfChanged();
+		}
+
 		// 持久化合并窗口：脏城市数据/NPC/关系 每 5 秒统一落盘
 		persistFlushTimer++;
 		if (persistFlushTimer >= 100)
@@ -256,7 +267,8 @@ public class NeoSim
 		{
 			ModSavedData data = ModSavedData.get(level);
 			data.incrementDay(level);
-			LifeSystem.onDayStart(level, data.getDayOfWeek());   // 生活系统每日结算入口（Phase 5+）
+			// 生活系统每日结算入口（Phase 5+）
+			LifeSystem.onDayStart(level, data.getDayOfWeek());
 			level.setDayTime(0);
 			NeoSim.LOGGER.info("NeoSim: day={}, dayOfWeek={}", data.getDay(), data.getDayOfWeek());
 		}
@@ -379,6 +391,13 @@ public class NeoSim
 				ClientToServerPayloads.CreateCityPayload.STREAM_CODEC,
 				ClientToServerPayloads.CreateCityPayload::handle
 		);
+
+		// 客户端语言上报（新建 NPC 命名池）
+		registrar.playToServer(
+				ClientToServerPayloads.ClientLocalePayload.TYPE,
+				ClientToServerPayloads.ClientLocalePayload.STREAM_CODEC,
+				ClientToServerPayloads.ClientLocalePayload::handle
+		);
 		registrar.playToServer(
 				ClientToServerPayloads.JoinCityPayload.TYPE,
 				ClientToServerPayloads.JoinCityPayload.STREAM_CODEC,
@@ -479,6 +498,9 @@ public class NeoSim
 		// 预热模组作物注册表（懒加载扫描放启动时，避免首个农业盒放置时卡顿）
 		com.wenzai.neosim.compat.crops.CropRegistry.all();
 
+		// 加载内容表（NeoSim/Json/）：首次运行落盘模板，扫描出的模组作物写回 crops.json
+		com.wenzai.neosim.json.ContentReloader.reloadAll();
+
 		// 服务器初始化蓝图
 		com.wenzai.neosim.schematic.SchematicRegistry.getInstance().initializeAsync();
 	}
@@ -505,6 +527,8 @@ public class NeoSim
 		WORKER_MAP.clear();
 		// L2：临产目标缓存跨存档残留 → 统一 clear
 		com.wenzai.neosim.life.ReproductionSystem.clearAllBirthTargets();
+		// 客户端语言上报缓存跨存档残留 → 统一 clear
+		com.wenzai.neosim.npc.PlayerLocales.clear();
 		// L3：单例持 ServerLevel，关档后钉住旧世界 → 置空
 		com.wenzai.neosim.storage.ModSavedData.resetInstance();
 		// player.json 成员缓存跨存档残留 → 清空

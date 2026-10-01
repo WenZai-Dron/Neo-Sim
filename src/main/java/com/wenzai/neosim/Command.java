@@ -12,10 +12,12 @@ import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.CommandEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 public class Command
@@ -81,7 +83,7 @@ public class Command
 		// 检查城市是否存在
 		if (!Manage.cityExists(level, cityName))
 		{
-			ctx.getSource().sendFailure(Component.literal("§cCity '" + cityName + "' does not exist"));
+			ctx.getSource().sendFailure(Component.translatable("msg.neosim.command.cityNotFound", cityName));
 			return 0;
 		}
 
@@ -102,7 +104,7 @@ public class Command
 		// 检查城市是否存在
 		if (!Manage.cityExists(level, cityName))
 		{
-			ctx.getSource().sendFailure(Component.literal("§cCity '" + cityName + "' does not exist"));
+			ctx.getSource().sendFailure(Component.translatable("msg.neosim.command.cityNotFound", cityName));
 			return 0;
 		}
 
@@ -123,13 +125,19 @@ public class Command
 		// 检查城市是否存在
 		if (!Manage.cityExists(level, cityName))
 		{
-			ctx.getSource().sendFailure(Component.literal("§cCity '" + cityName + "' does not exist"));
+			ctx.getSource().sendFailure(Component.translatable("msg.neosim.command.cityNotFound", cityName));
 			return 0;
 		}
 
 		BlockPos pos = BlockPos.containing(ctx.getSource().getPosition());
-		Manage.spawnAt(level, pos, cityName);
+		Manage.spawnAt(level, pos, cityName, sourcePlayerUuid(ctx));
 		return 1;
+	}
+
+	// 指令执行者若是玩家，取其 UUID（决定新建 NPC 使用哪套命名池）
+	private static UUID sourcePlayerUuid(CommandContext<CommandSourceStack> ctx)
+	{
+		return ctx.getSource().getEntity() instanceof ServerPlayer player ? player.getUUID() : null;
 	}
 
 	// 禁止/summon生成NPC
@@ -144,7 +152,7 @@ public class Command
 			{
 				event.setCanceled(true);
 				event.getParseResults().getContext().getSource()
-						.sendFailure(Component.literal("§cFail"));
+						.sendFailure(Component.translatable("msg.neosim.command.summonBlocked"));
 			}
 		}
 	}

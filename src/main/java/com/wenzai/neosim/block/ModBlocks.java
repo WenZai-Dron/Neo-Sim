@@ -32,20 +32,21 @@ public class ModBlocks
 			registerBlocks("mining_box", () -> new MiningBox(BlockBehaviour.Properties.of().strength(0.5F)));
 	public static final DeferredBlock<Block> DELIVERY_BOX =
 			registerBlocks("delivery_box", () -> new DeliveryBox(BlockBehaviour.Properties.of().strength(0.5F)));
+	// 生活点：可被替换（作者随手覆盖）、无碰撞（放站立点不挡路）、瞬破（易移除）、不掉落、不遮挡
 	public static final DeferredBlock<Block> LIVING_POINT =
 			registerBlocks("living_point", () -> new Block(BlockBehaviour.Properties.of()
-					.replaceable()          // 可被替换：作者随手覆盖
-					.noCollission()         // 无碰撞：放站立点不挡路
-					.instabreak()           // 瞬间破坏：作者易移除
-					.noLootTable()          // 不掉落（EMPTY loot，datagen 校验自动跳过）
-					.noOcclusion()));       // 不遮挡
+					.replaceable()
+					.noCollission()
+					.instabreak()
+					.noLootTable()
+					.noOcclusion()));
 
 	private static <T extends Block> void registerBlockItems(String name, DeferredBlock<T> block)
 	{
 		ModItems.ITEMS.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
 	}
 
-	private static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier<T> block) // 此处新增泛型
+	private static <T extends Block> DeferredBlock<T> registerBlocks(String name, Supplier<T> block)
 	{
 		DeferredBlock<T> blocks = BLOCKS.register(name, block);
 		registerBlockItems(name, blocks);

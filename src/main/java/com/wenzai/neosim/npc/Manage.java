@@ -21,6 +21,9 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+
+import javax.annotation.Nullable;
 
 public class Manage
 {
@@ -92,8 +95,10 @@ public class Manage
 		{
 			if (loadedNames.contains(name)) continue;
 			int home = NpcData.homeStatus(level, cityName, name);
-			if (home < 0) continue;   // 档案缺失
-			if (home == 0) return true;  // 有档案且无家 → 流浪者
+			// 档案缺失
+			if (home < 0) continue;
+			// 有档案且无家 → 流浪者
+			if (home == 0) return true;
 		}
 		return false;
 	}
@@ -116,8 +121,8 @@ public class Manage
 			return;
 		}
 
-		// 随机姓名与性别
-		Entity.generateAndSetName(npc);
+		// 随机姓名与性别（命名风格取该城市最近一次玩家语言）
+		Entity.generateAndSetName(level, npc, cityName);
 		npc.setNpcName(npc.getNpcName());
 
 		// 随机皮肤
@@ -125,6 +130,9 @@ public class Manage
 
 		// 记录所属城市，用于死亡时删除文件
 		npc.setCityName(cityName);
+
+		// 入城公告必须先于入住公告：tryAssignHome 内部会广播入住公告
+		LifeSystem.announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_SPAWN, npc.getNpcName()));
 
 		// 有空位则分配生活点（先于保存）
 		CityLivingManager.tryAssignHome(level, npc);
@@ -151,8 +159,6 @@ public class Manage
 		short pop = getPopulation(level, cityName);
 		ModSavedData.get(level).setPopulation(cityName, (short) (pop + 1), level);
 
-		// 公告
-		LifeSystem.announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_SPAWN, npc.getNpcName()));
 		NeoSim.LOGGER.info("NeoSim-spawnWithAnnouncement: Spawned {} (sex={}) in city {}",
 				npc.getNpcName(), npc.getSex(), cityName);
 	}
@@ -208,6 +214,9 @@ public class Manage
 		if (givenName != null) tag.putString(Entity.KEY_GIVEN_NAME, givenName);
 		String fullName = JsonUtil.getString(json, "name", null);
 		if (fullName != null) tag.putString(Entity.KEY_FULL_NAME, fullName);
+		// 命名风格：旧档无该字段时不写，由 Entity.getNameLocale() 按名字推断
+		NameLocale savedLocale = NameLocale.fromKey(JsonUtil.getString(json, "nameLocale", null));
+		if (savedLocale != null) npc.setNameLocale(savedLocale);
 		npc.setNpcName(JsonUtil.getString(json, "name", ""));
 
 		// 记录所属城市，用于死亡时删除文件
@@ -390,7 +399,7 @@ public class Manage
 
 		int age = json.has("age") ? json.get("age").getAsShort() : 0;
 		LifeSystem.announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_DEATH_TEMPLATE,
-				npcName, Config.ANNOUNCE_DEATH_CAUSE_OLD_AGE.get(),
+				npcName, LifeSystem.tpl(Config.ANNOUNCE_DEATH_CAUSE_OLD_AGE),
 				LifeSystem.tpl(Config.ANNOUNCE_DEATH_REMARK_OLD, age)));
 
 		// 族谱摘除（含未加载亲戚的文件改写）+删关系文件
@@ -418,8 +427,8 @@ public class Manage
 		return best;
 	}
 
-	// 在指定城市生成NPC，姓名与性别随机
-	public static void spawnAt(ServerLevel level, BlockPos pos, String cityName)
+	// 在指定城市生成NPC，姓名与性别随机（triggerPlayer 用于决定命名池语言，可为 null）
+	public static void spawnAt(ServerLevel level, BlockPos pos, String cityName, @Nullable UUID triggerPlayer)
 	{
 		// 人口上限检查
 		short currentPop = getPopulation(level, cityName);
@@ -436,8 +445,8 @@ public class Manage
 			return;
 		}
 
-		// 随机姓名与性别
-		Entity.generateAndSetName(npc);
+		// 随机姓名与性别（指令使用者即触发玩家：用其客户端语言）
+		Entity.generateAndSetName(level, npc, cityName, triggerPlayer);
 		npc.setNpcName(npc.getNpcName());
 
 		// 随机皮肤
@@ -491,7 +500,8 @@ public class Manage
 			}
 
 			// 分配姓名
-			Entity.generateAndSetName(npc);
+			String cityName0 = ModSavedData.getActiveCityName();
+			Entity.generateAndSetName(level, npc, cityName0);
 			npc.setNpcName(npc.getNpcName());
 
 			// 随机皮肤

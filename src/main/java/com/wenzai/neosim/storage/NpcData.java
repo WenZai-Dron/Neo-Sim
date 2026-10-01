@@ -441,6 +441,7 @@ public class NpcData
 				json.addProperty("name", entity.getNpcName());
 				json.addProperty("surname", entity.getNpcSurname());
 				json.addProperty("givenName", entity.getNpcGivenName());
+		json.addProperty("nameLocale", entity.getNameLocale().key());
 
 				// 性别
 				json.addProperty("sex", entity.getSex());

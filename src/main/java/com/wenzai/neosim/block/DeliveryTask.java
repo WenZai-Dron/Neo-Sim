@@ -12,7 +12,9 @@ import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.npc.NpcGoals;
 import com.wenzai.neosim.storage.ModSavedData;
 import com.wenzai.neosim.storage.SimData;
+import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
@@ -62,7 +64,7 @@ public class DeliveryTask
 	protected int orderScanTicks;
 
 	// 上次跳单原因（GUI 显示）
-	protected String lastSkipReason = "";
+	protected Component lastSkipReason = Component.empty();
 
 	// 当前订单（瞬态，不落盘）
 	// 认领键：工地控制箱坐标
@@ -125,7 +127,7 @@ public class DeliveryTask
 		return record.worker() != null ? record.worker() : "";
 	}
 
-	public String getLastSkipReason()
+	public Component getLastSkipReason()
 	{
 		return lastSkipReason;
 	}
@@ -343,7 +345,7 @@ public class DeliveryTask
 		List<ConstructionTask> waiting = ConstructionEngine.getWaitingTasks();
 		if (waiting.isEmpty())
 		{
-			lastSkipReason = "";
+			lastSkipReason = Component.empty();
 			setState(DeliveryState.IDLE);
 			return;
 		}
@@ -362,7 +364,7 @@ public class DeliveryTask
 			if (siteChests(t.getBuilding().getControlBoxPos(),
 					t.getBuilding().getConstructorPos()).isEmpty())
 			{
-				lastSkipReason = "工地无箱子";
+				lastSkipReason = Component.translatable("msg.neosim.delivery.noChest");
 				continue;
 			}
 
@@ -392,7 +394,7 @@ public class DeliveryTask
 		int stock = InventoryManager.countItems(stationChests, item);
 		if (stock <= 0)
 		{
-			lastSkipReason = "站点缺少 " + item.getDescription().getString();
+			lastSkipReason = Component.translatable("msg.neosim.delivery.stationMissing", item.getDescription());
 			setState(DeliveryState.IDLE);
 			return;
 		}
@@ -413,17 +415,17 @@ public class DeliveryTask
 				? best.getBuilding().getConstructorPos() : bestControl;
 		carryItem = item;
 		carryCount = taken;
-		lastSkipReason = "";
+		lastSkipReason = Component.empty();
 
 		// 手持形象：超一组只拿前 64 个（投料按实际数量）
 		worker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item, Math.min(taken, 64)));
 
 		// 城市公告：XXX 正前往 XXX 运送 XX 个 XXX
-		String buildingName = best.getBuilding().getSchematicName();
+		Component buildingName = BlueprintName.component(best.getBuilding().getSchematicName());
 		LifeSystem.announce(level, cityName,
 				LifeSystem.tpl(Config.ANNOUNCE_DELIVERY_DISPATCH,
 						worker.getNpcName(), buildingName, taken,
-						item.getDescription().getString()));
+						item.getDescription()));
 
 		worker.setMoveTarget(targetSite);
 		setState(DeliveryState.WALKING_TO_SITE);

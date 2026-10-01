@@ -98,6 +98,8 @@ public class MarriageSystem
 		{
 			String oldWifeName = wife.getNpcName();
 			String surname = husband.getNpcSurname();
+			// 命名风格随夫（语序一致），再改姓
+			wife.setNameLocale(husband.getNameLocale());
 			wife.setNpcName(surname.isEmpty() ? wife.getNpcSurname() : surname, wife.getNpcGivenName());
 
 			// 改名后同步关系文件、族谱引用与住宅居民登记
@@ -112,6 +114,20 @@ public class MarriageSystem
 					renameResident(level, city, keepRec, oldWifeName, wife.getNpcName());
 				}
 			}
+		}
+
+		// 结婚/同居公告必须先于入住公告：assignToExistingHome 内部会广播入住公告
+		String hName = husband.getNpcName();
+		String wName = wife.getNpcName();
+		if (married)
+		{
+			LifeSystem.announce(level, city, LifeSystem.tpl(Config.ANNOUNCE_MARRIAGE, hName, wName));
+			LOGGER.info("NeoSim-MarriageSystem: '{}' married '{}'", hName, wName);
+		}
+		else
+		{
+			LifeSystem.announce(level, city, LifeSystem.tpl(Config.ANNOUNCE_COHABIT, hName, wName));
+			LOGGER.info("NeoSim-MarriageSystem: '{}' and '{}' started cohabiting", hName, wName);
 		}
 
 		// 入住保留的家
@@ -129,20 +145,6 @@ public class MarriageSystem
 		wife.setPartner(husband.getNpcName());
 		husband.syncToJson();
 		wife.syncToJson();
-
-		// 公告
-		String hName = husband.getNpcName();
-		String wName = wife.getNpcName();
-		if (married)
-		{
-			LifeSystem.announce(level, city, LifeSystem.tpl(Config.ANNOUNCE_MARRIAGE, hName, wName));
-			LOGGER.info("NeoSim-MarriageSystem: '{}' married '{}'", hName, wName);
-		}
-		else
-		{
-			LifeSystem.announce(level, city, LifeSystem.tpl(Config.ANNOUNCE_COHABIT, hName, wName));
-			LOGGER.info("NeoSim-MarriageSystem: '{}' and '{}' started cohabiting", hName, wName);
-		}
 	}
 
 	// 空位更多的一方留作新家（平手保留男方家）

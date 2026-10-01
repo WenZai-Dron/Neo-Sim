@@ -6,7 +6,6 @@ import com.wenzai.neosim.building.ControlBoxPersistence;
 import com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
-import com.wenzai.neosim.schematic.BuildingType;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicRegistry;
 import com.wenzai.neosim.storage.CityManager;
@@ -179,8 +178,8 @@ public class LifeSystem
 		}
 	}
 
-	// 公告给该城市在线玩家
-	public static void announce(ServerLevel level, String cityName, String msg)
+	// 公告给该城市在线玩家（组件在客户端按各自语言解析）
+	public static void announce(ServerLevel level, String cityName, Component msg)
 	{
 		if (level.getServer() == null) return;
 		boolean dedicated = level.getServer().isDedicatedServer();
@@ -192,23 +191,36 @@ public class LifeSystem
 					: FileCreater.isPlayerInCity(cityName, saveName, player.getName().getString());
 			if (inCity)
 			{
-				player.displayClientMessage(Component.literal(msg), false);
+				player.displayClientMessage(msg, false);
 			}
 		}
 	}
 
-	// 按配置模板格式化公告文案（%s 占位）；模板非法时回退原样并警告
-	public static String tpl(ModConfigSpec.ConfigValue<String> template, Object... args)
+	// 按配置模板生成公告组件（%s 占位）：
+	// 模板保持默认值 → 翻译组件（每个客户端用自己的语言渲染，参数可为组件）
+	// 模板被玩家改过   → 原样格式化文本，尊重玩家自定义
+	public static Component tpl(ModConfigSpec.ConfigValue<String> template, Object... args)
 	{
 		String raw = template.get();
+		String key = Config.announceLangKey(template);
+		if (key != null && raw != null && raw.equals(template.getDefault()))
+		{
+			return Component.translatable(key, args);
+		}
+
+		Object[] plain = new Object[args.length];
+		for (int i = 0; i < args.length; i++)
+		{
+			plain[i] = args[i] instanceof Component c ? c.getString() : args[i];
+		}
 		try
 		{
-			return String.format(raw, args);
+			return Component.literal(String.format(raw, plain));
 		}
 		catch (IllegalFormatException e)
 		{
 			LOGGER.warn("NeoSim-Announce: bad template '{}' — {}", raw, e.getMessage());
-			return raw;
+			return Component.literal(raw);
 		}
 	}
 
@@ -237,7 +249,7 @@ public class LifeSystem
 
 		data.setCredit(city, data.getData(city).credit() + total, level);
 
-		String msg = tpl(Config.ANNOUNCE_RENT, formatAmount(total));
+		Component msg = tpl(Config.ANNOUNCE_RENT, formatAmount(total));
 		announce(level, city, msg);
 		LOGGER.info("NeoSim-RentSystem: collected {} credits from {} households in '{}'",
 				formatAmount(total), households, city);
@@ -249,7 +261,7 @@ public class LifeSystem
 		SchematicData schematic = SchematicRegistry.getInstance().get(rec.schematicName());
 		if (schematic != null)
 		{
-			return schematic.getType() == BuildingType.RESIDENTIAL;
+			return schematic.isResidential();
 		}
 		return !rec.livingPoints().isEmpty();
 	}

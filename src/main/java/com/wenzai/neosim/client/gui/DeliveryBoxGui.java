@@ -121,7 +121,7 @@ public class DeliveryBoxGui extends Screen implements HireListPanel.HostScreen
 	private void showPage()
 	{
 		clearWidgets();
-		int cx = width / 2;
+		int centerPosX = width / 2;
 
 		if (currentPage == 0)
 		{
@@ -129,10 +129,10 @@ public class DeliveryBoxGui extends Screen implements HireListPanel.HostScreen
 					? !task.getWorkerName().isEmpty()
 					: (record != null && record.worker() != null && !record.worker().isEmpty());
 
-			addButton(1, cx - 100, height - 30, 100, 20,
+			addButton(1, centerPosX - 100, height - 30, 100, 20,
 					Component.translatable(P + "close"), b -> onClose());
 
-			addButton(2, cx, height - 30, 100, 20,
+			addButton(2, centerPosX, height - 30, 100, 20,
 					hasWorker
 							? Component.translatable(P + "fire")
 							: Component.translatable(P + "hire"),
@@ -146,7 +146,7 @@ public class DeliveryBoxGui extends Screen implements HireListPanel.HostScreen
 						}
 					});
 
-			addButton(3, cx - 100, height - 56, 200, 20,
+			addButton(3, centerPosX - 100, height - 56, 200, 20,
 					task != null && task.isPaused()
 							? Component.translatable(P + "resume")
 							: Component.translatable(P + "pause"),
@@ -169,33 +169,33 @@ public class DeliveryBoxGui extends Screen implements HireListPanel.HostScreen
 		String workerName = task != null ? task.getWorkerName()
 				: (record != null && record.worker() != null ? record.worker() : "");
 
-		// 快递员行
+		WorkBoxText text = new WorkBoxText(gfx, font, width);
+
+		// 快递员行 + 等级
 		if (hasWorker)
 		{
-			int level = workerLevel();
-			gfx.drawString(font, Component.translatable(P + "worker", workerName), 5, 40, 0xFFFFFF);
-			gfx.drawString(font, Component.translatable(P + "workerLevel", level), width / 2 + 3, 40, 0xFFFFFF);
+			text.workerLine(Component.translatable(P + "worker", workerName),
+					Component.translatable(P + "workerLevel", workerLevel()));
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "workerNone"), 5, 40, 0xFFFFFF);
+			text.line(Component.translatable(P + "workerNone"), 0xAAAAAA);
 		}
 
 		// 状态行（含跳单原因）
-		String stateText = stateLabel();
-		if (task != null)
+		Component stateLine = Component.translatable(P + "state", stateLabel());
+		if (task != null && !task.getLastSkipReason().getString().isEmpty())
 		{
-			String skip = task.getLastSkipReason();
-			if (!skip.isEmpty()) stateText = skip;
+			stateLine = task.getLastSkipReason();
 		}
-		gfx.drawString(font, Component.translatable(P + "state", stateText), 5, 64, 0xFFFFFF);
+		text.line(stateLine, 0xFFFFFF);
 
 		// 当前配送行
 		if (task != null && task.getCarryItem() != null)
 		{
 			String itemName = task.getCarryItem().getDescription().getString();
 			int count = task.getCarryCount();
-			gfx.drawString(font, Component.literal(itemName + " ×" + count), 5, 88, 0xFFFF80);
+			text.line(Component.literal(itemName + " ×" + count), 0xFFFF80);
 		}
 	}
 
@@ -304,10 +304,10 @@ public class DeliveryBoxGui extends Screen implements HireListPanel.HostScreen
 		return Component.translatable(P + key).getString();
 	}
 
-	private Button addButton(int id, int x, int y, int w, int h, Component label, Button.OnPress action)
+	private Button addButton(int id, int posX, int posY, int sizeW, int sizeH, Component label, Button.OnPress action)
 	{
 		Button btn = Button.builder(label, action != null ? action : b -> { })
-				.pos(x, y).size(w, h).build();
+				.pos(posX, posY).size(sizeW, sizeH).build();
 		return addRenderableWidget(btn);
 	}
 

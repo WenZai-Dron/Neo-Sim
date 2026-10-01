@@ -1,14 +1,20 @@
 package com.wenzai.neosim.client.preview;
 
+import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.schematic.SchematicData;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Mirror;
+import net.minecraft.world.level.block.Rotation;
+import org.slf4j.Logger;
 
 // 预览管理
 public class SchematicPreviewManager
 {
+	private static final Logger LOGGER = LogUtils.getLogger();
+
 	private static final SchematicPreviewManager INSTANCE = new SchematicPreviewManager();
 	private final ClientPreviewState state = new ClientPreviewState();
 	private BlockPos constructorPos;
@@ -44,6 +50,7 @@ public class SchematicPreviewManager
 		int oy = constructorPos.getY();
 		int oz = constructorPos.getZ();
 
+		// 起点＝模盒沿玩家面朝方向的相邻一格（与原版 Sim-U-Kraft 的"站在模盒某一侧"一致）
 		switch (facing)
 		{
 			case SOUTH -> oz = oz + 1;
@@ -54,10 +61,23 @@ public class SchematicPreviewManager
 		}
 
 		this.constructorPos = constructorPos;
+		// state 是单例字段，跨蓝图复用：不清掉上一次预览残留的旋转/镜像，新预览会一直带着转
+		state.setRotation(Rotation.NONE);
+		state.setMirror(Mirror.NONE);
 		state.setSchematic(schematic);
 		state.setFacing(facing);
 		state.setOrigin(new BlockPos(ox, oy, oz));
 		state.setActive(true);
+
+		// 诊断：把这次预览用的映射结果打出来，便于与投影的粘贴范围对照
+		BlockPos c0 = state.blueprintToWorld(0, 0, 0);
+		BlockPos c1 = state.blueprintToWorld(
+				schematic.getSizeX() - 1, schematic.getSizeY() - 1, schematic.getSizeZ() - 1);
+		LOGGER.info("NeoSim-Preview: '{}' format={} frame={} size={}x{}x{} facing={} rot={} mirror={} origin={} span={}..{}",
+				schematic.getName(), schematic.getFormat(), state.frame(),
+				schematic.getSizeX(), schematic.getSizeY(), schematic.getSizeZ(),
+				state.getFacing(), state.getRotation(), state.getMirror(),
+				state.getOrigin(), c0, c1);
 	}
 
 	// 确认放置并创建建造任务
@@ -76,8 +96,8 @@ public class SchematicPreviewManager
 					if (mc.player != null)
 					{
 						mc.player.displayClientMessage(
-								net.minecraft.network.chat.Component.literal(
-										"§c整地进行中，请先完成整地"), false);
+								net.minecraft.network.chat.Component.translatable(
+										"msg.neosim.terraform.running"), false);
 					}
 					return;
 				}
@@ -93,8 +113,8 @@ public class SchematicPreviewManager
 					if (mc.player != null)
 					{
 						mc.player.displayClientMessage(
-								net.minecraft.network.chat.Component.literal(
-										"§cCannot place: area overlaps an existing building."), false);
+								net.minecraft.network.chat.Component.translatable(
+										"msg.neosim.preview.overlap"), false);
 					}
 					return;
 				}

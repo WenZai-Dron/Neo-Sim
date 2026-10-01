@@ -4,12 +4,15 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.*;
+import com.wenzai.neosim.compat.attached.AttachMode;
+import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.NpcGoals;
 import com.wenzai.neosim.schematic.*;
 import com.wenzai.neosim.storage.FileCreater;
+import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -23,8 +26,10 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class ConstructionTask
 {
@@ -72,6 +77,14 @@ public class ConstructionTask
 	// 两轮建造
 	private boolean phaseTwo;
 
+	// 依附表兜底：第二轮扫完后仍有被推迟的方块时回卷重试的上限
+	private static final int MAX_RETRY_ROUNDS = 4;
+
+	// 当前轮回卷次数、本轮被推迟的方块数、本轮是否已放置过方块（判断"还有进展"）
+	private int retryRound;
+	private int deferredThisRound;
+	private boolean placedThisRound;
+
 	// 抬手
 	private long animStartTime;
 	private Entity builderNpc;
@@ -97,6 +110,9 @@ public class ConstructionTask
 		this.resumeIndex = building.getBuildProgress();
 		this.phaseTwo = building.isPhaseTwo();
 		this.paused = building.isPaused();
+
+		// 建造开始时刷新内容表：改完 NeoSim/Json/ 后下一个建筑盒立刻生效，不依赖轮询时序
+		AttachedBlockTable.reloadIfChanged();
 		updateBuildSpeed(builderLevel);
 	}
 
@@ -376,18 +392,18 @@ public class ConstructionTask
 			}
 
 			BlockPos worldPos = building.blueprintToWorld(width, layer, depth);
+
+			// 模盒那一格永远不动：轮廓可能正好压在模盒上，挖掉它会让任务自我取消
+			if (worldPos.equals(boxPos()))
+			{
+				resumeIndex++;
+				continue;
+			}
+
 			BlockState current = PhysicsWorld.getBlockState(level, worldPos);
 
-			// 应用镜像/旋转
-			BlockState toPlace = CoordTransform.transformState(desired, building.getFacing());
-			if (building.getMirror() != net.minecraft.world.level.block.Mirror.NONE)
-			{
-				toPlace = toPlace.mirror(building.getMirror());
-			}
-			if (building.getRotation() != net.minecraft.world.level.block.Rotation.NONE)
-			{
-				toPlace = toPlace.rotate(building.getRotation());
-			}
+			// 朝向与位置同一条落地链（BlueprintPlacement）：格式映射 + 镜像 + 旋转一次算完
+			BlockState toPlace = building.placement().state(desired);
 
 			// 依附性方块朝向贴着实际支撑
 			if (MaterialCalculator.isAttachedBlock(desired))
@@ -395,8 +411,13 @@ public class ConstructionTask
 				toPlace = fixAttachedFacing(worldPos, toPlace);
 				if (toPlace == null)
 				{
-					LOGGER.warn("NeoSim-ConstructionTask: skip '{}' at {} — no support",
-							desired.getBlock().getDescriptionId(), worldPos);
+					deferredThisRound++;
+					if (deferredThisRound <= 8 || deferredThisRound % 64 == 0)
+					{
+						LOGGER.info("NeoSim-ConstructionTask: defer '{}' at {} — no support yet (mode {})",
+								desired.getBlock().getDescriptionId(), worldPos,
+								AttachedBlockTable.mode(desired).id());
+					}
 					resumeIndex++;
 					continue;
 				}
@@ -436,6 +457,20 @@ public class ConstructionTask
 				return;
 			}
 
+			// 兜底预检：方块自身判定能否在当前世界存活
+			// （表未覆盖的模组依附方块也能正确推迟，且不会白扣一份材料）
+			if (AttachedBlockTable.precheck(toPlace) && !canSurviveAt(worldPos, toPlace))
+			{
+				deferredThisRound++;
+				if (deferredThisRound <= 8 || deferredThisRound % 64 == 0)
+				{
+					LOGGER.info("NeoSim-ConstructionTask: defer '{}' at {} — cannot survive yet",
+							desired.getBlock().getDescriptionId(), worldPos);
+				}
+				resumeIndex++;
+				continue;
+			}
+
 			// 材料检查与消耗
 			if (MaterialCalculator.requiresMaterial(desired, currentMode()))
 			{
@@ -468,6 +503,7 @@ public class ConstructionTask
 
 			// 放置方块
 			PhysicsWorld.setBlock(level, worldPos, toPlace, placeFlags);
+			placedThisRound = true;
 
 			// 双箱合并：vanilla 的 getStateForPlacement 路径在纯 setBlock 下不触发，放置后手动合并
 			if (toPlace.getBlock() instanceof ChestBlock)
@@ -564,20 +600,63 @@ public class ConstructionTask
 			break;
 		}
 
+		// 第一轮扫完仍有被推迟的方块（如活塞头等依赖同轮邻居的方块）：先在第一轮回卷补放
+		if (resumeIndex >= totalVolume && !phaseTwo
+				&& deferredThisRound > 0 && placedThisRound && retryRound < MAX_RETRY_ROUNDS)
+		{
+			retryRound++;
+			resumeIndex = 0;
+			building.setBuildProgress(0);
+			placedThisRound = false;
+			int deferred = deferredThisRound;
+			deferredThisRound = 0;
+			LOGGER.info("NeoSim-ConstructionTask: phase 1 retry round {}/{} — {} deferred block(s) — {}",
+					retryRound, MAX_RETRY_ROUNDS, deferred, building.getSchematicName());
+			return;
+		}
+
 		if (resumeIndex >= totalVolume && !phaseTwo)
 		{
+			if (deferredThisRound > 0)
+			{
+				LOGGER.warn("NeoSim-ConstructionTask: {} block(s) still unsupported after phase 1 retry — {}",
+						deferredThisRound, building.getSchematicName());
+			}
 			phaseTwo = true;
 			resumeIndex = 0;
 			building.setPhaseTwo(true);
 			building.setBuildProgress(0);
 			setBuilderAnim(0.0F);
+			retryRound = 0;
+			deferredThisRound = 0;
+			placedThisRound = false;
 			LOGGER.info("NeoSim-ConstructionTask: phase 1 done, building attached blocks — {}",
 					building.getSchematicName());
+		}
+
+		// 第二轮扫完仍有被推迟的方块：上一轮有进展且未超上限 → 回卷重试（支撑可能刚刚才放好）
+		if (resumeIndex >= totalVolume && phaseTwo
+				&& deferredThisRound > 0 && placedThisRound && retryRound < MAX_RETRY_ROUNDS)
+		{
+			retryRound++;
+			resumeIndex = 0;
+			building.setBuildProgress(0);
+			placedThisRound = false;
+			int deferred = deferredThisRound;
+			deferredThisRound = 0;
+			LOGGER.info("NeoSim-ConstructionTask: retry round {}/{} — {} deferred block(s) — {}",
+					retryRound, MAX_RETRY_ROUNDS, deferred, building.getSchematicName());
+			return;
 		}
 
 		// 完工
 		if (resumeIndex >= totalVolume && phaseTwo)
 		{
+			if (deferredThisRound > 0)
+			{
+				LOGGER.warn("NeoSim-ConstructionTask: {} block(s) still unsupported after {} retry round(s) — {}",
+						deferredThisRound, retryRound, building.getSchematicName());
+			}
 			currentState = BuildingInstance.BuildState.COMPLETE;
 			building.setState(currentState);
 			building.setBuildingComplete(true);
@@ -739,7 +818,14 @@ public class ConstructionTask
 			MarkerManager.onPlaced(level, pos);
 			WorkPlotEngine.tryBindAfterMarkerPlacement(level);
 		}
+		else if (placed.getBlock() instanceof ControlBox)
+		{
+			// 蓝图里直接摆的控制箱方块（.litematic 常见）：与 .txt 的 $ 标记一样登记记录，
+			// 否则控制箱没有记录，右键不出 GUI，也不会被当作住宅管理
+			recordControlBox(pos);
+		}
 	}
+
 
 	// 写入控制箱记录，放置者未入城时跳过（与任务持久化一致）
 	private void recordControlBox(BlockPos boxPos)
@@ -764,10 +850,12 @@ public class ConstructionTask
 		ControlBoxPersistence.addOrUpdate(level, city, rec);
 	}
 
-	// 建筑全部生活点的世界坐标
+	// 建筑全部生活点的世界坐标。按列(x,z)去重：入住占用是按列判定的，
+	// 同一列上叠着多个生活点（比如两个高度各放一个）只会显示成"同一个住户占了 2 个位置"
 	private static List<BlockPos> livingPointsOf(BuildingInstance building)
 	{
 		List<BlockPos> out = new ArrayList<>();
+		Set<Long> columns = new HashSet<>();
 		Map<BlockPos, SpecialMarker> markers = building.getSchematic().getSpecialMarkers();
 		if (markers != null)
 		{
@@ -776,7 +864,12 @@ public class ConstructionTask
 				if (e.getValue() == SpecialMarker.LIVING_POINT)
 				{
 					BlockPos l = e.getKey();
-					out.add(building.blueprintToWorld(l.getX(), l.getY(), l.getZ()));
+					BlockPos w = building.blueprintToWorld(l.getX(), l.getY(), l.getZ());
+
+					if (columns.add(ControlBoxPersistence.columnKey(w.getX(), w.getZ())))
+					{
+						out.add(w);
+					}
 				}
 			}
 		}
@@ -833,21 +926,15 @@ public class ConstructionTask
 		InventoryManager.extractItem(nearbyChests, item, 1);
 	}
 
-	// 依附性方块朝向修正：找不到支撑跳过
+	// 依附性方块朝向修正：按依附方式分派（贴墙 / 地面 / 悬挂 / 任意），找不到支撑返回 null（跳过并计入缺件）
+	// 依附方式来自可编辑的 AttachedBlockTable：内置类型规则（instanceof 注册）+ jar 内置 JSON + NeoSim/Json 外部覆盖
 	private BlockState fixAttachedFacing(BlockPos worldPos, BlockState state)
 	{
 		Block block = state.getBlock();
+		AttachMode mode = AttachedBlockTable.mode(state);
 
 		// 贴墙类
-		if (block instanceof LadderBlock
-				|| block instanceof WallTorchBlock
-				|| block instanceof RedstoneWallTorchBlock
-				|| block instanceof WallSignBlock
-				|| block instanceof ButtonBlock
-				|| block instanceof LeverBlock
-				|| block instanceof TripWireHookBlock
-				|| block instanceof CocoaBlock
-				|| block instanceof VineBlock)
+		if (mode == AttachMode.WALL)
 		{
 			if (block instanceof VineBlock)
 			{
@@ -869,11 +956,8 @@ public class ConstructionTask
 				return null;
 			}
 
-			net.minecraft.world.level.block.state.properties.Property<Direction> facingProp =
-					block instanceof CocoaBlock
-							? CocoaBlock.FACING
-							: BlockStateProperties.HORIZONTAL_FACING;
-			if (!state.hasProperty(facingProp)) return state;
+			net.minecraft.world.level.block.state.properties.Property<Direction> facingProp = facingProperty(state);
+			if (facingProp == null) return state;
 			Direction facing = state.getValue(facingProp);
 
 			if (hasSupport(worldPos, facing.getOpposite())) return state;
@@ -888,31 +972,54 @@ public class ConstructionTask
 			return null;
 		}
 
-		// 地面类
-		if (block instanceof BushBlock
-				|| block instanceof CropBlock
-				|| block instanceof StemBlock
-				|| block instanceof AttachedStemBlock
-				|| block instanceof SaplingBlock
-				|| block instanceof SugarCaneBlock
-				|| block instanceof FlowerPotBlock
-				|| block instanceof StandingSignBlock
-				|| block instanceof TorchBlock
-				|| block instanceof PressurePlateBlock
-				|| block instanceof BedBlock
-				|| block instanceof SnowLayerBlock
-				|| block instanceof AnvilBlock
-				|| block instanceof DoorBlock
-				|| block instanceof BaseRailBlock
-				|| block instanceof RedStoneWireBlock
-				|| block instanceof TripWireBlock
-				|| block instanceof BannerBlock
-				|| block instanceof CarpetBlock)
+		// 地面类：下方需支撑（不含空气，水/岩浆也算支撑以外的实心判定与原逻辑一致）
+		if (mode == AttachMode.GROUND)
 		{
 			return PhysicsWorld.getBlockState(level, worldPos.below()).isAir() ? null : state;
 		}
 
+		// 悬挂类：上方需支撑（灯笼 / 锁链 / 挂式告示牌）
+		if (mode == AttachMode.CEILING)
+		{
+			return PhysicsWorld.getBlockState(level, worldPos.above()).isAir() ? null : state;
+		}
+
+		// ANY / AUTO / NONE：不做朝向与支撑修正
 		return state;
+	}
+
+	// 贴墙方块的朝向属性：先按数据规则的 facing 名称匹配，再回退原版水平朝向
+	private static net.minecraft.world.level.block.state.properties.Property<Direction> facingProperty(BlockState state)
+	{
+		for (String name : AttachedBlockTable.facingProperties(state.getBlock()))
+		{
+			for (net.minecraft.world.level.block.state.properties.Property<?> prop : state.getProperties())
+			{
+				if (prop.getName().equalsIgnoreCase(name)
+						&& prop.getValueClass() == Direction.class)
+				{
+					@SuppressWarnings("unchecked")
+					net.minecraft.world.level.block.state.properties.Property<Direction> dirProp =
+							(net.minecraft.world.level.block.state.properties.Property<Direction>) prop;
+					return dirProp;
+				}
+			}
+		}
+		return null;
+	}
+
+	// 放置前预检：方块自身判定能否在当前世界存活；模组实现可能抛异常，异常视为可放置，不阻断建造
+	private boolean canSurviveAt(BlockPos pos, BlockState state)
+	{
+		try
+		{
+			return state.canSurvive(level, pos);
+		}
+		catch (Throwable t)
+		{
+			LOGGER.debug("NeoSim-ConstructionTask: canSurvive check failed at {} — {}", pos, t.toString());
+			return true;
+		}
 	}
 
 	// 连接性方块
@@ -1148,7 +1255,7 @@ public class ConstructionTask
 			if (MaterialCalculator.isAttachedBlock(desired) != phaseTwo) continue;
 			BlockPos worldPos = building.blueprintToWorld(width, layer, depth);
 			BlockState current = PhysicsWorld.getBlockState(level, worldPos);
-			if (current.equals(CoordTransform.transformState(desired, building.getFacing()))) continue;
+			if (current.equals(building.placement().state(desired))) continue;
 			if (MaterialCalculator.requiresMaterial(desired, currentMode()))
 			{
 				result = desired.getBlock().asItem();
@@ -1174,8 +1281,8 @@ public class ConstructionTask
 		if (level.getServer() == null) return;
 		sendPacketToCityPlayers(new com.wenzai.neosim.network.ServerToClientPayloads.ResourceShortagePacket(
 				LifeSystem.tpl(Config.ANNOUNCE_MISSING_MATERIAL,
-						building.getSchematicName(),
-						item.getDescription().getString())));
+						BlueprintName.component(building.getSchematicName()),
+						item.getDescription())));
 	}
 
 	// 只发给该建筑所属城市的在线玩家(放置者未入城时发给所有玩家)
@@ -1247,7 +1354,8 @@ public class ConstructionTask
 	private void announceComplete()
 	{
 		sendPacketToCityPlayers(new com.wenzai.neosim.network.ServerToClientPayloads.BuildingCompletePacket(
-				LifeSystem.tpl(Config.ANNOUNCE_BUILDING_COMPLETE, building.getSchematicName())));
+				LifeSystem.tpl(Config.ANNOUNCE_BUILDING_COMPLETE,
+						BlueprintName.component(building.getSchematicName()))));
 		LOGGER.info("NeoSim-ConstructionTask: announce complete — {}", building.getSchematicName());
 	}
 

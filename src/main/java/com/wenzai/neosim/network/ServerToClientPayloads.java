@@ -11,7 +11,9 @@ import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -111,13 +113,13 @@ public class ServerToClientPayloads
 	}
 
 	// 定向该城市玩家通知材料短缺（服务端已按配置模板格式化）
-	public record ResourceShortagePacket(String message) implements CustomPacketPayload
+	public record ResourceShortagePacket(Component message) implements CustomPacketPayload
 	{
 		public static final Type<ResourceShortagePacket> TYPE =
 				new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "resource_shortage"));
 
-		public static final StreamCodec<ByteBuf, ResourceShortagePacket> STREAM_CODEC =
-				ByteBufCodecs.STRING_UTF8.map(ResourceShortagePacket::new, ResourceShortagePacket::message);
+		public static final StreamCodec<RegistryFriendlyByteBuf, ResourceShortagePacket> STREAM_CODEC =
+				ComponentSerialization.STREAM_CODEC.map(ResourceShortagePacket::new, ResourceShortagePacket::message);
 
 		@Override
 		public Type<? extends CustomPacketPayload> type()
@@ -132,20 +134,20 @@ public class ServerToClientPayloads
 			{
 				if (ctx.player() != null)
 				{
-					ctx.player().displayClientMessage(Component.literal(pkt.message()), false);
+					ctx.player().displayClientMessage(pkt.message(), false);
 				}
 			});
 		}
 	}
 
 	// 定向该城市玩家公告建造完工（服务端已按配置模板格式化）
-	public record BuildingCompletePacket(String message) implements CustomPacketPayload
+	public record BuildingCompletePacket(Component message) implements CustomPacketPayload
 	{
 		public static final Type<BuildingCompletePacket> TYPE =
 				new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "building_complete"));
 
-		public static final StreamCodec<ByteBuf, BuildingCompletePacket> STREAM_CODEC =
-				ByteBufCodecs.STRING_UTF8.map(BuildingCompletePacket::new, BuildingCompletePacket::message);
+		public static final StreamCodec<RegistryFriendlyByteBuf, BuildingCompletePacket> STREAM_CODEC =
+				ComponentSerialization.STREAM_CODEC.map(BuildingCompletePacket::new, BuildingCompletePacket::message);
 
 		@Override
 		public Type<? extends CustomPacketPayload> type()
@@ -160,20 +162,20 @@ public class ServerToClientPayloads
 			{
 				if (ctx.player() != null)
 				{
-					ctx.player().displayClientMessage(Component.literal(pkt.message()), false);
+					ctx.player().displayClientMessage(pkt.message(), false);
 				}
 			});
 		}
 	}
 
 	// 定向该城市玩家公告整地完工（服务端已格式化）
-	public record TerraformCompletePacket(String message) implements CustomPacketPayload
+	public record TerraformCompletePacket(Component message) implements CustomPacketPayload
 	{
 		public static final Type<TerraformCompletePacket> TYPE =
 				new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "terraform_complete"));
 
-		public static final StreamCodec<ByteBuf, TerraformCompletePacket> STREAM_CODEC =
-				ByteBufCodecs.STRING_UTF8.map(TerraformCompletePacket::new, TerraformCompletePacket::message);
+		public static final StreamCodec<RegistryFriendlyByteBuf, TerraformCompletePacket> STREAM_CODEC =
+				ComponentSerialization.STREAM_CODEC.map(TerraformCompletePacket::new, TerraformCompletePacket::message);
 
 		@Override
 		public Type<? extends CustomPacketPayload> type()
@@ -188,7 +190,7 @@ public class ServerToClientPayloads
 			{
 				if (ctx.player() != null)
 				{
-					ctx.player().displayClientMessage(Component.literal(pkt.message()), false);
+					ctx.player().displayClientMessage(pkt.message(), false);
 				}
 			});
 		}
@@ -513,6 +515,10 @@ public class ServerToClientPayloads
 			{
 				net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
 				if (mc.screen instanceof com.wenzai.neosim.client.gui.ControlBoxGui gui)
+				{
+					gui.applyHomelessList(payload.names());
+				}
+				else if (mc.screen instanceof com.wenzai.neosim.client.gui.CityInfoGui gui)
 				{
 					gui.applyHomelessList(payload.names());
 				}

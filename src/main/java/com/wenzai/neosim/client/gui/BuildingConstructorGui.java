@@ -34,6 +34,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	// 单条缺少材料记录
 	private record MissingEntry(net.minecraft.world.item.Item item, int missing)
 	{
+
 	}
 
 	private int currentPage = 0;
@@ -151,14 +152,30 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		});
 	}
 
-	// 从预览返回到需求页
+	// 从预览返回到需求页。上一页跟着蓝图类型走：以前写死 2（住宅页），
+	// 于是从自定义页进来的蓝图，退出时会被丢进住宅列表
 	public BuildingConstructorGui(BlockPos constructorPos, SchematicData building)
 	{
 		this(constructorPos);
 		this.selectedBuilding = building;
 		this.materialOffset = 0;
 		this.currentPage = 6;
-		this.previousPage = 2;
+		BuildingType type = building != null ? building.getType() : BuildingType.RESIDENTIAL;
+		this.selectedType = type;
+		this.previousPage = listPageOf(type);
+	}
+
+	// 蓝图类型 -> 它的列表页编号（与 showPage 里的分派一致）
+	private static int listPageOf(BuildingType type)
+	{
+		return switch (type)
+		{
+			case COMMERCIAL -> 3;
+			case INDUSTRIAL -> 4;
+			case OTHER -> 5;
+			case CUSTOM -> 9;
+			default -> 2;
+		};
 	}
 
 	// 生命周期
@@ -271,24 +288,24 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	private boolean isInPreviewPanel(double mx, double my)
 	{
 		if (currentPage != 6 || selectedBuilding == null) return false;
-		int px = previewPanelX(), py = previewPanelY(), pw = previewPanelW(), ph = previewPanelH();
-		return mx >= px && mx <= px + pw && my >= py && my <= py + ph;
+		int panelPosX = previewPanelX(), panelPosY = previewPanelY(), panelSizeW = previewPanelW(), panelSizeH = previewPanelH();
+		return mx >= panelPosX && mx <= panelPosX + panelSizeW && my >= panelPosY && my <= panelPosY + panelSizeH;
 	}
 
 	// 需求页右侧3D预览面板
 	private void drawPreviewPanel(GuiGraphics gfx)
 	{
 		if (selectedBuilding == null) return;
-		int px = previewPanelX(), py = previewPanelY(), pw = previewPanelW(), ph = previewPanelH();
+		int panelPosX = previewPanelX(), panelPosY = previewPanelY(), panelSizeW = previewPanelW(), panelSizeH = previewPanelH();
 
-		gfx.fill(px, py, px + pw, py + ph, 0x90000000);
+		gfx.fill(panelPosX, panelPosY, panelPosX + panelSizeW, panelPosY + panelSizeH, 0x90000000);
 		gfx.drawString(font, BuildingNameLocalizer.localize(selectedBuilding.getName()),
-				px + 4, py + 6, 0xFFFFFF);
+				panelPosX + 4, panelPosY + 6, 0xFFFFFF);
 
-		int cxp = px + pw / 2;
-		int cyp = py + ph / 2 + 10;
-		int size = Math.max(40, Math.min(pw, ph) - 24);
-		BuildingPreviewRenderer.render(gfx, selectedBuilding, cxp, cyp,
+		int centerPosX = panelPosX + panelSizeW / 2;
+		int centerPosY = panelPosY + panelSizeH / 2 + 10;
+		int size = Math.max(40, Math.min(panelSizeW, panelSizeH) - 24);
+		BuildingPreviewRenderer.render(gfx, selectedBuilding, centerPosX, centerPosY,
 				(int) (size * previewZoom), previewYaw, previewPitch);
 	}
 
@@ -313,12 +330,12 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		if (data == null) return;
 
 		int size = 44;
-		int py = 8;
+		int previewPosY = 8;
 
-		int px = width - size - 16;
+		int previewPosX = width - size - 16;
 
-		gfx.fill(px - 4, py - 4, px + size + 4, py + size + 4, 0x90000000);
-		BuildingPreviewRenderer.render(gfx, data, px + size / 2, py + size / 2,
+		gfx.fill(previewPosX - 4, previewPosY - 4, previewPosX + size + 4, previewPosY + size + 4, 0x90000000);
+		BuildingPreviewRenderer.render(gfx, data, previewPosX + size / 2, previewPosY + size / 2,
 				size, previewYaw, previewPitch);
 	}
 
@@ -501,16 +518,16 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 			activeTask = null;
 		}
 
-		int btnW = width / 4;
-		int btnH = height / 13;
-		int cx = width / 2;
-		int row1Y = height * 5 / 8;
-		int row2Y = row1Y + btnH;
+		int btnSizeW = width / 4;
+		int btnSizeH = height / 13;
+		int centerPosX = width / 2;
+		int row1PosY = height * 5 / 8;
+		int row2PosY = row1PosY + btnSizeH;
 
 		Component hireLabel = assignedWorker != null
 				? Component.translatable(P + "fireWorker", assignedWorker)
 				: Component.translatable(P + "hireBuilder");
-		addButton(1, cx - width * 3 / 8, row1Y, btnW, btnH,
+		addButton(1, centerPosX - width * 3 / 8, row1PosY, btnSizeW, btnSizeH,
 				hireLabel,
 				b ->
 				{
@@ -528,14 +545,14 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 						showPage();
 					}
 				});
-		addButton(2, cx - width / 8, row1Y, btnW, btnH,
+		addButton(2, centerPosX - width / 8, row1PosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "chooseBuilding"),
 				b ->
 				{
 					currentPage = 1;
 					showPage();
 				});
-		Button statusBtn = addButton(3, cx + width / 8, row1Y, btnW, btnH,
+		Button statusBtn = addButton(3, centerPosX + width / 8, row1PosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "currentStatus"), b ->
 				{
 					currentPage = 8;
@@ -545,7 +562,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 
 		boolean hasTask = activeTask != null && activeTask.getState() != com.wenzai.neosim.building.BuildingInstance.BuildState.COMPLETE;
 		Component cpLabel = !hasTask ? Component.translatable(P + "pause") : (activeTask.isPaused() ? Component.translatable(P + "continue") : Component.translatable(P + "pause"));
-		Button cpBtn = addButton(4, cx - width * 3 / 8, row2Y, btnW, btnH,
+		Button cpBtn = addButton(4, centerPosX - width * 3 / 8, row2PosY, btnSizeW, btnSizeH,
 				cpLabel,
 				b ->
 				{
@@ -557,7 +574,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 					}
 				});
 		cpBtn.active = hasTask;
-		Button planBtn = addButton(5, cx - width / 8, row2Y, btnW, btnH,
+		Button planBtn = addButton(5, centerPosX - width / 8, row2PosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "choosePlan"),
 				b ->
 				{
@@ -565,7 +582,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 					showPage();
 				});
 		planBtn.active = !hasTask;
-		Button missingBtn = addButton(6, cx + width / 8, row2Y, btnW, btnH,
+		Button missingBtn = addButton(6, centerPosX + width / 8, row2PosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "currentMissing"),
 				b ->
 				{
@@ -577,12 +594,12 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 
 	private void showTypeSelection()
 	{
-		int btnW = width * 5 / 24;
-		int btnH = height / 13;
-		int cx = width / 2;
-		int y = height * 5 / 8;
+		int btnSizeW = width * 5 / 24;
+		int btnSizeH = height / 13;
+		int centerPosX = width / 2;
+		int startPosY = height * 5 / 8;
 
-		addButton(7, cx - width * 5 / 12, y, btnW, btnH,
+		addButton(7, centerPosX - width * 5 / 12, startPosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "typeResidential"),
 				b ->
 				{
@@ -590,7 +607,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 					selectedType = BuildingType.RESIDENTIAL;
 					showPage();
 				});
-		addButton(8, cx - width * 5 / 24, y, btnW, btnH,
+		addButton(8, centerPosX - width * 5 / 24, startPosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "typeCommercial"),
 				b ->
 				{
@@ -598,7 +615,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 					selectedType = BuildingType.COMMERCIAL;
 					showPage();
 				});
-		addButton(9, cx, y, btnW, btnH,
+		addButton(9, centerPosX, startPosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "typeIndustrial"),
 				b ->
 				{
@@ -606,7 +623,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 					selectedType = BuildingType.INDUSTRIAL;
 					showPage();
 				});
-		addButton(10, cx + width * 5 / 24, y, btnW, btnH,
+		addButton(10, centerPosX + width * 5 / 24, startPosY, btnSizeW, btnSizeH,
 				Component.translatable(P + "typeOther"),
 				b ->
 				{
@@ -615,7 +632,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 					showPage();
 				});
 
-		addButton(11, cx - btnW / 2, y + btnH + 6, btnW, btnH,
+		addButton(11, centerPosX - btnSizeW / 2, startPosY + btnSizeH + 6, btnSizeW, btnSizeH,
 				Component.translatable(P + "typeCustom"),
 				b ->
 				{
@@ -657,12 +674,8 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 
 	private void buildFormatButtons()
 	{
-		int fy = height - 40;
-		int fx = width / 2 + 80;
-		int bw = 70;
-
 		// 切换格式筛选
-		addButton(600, fx, fy, bw, 20,
+		addButton(600, width / 2 + 80, height - 40, 70, 20,
 				Component.translatable(P + (formatCycleIndex == 0 ? "filterAll"
 						: formatCycleIndex == 1 ? "filterTxt" : "filterLitematic")),
 				b ->
@@ -744,6 +757,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		if (!query.isEmpty())
 		{
 			String lower = query.toLowerCase();
+
 			// 按搜索模式过滤：建筑=名称（英文名或本地化中文名都匹配），作者=作者
 			currentBlueprints = currentBlueprints.stream()
 					.filter(d -> searchByAuthor
@@ -775,9 +789,9 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		sorted.sort(cmp);
 		currentBlueprints = sorted;
 
-		int colW = (width - 20) / COLS;
+		int colSizeW = (width - 20) / COLS;
 
-		int x = 5, y = 60, idx = 1;
+		int btnPosX = 5, btnPosY = 60, idx = 1;
 		int perRow = 0;
 		buildingsOnPage = 0;
 
@@ -788,7 +802,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 					: Component.translatable(P + "unknownAuthor").getString();
 
 			double cost = data.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get();
-			Button bpBtn = addButton(idx, x, y, colW, 20,
+			Button bpBtn = addButton(idx, btnPosX, btnPosY, colSizeW, 20,
 					Component.literal(BuildingNameLocalizer.localize(data.getName())),
 					b -> onBlueprintPicked(data));
 
@@ -797,25 +811,25 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 
 			// 资金不足时禁用蓝图选择
 			bpBtn.active = canAfford(cost);
-			addButton(idx + 200, x, y + 19, colW, 14,
+			addButton(idx + 200, btnPosX, btnPosY + 19, colSizeW, 14,
 					Component.literal(data.getDimensionString()), null).active = false;
 
-			addButton(idx + 250, x, y + 32, colW, 14,
+			addButton(idx + 250, btnPosX, btnPosY + 32, colSizeW, 14,
 					Component.translatable(P + "cost", String.format("%.2f", cost)), null).active = false;
-			addButton(idx + 300, x, y + 45, colW, 14,
+			addButton(idx + 300, btnPosX, btnPosY + 45, colSizeW, 14,
 					Component.translatable(P + "blocks", data.getTotalSolidBlocks()), null).active = false;
-			addButton(idx + 400, x, y + 58, colW, 14,
+			addButton(idx + 400, btnPosX, btnPosY + 58, colSizeW, 14,
 					Component.literal(author), null).active = false;
 
-			x += colW;
+			btnPosX += colSizeW;
 			idx++;
 			buildingsOnPage++;
 			perRow++;
 
 			if (perRow >= COLS)
 			{
-				x = 5;
-				y += ROW_H;
+				btnPosX = 5;
+				btnPosY += ROW_H;
 				perRow = 0;
 			}
 		}
@@ -823,7 +837,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		// 自定义页：在最后一个蓝图按钮之后的空位添加"添加"按钮
 		if (selectedType == BuildingType.CUSTOM && buildingsOnPage < PER_PAGE)
 		{
-			addButton(700, x, y, colW, 20,
+			addButton(700, btnPosX, btnPosY, colSizeW, 20,
 					Component.translatable(P + "add"),
 					b -> openCustomFolder());
 		}
@@ -989,17 +1003,17 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		}
 
 		// 方案列表（不显示地块相关内容；无地块时确认会给出聊天提示）
-		int y = 60;
+		int startPosY = 60;
 		for (TerraformPlan plan : TerraformPlan.values())
 		{
-			addButton(1600 + plan.ordinal(), 10, y, 190, 20,
+			addButton(1600 + plan.ordinal(), 10, startPosY, 190, 20,
 					Component.translatable(plan.labelKey()),
 					b ->
 					{
 						selectedPlan = plan;
 						showTerraformPage();
 					});
-			y += 24;
+			startPosY += 24;
 		}
 
 		// 确认（与返回并排，避免覆盖）
@@ -1021,7 +1035,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 			if (minecraft != null && minecraft.player != null)
 			{
 				minecraft.player.displayClientMessage(
-						Component.literal("§c请先用标记棒圈出矩形地块，且标记需与模盒相连"), false);
+						Component.translatable("msg.neosim.terraform.noMarkerRect"), false);
 			}
 			return;
 		}
@@ -1032,13 +1046,13 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		{
 			ServerLevel level = minecraft.getSingleplayerServer().overworld();
 			String city = ClientDataHolder.getInstance().getCityName();
-			String err = TerraformEngine.start(level, city, constructorPos, selectedPlan,
+			Component err = TerraformEngine.start(level, city, constructorPos, selectedPlan,
 					minX, minZ, maxX, maxZ, baselineY);
 			if (err != null)
 			{
 				if (minecraft.player != null)
 				{
-					minecraft.player.displayClientMessage(Component.literal(err), false);
+					minecraft.player.displayClientMessage(err, false);
 				}
 			}
 			else
@@ -1222,51 +1236,51 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	// 当前状态页绘制
 	private void drawStatus(GuiGraphics gfx)
 	{
-		int x = 10;
-		int y = 60;
+		int posX = 10;
+		int posY = 60;
 
 		// 目标建筑
 		gfx.drawString(font, Component.translatable(P + "statusBuilding"),
-				x, y, 0xFFFFFF);
-		y += 14;
+				posX, posY, 0xFFFFFF);
+		posY += 14;
 		if (selectedBuilding != null)
 		{
 			gfx.drawString(font, BuildingNameLocalizer.localize(selectedBuilding.getName()),
-					x + 20, y, 0xCCCCCC);
+					posX + 20, posY, 0xCCCCCC);
 		}
 		else if (activeTask != null)
 		{
 			// 任务存在时显示任务建筑
-			gfx.drawString(font, activeTask.getBuilding().getSchematicName(), x + 20, y, 0xCCCCCC);
+			gfx.drawString(font, BuildingNameLocalizer.localize(activeTask.getBuilding().getSchematicName()), posX + 20, posY, 0xCCCCCC);
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "statusNone"), x + 20, y, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(P + "statusNone"), posX + 20, posY, 0xAAAAAA);
 		}
-		y += 24;
+		posY += 24;
 
 		// 所选建筑师
 		gfx.drawString(font, Component.translatable(P + "statusBuilder"),
-				x, y, 0xFFFFFF);
-		y += 14;
+				posX, posY, 0xFFFFFF);
+		posY += 14;
 		String worker = assignedWorker != null ? assignedWorker
 				: (activeTask != null && activeTask.getBuilding().getBuilderName() != null
 				? activeTask.getBuilding().getBuilderName()
 				: null);
 		if (worker != null)
 		{
-			gfx.drawString(font, worker, x + 20, y, 0xCCCCCC);
+			gfx.drawString(font, worker, posX + 20, posY, 0xCCCCCC);
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "statusNone"), x + 20, y, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(P + "statusNone"), posX + 20, posY, 0xAAAAAA);
 		}
-		y += 24;
+		posY += 24;
 
 		// 当前建造状态
 		gfx.drawString(font, Component.translatable(P + "statusState"),
-				x, y, 0xFFFFFF);
-		y += 14;
+				posX, posY, 0xFFFFFF);
+		posY += 14;
 		if (activeTask != null)
 		{
 			String stateName = switch (activeTask.getState())
@@ -1279,50 +1293,49 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 				case BUILDING -> "statusState.building";
 				case COMPLETE -> "statusState.complete";
 			};
-			gfx.drawString(font, Component.translatable(P + stateName), x + 20, y, 0xCCCCCC);
-			y += 14;
+			gfx.drawString(font, Component.translatable(P + stateName), posX + 20, posY, 0xCCCCCC);
+			posY += 14;
 
 			// 建造进度
 			int progress = activeTask.getProgress();
 			int total = activeTask.getTotal();
 			gfx.drawString(font, Component.translatable(P + "statusProgress", progress, total),
-					x + 20, y, 0xCCCCCC);
-			y += 24;
+					posX + 20, posY, 0xCCCCCC);
+			posY += 24;
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "statusNone"), x + 20, y, 0xAAAAAA);
-			y += 24;
+			gfx.drawString(font, Component.translatable(P + "statusNone"), posX + 20, posY, 0xAAAAAA);
+			posY += 24;
 		}
 
 		// 在状态显示服务端缓存的缺料
 		gfx.drawString(font, Component.translatable(P + "statusMaterials"),
-				x, y, 0xFFFFFF);
-		y += 14;
+				posX, posY, 0xFFFFFF);
+		posY += 14;
 		if (activeTask != null
 				&& activeTask.getState() == com.wenzai.neosim.building.BuildingInstance.BuildState.WAITING_FOR_RESOURCES)
 		{
 			net.minecraft.world.item.Item missing = activeTask.getLastMissingMaterial();
 			if (missing != null)
 			{
-				gfx.drawString(font, missing.getDescription(), x + 20, y, 0xCCCCCC);
+				gfx.drawString(font, missing.getDescription(), posX + 20, posY, 0xCCCCCC);
 			}
 			else
 			{
-				gfx.drawString(font, Component.translatable(P + "statusNone"), x + 20, y, 0xAAAAAA);
+				gfx.drawString(font, Component.translatable(P + "statusNone"), posX + 20, posY, 0xAAAAAA);
 			}
 		}
 		else
 		{
-			gfx.drawString(font, Component.translatable(P + "statusNone"), x + 20, y, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(P + "statusNone"), posX + 20, posY, 0xAAAAAA);
 		}
 	}
 
 	// 材料列表每页行数
 	private int materialRowsPerPage()
 	{
-		int available = Math.max(40, height - 116 - 30);
-		return Math.max(4, available / 13);
+		return Math.max(4, Math.max(40, height - 116 - 30) / 13);
 	}
 
 	private void drawRequirements(GuiGraphics gfx)
@@ -1330,20 +1343,20 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		SchematicData data = selectedBuilding;
 		if (data == null) return;
 
-		int x = 10;
-		int y = 60;
+		int posX = 10;
+		int posY = 60;
 
 		// 左上角信息块
 		double cost = data.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get();
 		gfx.drawString(font, Component.translatable(P + "dimensions", data.getDimensionString()),
-				x, y, 0xFFFFFF);
-		y += 14;
+				posX, posY, 0xFFFFFF);
+		posY += 14;
 		gfx.drawString(font, Component.translatable(P + "cost", String.format("%.2f", cost)),
-				x, y, 0xFFFFFF);
-		y += 14;
+				posX, posY, 0xFFFFFF);
+		posY += 14;
 		gfx.drawString(font, Component.translatable(P + "totalBlocks", data.getTotalSolidBlocks()),
-				x, y, 0xFFFFFF);
-		y += 14;
+				posX, posY, 0xFFFFFF);
+		posY += 14;
 
 		// 材料需求
 		List<MaterialCalculator.MaterialEntry> materials = MaterialCalculator.calculate(data,
@@ -1352,7 +1365,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		{
 			String key = com.wenzai.neosim.client.ClientDataHolder.getInstance().getMode() == 2
 					? P + "noMaterialsCreative" : P + "noMaterials";
-			gfx.drawString(font, Component.translatable(key), x, y, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(key), posX, posY, 0xAAAAAA);
 			return;
 		}
 
@@ -1368,36 +1381,36 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		{
 			countLine = countLine.copy().append("   " + page + "/" + pages);
 		}
-		gfx.drawString(font, countLine, x, y, 0xFFFFFF);
-		y += 14;
+		gfx.drawString(font, countLine, posX, posY, 0xFFFFFF);
+		posY += 14;
 
 		int gap = 24;
 
-		int colW = (width / 2 - 40 - gap * (MAT_COLS - 1)) / MAT_COLS;
+		int colSizeW = (width / 2 - 40 - gap * (MAT_COLS - 1)) / MAT_COLS;
 
 		// 材料列表
 		float S = 0.8F;
-		int sx = Math.round(x / S);
-		int sy = Math.round(y / S);
-		int sColW = Math.round(colW / S);
-		int sGap = Math.round(52 / S);
-		int sRow = Math.round(11 / S);
+		int scaledPosX = Math.round(posX / S);
+		int scaledPosY = Math.round(posY / S);
+		int scaledColSizeW = Math.round(colSizeW / S);
+		int scaledGap = Math.round(52 / S);
+		int scaledRowSizeH = Math.round(11 / S);
 
 		gfx.pose().pushPose();
 		gfx.pose().scale(S, S, 1.0F);
 		for (int i = 0; i < perPage && materialOffset + i < materials.size(); i++)
 		{
 			MaterialCalculator.MaterialEntry e = materials.get(materialOffset + i);
-			int cx = sx + (i % MAT_COLS) * (sColW + sGap);
-			int cy = sy + (i / MAT_COLS) * sRow;
+			int cellPosX = scaledPosX + (i % MAT_COLS) * (scaledColSizeW + scaledGap);
+			int cellPosY = scaledPosY + (i / MAT_COLS) * scaledRowSizeH;
 
 			// 右侧数量右对齐；左侧名称与数量保持间距，超宽截断避免重叠
 			String count = e.formatted();
-			int countX = cx + sColW - font.width(count);
-			int maxNameW = Math.max(8, countX - cx - 4);
-			gfx.drawString(font, font.plainSubstrByWidth(e.item.getDescription().getString(), maxNameW, true),
-					cx, cy, 0xCCCCCC);
-			gfx.drawString(font, count, countX, cy, 0xCCCCCC);
+			int countPosX = cellPosX + scaledColSizeW - font.width(count);
+			int maxNameSizeW = Math.max(8, countPosX - cellPosX - 4);
+			gfx.drawString(font, font.plainSubstrByWidth(e.item.getDescription().getString(), maxNameSizeW, true),
+					cellPosX, cellPosY, 0xCCCCCC);
+			gfx.drawString(font, count, countPosX, cellPosY, 0xCCCCCC);
 		}
 		gfx.pose().popPose();
 
@@ -1414,25 +1427,25 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 			return;
 		}
 
-		int x = 10;
-		int y = 60;
+		int posX = 10;
+		int posY = 60;
 
 		// 扫描中
 		if (missingScanPending)
 		{
-			gfx.drawString(font, Component.translatable(P + "scanning"), x, y, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(P + "scanning"), posX, posY, 0xAAAAAA);
 			return;
 		}
 
 		// 创造模式：全部方块免费
 		if (com.wenzai.neosim.client.ClientDataHolder.getInstance().getMode() == 2)
 		{
-			gfx.drawString(font, Component.translatable(P + "noMaterialsCreative"), x, y, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(P + "noMaterialsCreative"), posX, posY, 0xAAAAAA);
 			return;
 		}
 		if (missingMaterials.isEmpty())
 		{
-			gfx.drawString(font, Component.translatable(P + "missingNone"), x, y, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(P + "missingNone"), posX, posY, 0xAAAAAA);
 			return;
 		}
 
@@ -1448,36 +1461,36 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		{
 			countLine = countLine.copy().append("   " + page + "/" + pages);
 		}
-		gfx.drawString(font, countLine, x, y, 0xFFFFFF);
-		y += 14;
+		gfx.drawString(font, countLine, posX, posY, 0xFFFFFF);
+		posY += 14;
 
 		int gap = 24;
-		int colW = (width / 2 - 40 - gap * (MAT_COLS - 1)) / MAT_COLS;
+		int colSizeW = (width / 2 - 40 - gap * (MAT_COLS - 1)) / MAT_COLS;
 
 		float S = 0.8F;
-		int sx = Math.round(x / S);
-		int sy = Math.round(y / S);
-		int sColW = Math.round(colW / S);
-		int sGap = Math.round(52 / S);
-		int sRow = Math.round(11 / S);
+		int scaledPosX = Math.round(posX / S);
+		int scaledPosY = Math.round(posY / S);
+		int scaledColSizeW = Math.round(colSizeW / S);
+		int scaledGap = Math.round(52 / S);
+		int scaledRowSizeH = Math.round(11 / S);
 
 		gfx.pose().pushPose();
 		gfx.pose().scale(S, S, 1.0F);
 		for (int i = 0; i < perPage && missingOffset + i < missingMaterials.size(); i++)
 		{
 			MissingEntry e = missingMaterials.get(missingOffset + i);
-			int cx = sx + (i % MAT_COLS) * (sColW + sGap);
-			int cy = sy + (i / MAT_COLS) * sRow;
+			int cellPosX = scaledPosX + (i % MAT_COLS) * (scaledColSizeW + scaledGap);
+			int cellPosY = scaledPosY + (i / MAT_COLS) * scaledRowSizeH;
 
 			// 右侧：只显示该材料总共缺少的数量
 			Component line = Component.translatable(P + "missingLine", e.missing());
-			int lineX = cx + sColW - font.width(line);
+			int linePosX = cellPosX + scaledColSizeW - font.width(line);
 
 			// 左侧材料名：与缺料数字保持间距，超宽截断避免重叠
 			String name = e.item().getDescription().getString();
-			int maxNameW = Math.max(8, lineX - cx - 4);
-			gfx.drawString(font, font.plainSubstrByWidth(name, maxNameW, true), cx, cy, 0xCCCCCC);
-			gfx.drawString(font, line, lineX, cy, 0xCCCCCC);
+			int maxNameSizeW = Math.max(8, linePosX - cellPosX - 4);
+			gfx.drawString(font, font.plainSubstrByWidth(name, maxNameSizeW, true), cellPosX, cellPosY, 0xCCCCCC);
+			gfx.drawString(font, line, linePosX, cellPosY, 0xCCCCCC);
 		}
 		gfx.pose().popPose();
 	}
@@ -1516,10 +1529,10 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		onClose();
 	}
 
-	private Button addButton(int id, int x, int y, int w, int h, Component label, Button.OnPress action)
+	private Button addButton(int id, int posX, int posY, int sizeW, int sizeH, Component label, Button.OnPress action)
 	{
 		Button btn = Button.builder(label, action != null ? action : b -> { })
-				.pos(x, y).size(w, h).build();
+				.pos(posX, posY).size(sizeW, sizeH).build();
 		return addRenderableWidget(btn);
 	}
 

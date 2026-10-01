@@ -8,6 +8,8 @@
 
 A city-simulation mod built on **NeoForge 1.21.1**, a tribute to — and a continuation of — [Sim-U-Kraft](https://www.mcmod.cn/class/489.html), with support for [Litematica](https://www.mcmod.cn/class/2261.html) schematic formats.
 
+For the algorithmic work behind it, see [算法改进](算法改进.md) (Chinese).
+
 ---
 
 ## Features

@@ -10,6 +10,7 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 // 蓝图坐标同步到世界坐标
 public class CoordTransform
 {
+
 	public static BlockPos simukraftPos(int bx, int by, int bz, Direction facing)
 	{
 		return switch (facing)

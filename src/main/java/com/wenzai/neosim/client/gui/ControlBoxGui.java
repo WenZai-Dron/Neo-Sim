@@ -6,7 +6,6 @@ import com.wenzai.neosim.building.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.client.BuildingNameLocalizer;
 import com.wenzai.neosim.client.ClientDataHolder;
 import com.wenzai.neosim.network.ClientToServerPayloads;
-import com.wenzai.neosim.schematic.BuildingType;
 import com.wenzai.neosim.schematic.SchematicRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -33,6 +32,8 @@ public class ControlBoxGui extends Screen
 	private boolean residential;
 	private String currentPage = "main";
 	private List<String> homelessNames = new ArrayList<>();
+	// 记录每秒重读一次：NPC 死亡/被驱逐后控制箱不再挂着陈旧住户
+	private long lastReloadTick;
 
 	public ControlBoxGui(BlockPos boxPos)
 	{
@@ -67,7 +68,7 @@ public class ControlBoxGui extends Screen
 	{
 		if (rec == null) return false;
 		var schematic = SchematicRegistry.getInstance().get(rec.schematicName());
-		return schematic != null && schematic.getType() == BuildingType.RESIDENTIAL;
+		return schematic != null && schematic.isResidential();
 	}
 
 	// 请求服务端权威的无家名单（缺陷 C 结构性：不再客户端直读本地文件，多人下也可用）
@@ -130,13 +131,13 @@ public class ControlBoxGui extends Screen
 			addRenderableWidget(evictAll);
 
 			// 每个居民行尾的驱逐按钮
-			int y = RESIDENTS_TOP + ROW_H;
+			int rowPosY = RESIDENTS_TOP + ROW_H;
 			for (Resident r : record.residents())
 			{
 				final String name = r.name();
 				addRenderableWidget(Button.builder(Component.translatable(P + "evict"), b -> sendAction((byte) 1, name))
-						.pos(width / 2 + 60, y).size(60, 16).build());
-				y += ROW_H;
+						.pos(width / 2 + 60, rowPosY).size(60, 16).build());
+				rowPosY += ROW_H;
 			}
 		}
 	}
@@ -150,13 +151,13 @@ public class ControlBoxGui extends Screen
 			init();
 		}).pos(width / 2 - 50, height - 30).size(100, 20).build());
 
-		int y = 70;
+		int listPosY = 70;
 		for (String name : homelessNames)
 		{
 			final String n = name;
 			addRenderableWidget(Button.builder(Component.translatable(P + "moveIn"), b -> sendAction((byte) 3, n))
-					.pos(width / 2 + 60, y).size(70, 16).build());
-			y += 22;
+					.pos(width / 2 + 60, listPosY).size(70, 16).build());
+			listPosY += 22;
 		}
 	}
 
@@ -184,8 +185,31 @@ public class ControlBoxGui extends Screen
 	public void render(GuiGraphics gfx, int mx, int my, float pt)
 	{
 		renderBackground(gfx, mx, my, pt);
+		reloadIfStale();
 		super.render(gfx, mx, my, pt);
 		drawInfo(gfx);
+	}
+
+	// 每秒重读记录文件：住户死了/被驱逐/搬走了，界面立刻跟着变（以前只在打开时读一次）
+	private void reloadIfStale()
+	{
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.level == null) return;
+		long now = mc.level.getGameTime();
+		if (lastReloadTick != 0 && now - lastReloadTick < 20L) return;
+		lastReloadTick = now;
+
+		ControlBoxRecord fresh = loadRecord(boxPos);
+		if (fresh == null) return;
+		int before = record == null ? -1 : record.residents().size();
+		residential = isResidentialRecord(fresh);
+		record = fresh;
+
+		// 住户数变了才重建控件，避免每秒把按钮重建一遍
+		if (fresh.residents().size() != before && currentPage.equals("main"))
+		{
+			init();
+		}
 	}
 
 	private void drawInfo(GuiGraphics gfx)
@@ -208,77 +232,79 @@ public class ControlBoxGui extends Screen
 			}
 			else
 			{
-				int hy = 70;
+				int listPosY = 70;
 				for (String n : homelessNames)
 				{
-					gfx.drawString(font, Component.literal(n), width / 2 - 100, hy, 0xCCCCCC);
-					hy += 22;
+					gfx.drawString(font, Component.literal(n), width / 2 - 100, listPosY, 0xCCCCCC);
+					listPosY += 22;
 				}
 			}
 			return;
 		}
 
-		int x = width / 2 - 100;
+		int infoPosX = width / 2 - 100;
 
 		// 建筑名
 		gfx.drawString(font, Component.translatable(P + "building",
-				BuildingNameLocalizer.localize(record.schematicName())), x, INFO_TOP, 0xFFFFFF);
+				BuildingNameLocalizer.localize(record.schematicName())), infoPosX, INFO_TOP, 0xFFFFFF);
 
 		// 作者
 		String author = record.author() != null && !record.author().isEmpty()
 				? record.author()
 				: Component.translatable(P + "none").getString();
-		gfx.drawString(font, Component.translatable(P + "author", author), x, INFO_TOP + 24, 0xCCCCCC);
+		gfx.drawString(font, Component.translatable(P + "author", author), infoPosX, INFO_TOP + 24, 0xCCCCCC);
 
 		// 所建玩家
 		String placer = record.placerName() != null && !record.placerName().isEmpty()
 				? record.placerName()
 				: Component.translatable(P + "none").getString();
-		gfx.drawString(font, Component.translatable(P + "placer", placer), x, INFO_TOP + 48, 0xCCCCCC);
+		gfx.drawString(font, Component.translatable(P + "placer", placer), infoPosX, INFO_TOP + 48, 0xCCCCCC);
 
 		// 生活点占用（住宅）：右列，每生活点一行（空闲 / 住户: X）
 		if (residential)
 		{
-			List<BlockPos> points = new ArrayList<>(record.livingPoints());
+			// 按列(x,z)去重：占用是按列算的，同列叠两个点会显示成"同一个住户占了 2 个位置"
+			List<BlockPos> points = ControlBoxPersistence.uniqueColumns(record.livingPoints());
 			if (points.isEmpty())
 			{
 				// 无生活点的住宅按1个控制箱位计
 				points.add(record.boxPos());
 			}
-			int lx = width / 2 + 60;
-			int ly = INFO_TOP;
+			int livingPosX = width / 2 + 60;
+			int livingPosY = INFO_TOP;
 			gfx.drawString(font, Component.translatable(P + "livingPoints",
-					points.size(), record.residents().size()), lx, ly, 0xFFFFFF);
-			ly += 14;
+					points.size(), record.residents().size()), livingPosX, livingPosY, 0xFFFFFF);
+			livingPosY += 14;
 			for (BlockPos lp : points)
 			{
 				// 右侧列不侵入居民列表区
-				if (ly >= RESIDENTS_TOP - 8) break;
+				if (livingPosY >= RESIDENTS_TOP - 8) break;
 				String occupant = occupantAt(record, lp);
 				gfx.drawString(font, occupant == null
 						? Component.translatable(P + "livingPointFree")
 						: Component.translatable(P + "livingPointOccupant", occupant),
-						lx, ly, 0xCCCCCC);
-				ly += 14;
+						livingPosX, livingPosY, 0xCCCCCC);
+				livingPosY += 14;
 			}
 		}
 
 		// 居民列表（每行一个，与驱逐按钮对齐）
-		gfx.drawString(font, Component.translatable(P + "residentsLabel"), x, RESIDENTS_TOP, 0xFFFFFF);
-		int ry = RESIDENTS_TOP + ROW_H;
+		gfx.drawString(font, Component.translatable(P + "residentsLabel"), infoPosX, RESIDENTS_TOP, 0xFFFFFF);
+		int rowPosY = RESIDENTS_TOP + ROW_H;
 		if (record.residents().isEmpty())
 		{
-			gfx.drawString(font, Component.translatable(P + "none"), x, ry, 0xAAAAAA);
+			gfx.drawString(font, Component.translatable(P + "none"), infoPosX, rowPosY, 0xAAAAAA);
 		}
 		else
 		{
 			for (Resident r : record.residents())
 			{
-				gfx.drawString(font, Component.literal(r.name()), x, ry, 0xCCCCCC);
-				ry += ROW_H;
+				gfx.drawString(font, Component.literal(r.name()), infoPosX, rowPosY, 0xCCCCCC);
+				rowPosY += ROW_H;
 			}
 		}
 	}
+
 
 	// 该生活点（列）的住户名，空闲返回null
 	private static String occupantAt(ControlBoxRecord rec, BlockPos lp)

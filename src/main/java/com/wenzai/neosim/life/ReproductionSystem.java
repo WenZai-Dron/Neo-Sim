@@ -9,6 +9,7 @@ import com.wenzai.neosim.building.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.npc.CityLivingManager;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
+import com.wenzai.neosim.npc.NameLocale;
 import com.wenzai.neosim.npc.NpcGoals;
 import com.wenzai.neosim.storage.ModSavedData;
 import com.wenzai.neosim.storage.NpcData;
@@ -263,14 +264,15 @@ public class ReproductionSystem
 		// 父名（父已亡被清空则为未知）
 		String fatherName = mother.getPartner();
 
-		// 姓氏继承：父姓优先，父亡或未知则随母姓
+		// 姓氏继承：父姓优先，父亡或未知则随母姓；命名风格跟随父（否则随母），保证一家人语序一致
 		String surname = resolveSurname(level, city, fatherName, mother);
+		NameLocale locale = resolveNameLocale(level, city, fatherName, mother);
 
 		// 创建新生儿：指定姓氏+随机性别与皮肤
 		Entity baby = Entity.NPC.get().create(level);
 		if (baby == null) return;
 
-		Entity.generateAndSetName(baby, surname);
+		Entity.generateAndSetName(level, baby, city, surname, locale);
 		baby.setCityName(city);
 		baby.setNpcName(baby.getNpcName());
 		baby.setSkin(Entity.randomSkin(baby.getSex()));
@@ -289,6 +291,9 @@ public class ReproductionSystem
 
 		// 族谱
 		Genealogy.onBirth(level, baby, fatherName, mother.getNpcName());
+
+		// 出生公告必须先于入住公告：moveIntoMotherHome 内部会广播入住公告
+		LifeSystem.announce(level, city, LifeSystem.tpl(Config.ANNOUNCE_BIRTH, baby.getNpcName()));
 
 		// 入住母亲家
 		moveIntoMotherHome(level, city, baby, mother);
@@ -309,11 +314,28 @@ public class ReproductionSystem
 			ModSavedData.get(level).setPopulation(city, (short) (pop + 1), level);
 		}
 
-		// 公告+出生音效
-		LifeSystem.announce(level, city, LifeSystem.tpl(Config.ANNOUNCE_BIRTH, baby.getNpcName()));
+		// 出生音效
 		level.playSound(null, birthPos, SoundEvents.VILLAGER_CELEBRATE, SoundSource.NEUTRAL, 1.0F, 1.0F);
 		LOGGER.info("NeoSim-Reproduction: {} born to {} & {} at {}",
 				baby.getNpcName(), mother.getNpcName(), fatherName, birthPos);
+	}
+
+	// 命名风格继承：父优先（含未加载档案），否则随母
+	private static NameLocale resolveNameLocale(ServerLevel level, String city, String fatherName, Entity mother)
+	{
+		if (fatherName != null && !fatherName.isEmpty())
+		{
+			Entity father = findLoaded(level, fatherName);
+			if (father != null) return father.getNameLocale();
+
+			JsonObject json = NpcData.load(level, city, fatherName);
+			if (json != null && json.has("nameLocale"))
+			{
+				NameLocale fromFile = NameLocale.fromKey(json.get("nameLocale").getAsString());
+				if (fromFile != null) return fromFile;
+			}
+		}
+		return mother.getNameLocale();
 	}
 
 	// 姓氏继承：父姓优先，父不存在则随母姓
@@ -393,16 +415,17 @@ public class ReproductionSystem
 		}
 	}
 
-	// 双方夜晚都在家
+	// 双方夜晚都在家。用 isNearHome（含生活点闲逛范围）而不是 hasArrived：
+	// NPC 到家后会在生活点附近走动，按贴合判定会被反复误判成"离家"并重置造人进度
 	private static boolean bothAtHome(ServerLevel level, Entity npc)
 	{
 		BlockPos home = npc.getHomePos();
-		if (home == null || !NpcGoals.GoHomeGoal.hasArrived(npc, home)) return false;
+		if (home == null || !NpcGoals.isNearHome(npc, home)) return false;
 
 		Entity partner = findLoaded(level, npc.getPartner());
 		if (partner == null) return false;
 		BlockPos phome = partner.getHomePos();
-		return phome != null && NpcGoals.GoHomeGoal.hasArrived(partner, phome);
+		return phome != null && NpcGoals.isNearHome(partner, phome);
 	}
 
 	// 距目标3格内

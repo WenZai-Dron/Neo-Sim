@@ -17,6 +17,12 @@ public class BlockStatePalette
 {
 	private static final int LINEAR_THRESHOLD = 16;
 
+	// Litematica 的 LitematicaBlockStateContainer.createFrom 用
+	//   bits = Math.max(2, Integer.SIZE - Integer.numberOfLeadingZeros(paletteSize - 1))
+	// 即**最低 2 bit**：1 bit 的打包 Litematica 从不写。这里必须同口径，
+	// 否则读到「2 项调色板」的 .litematic（air + 1 种方块）会按 1 bit 解，整片方块错位。
+	private static final int MIN_BITS = 2;
+
 	private BlockState[] linearPalette;
 	private int linearCount;
 
@@ -34,7 +40,8 @@ public class BlockStatePalette
 		BlockState air = Blocks.AIR.defaultBlockState();
 		this.linearPalette[0] = air;
 		this.linearCount = 1;
-		this.bits = 1;
+		// 最低 2 bit，与 Litematica 的打包口径一致（见 computeBits）
+		this.bits = MIN_BITS;
 	}
 
 	// 返回调色板ID，不存在则插入
@@ -176,9 +183,7 @@ public class BlockStatePalette
 	private int computeBits()
 	{
 		int paletteSize = size();
-		if (paletteSize <= 1)  return 1;
-		if (paletteSize <= 2)  return 1;
-		if (paletteSize <= 4)  return 2;
+		if (paletteSize <= 4)  return MIN_BITS;   // 1~4 项都是 2 bit（Litematica 口径，没有 1 bit）
 		if (paletteSize <= 8)  return 3;
 		if (paletteSize <= 16) return 4;
 		if (paletteSize <= 32) return 5;

@@ -73,14 +73,14 @@ public class FamilyTreeRenderer
 	}
 
 	// 世界坐标 <-> 屏幕坐标
-	private float toWorldX(double sx)
+	private float toWorldX(double screenPosX)
 	{
-		return (float) ((sx - panX) / zoom);
+		return (float) ((screenPosX - panX) / zoom);
 	}
 
-	private float toWorldY(double sy)
+	private float toWorldY(double screenPosY)
 	{
-		return (float) ((sy - panY) / zoom);
+		return (float) ((screenPosY - panY) / zoom);
 	}
 
 	private int toScreenX(float wx)
@@ -221,8 +221,8 @@ public class FamilyTreeRenderer
 			panX = 0; panY = 0;
 			return;
 		}
-		int w = Minecraft.getInstance().getWindow().getGuiScaledWidth();
-		int h = Minecraft.getInstance().getWindow().getGuiScaledHeight();
+		int screenWidth = Minecraft.getInstance().getWindow().getGuiScaledWidth();
+		int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
 
 		// 整棵树包围盒
 		float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
@@ -234,17 +234,17 @@ public class FamilyTreeRenderer
 			maxX = Math.max(maxX, r.x() + r.w());
 			maxY = Math.max(maxY, r.y() + r.h());
 		}
-		float treeW = Math.max(1.0F, maxX - minX);
-		float treeH = Math.max(1.0F, maxY - minY);
+		float treeSizeW = Math.max(1.0F, maxX - minX);
+		float treeSizeH = Math.max(1.0F, maxY - minY);
 
 		// 适配缩放：四周留 40px 边距；树小不放大（上限 1.0），树大完全缩小到能放下
 		float margin = 40.0F;
-		float fit = Math.min((w - margin * 2) / treeW, (h - margin * 2) / treeH);
+		float fit = Math.min((screenWidth - margin * 2) / treeSizeW, (screenHeight - margin * 2) / treeSizeH);
 		zoom = Math.min(1.0F, fit);
 
 		// 整棵树居中
-		panX = w / 2.0F - (minX + treeW / 2.0F) * zoom;
-		panY = h / 2.0F - (minY + treeH / 2.0F) * zoom;
+		panX = screenWidth / 2.0F - (minX + treeSizeW / 2.0F) * zoom;
+		panY = screenHeight / 2.0F - (minY + treeSizeH / 2.0F) * zoom;
 	}
 
 	// 计算某节点的关系称谓（基于与中心节点的关系；layout 时预计算一次进 titles 缓存）
@@ -327,10 +327,10 @@ public class FamilyTreeRenderer
 	// 绘制单个节点：男直角/女圆角，名字+称谓整体垂直居中、随 zoom 缩放
 	private void drawNode(GuiGraphics gfx, String name, Rect r)
 	{
-		int sx = toScreenX(r.x());
-		int sy = toScreenY(r.y());
-		int sw = Math.max(1, Math.round(r.w() * zoom));
-		int sh = Math.max(1, Math.round(r.h() * zoom));
+		int nodePosX = toScreenX(r.x());
+		int nodePosY = toScreenY(r.y());
+		int nodeSizeW = Math.max(1, Math.round(r.w() * zoom));
+		int nodeSizeH = Math.max(1, Math.round(r.h() * zoom));
 
 		FamilyNode n = nodes.get(name);
 		boolean male = !"female".equals(n == null ? "" : n.sex());
@@ -342,13 +342,14 @@ public class FamilyTreeRenderer
 		// 框：世界坐标 → 屏幕坐标（与连线同一变换；renderOutline 第3、4参数为宽高）
 		if (male)
 		{
-			gfx.fill(sx, sy, sx + sw, sy + sh, bg);
-			gfx.renderOutline(sx, sy, sw, sh, border);
+			gfx.fill(nodePosX, nodePosY, nodePosX + nodeSizeW, nodePosY + nodeSizeH, bg);
+			gfx.renderOutline(nodePosX, nodePosY, nodeSizeW, nodeSizeH, border);
 		}
 		else
 		{
-			fillRoundRect(gfx, sx, sy, sx + sw, sy + sh, 6.0F * zoom, bg);
-			fillRoundRect(gfx, sx + 1, sy + 1, sx + sw - 1, sy + sh - 1, 5.0F * zoom, border);
+			fillRoundRect(gfx, nodePosX, nodePosY, nodePosX + nodeSizeW, nodePosY + nodeSizeH, 6.0F * zoom, bg);
+			fillRoundRect(gfx, nodePosX + 1, nodePosY + 1, nodePosX + nodeSizeW - 1, nodePosY + nodeSizeH - 1,
+					5.0F * zoom, border);
 		}
 
 		// 称谓直接查 layout 预计算缓存（不再每帧重算）
@@ -356,20 +357,20 @@ public class FamilyTreeRenderer
 
 		// 文字：同样从世界坐标 → 屏幕坐标（与框完全同源）
 		// 名字（正常字号，水平居中）
-		int nameW = font.width(name);
-		float nameX = sx + (sw - nameW * zoom) / 2.0F;
+		int nameSizeW = font.width(name);
+		float namePosX = nodePosX + (nodeSizeW - nameSizeW * zoom) / 2.0F;
 		// 内容总高 = 名字行高(9) + 称谓行高(0.7*9≈6.3)；垂直居中
-		float contentH = 9.0F + (title.isEmpty() ? 0.0F : 6.3F);
-		float textTop = sy + Math.max(1.0F, (sh - contentH * zoom) / 2.0F);
-		gfx.drawString(font, name, Math.round(nameX), Math.round(textTop), 0xFFFFFF);
+		float contentSizeH = 9.0F + (title.isEmpty() ? 0.0F : 6.3F);
+		float textPosY = nodePosY + Math.max(1.0F, (nodeSizeH - contentSizeH * zoom) / 2.0F);
+		gfx.drawString(font, name, Math.round(namePosX), Math.round(textPosY), 0xFFFFFF);
 
 		// 称谓（0.7 倍小字号，水平居中）
 		if (!title.isEmpty())
 		{
-			float titleW = font.width(title) * 0.7F * zoom;
-			float tx = sx + (sw - titleW) / 2.0F;
+			float titleSizeW = font.width(title) * 0.7F * zoom;
+			float titlePosX = nodePosX + (nodeSizeW - titleSizeW) / 2.0F;
 			gfx.pose().pushPose();
-			gfx.pose().translate(tx, textTop + 9.0F * zoom, 0.0F);
+			gfx.pose().translate(titlePosX, textPosY + 9.0F * zoom, 0.0F);
 			gfx.pose().scale(0.7F * zoom, 0.7F * zoom, 1.0F);
 			gfx.drawString(font, title, 0, 0, 0xAAAAAA);
 			gfx.pose().popPose();
@@ -377,10 +378,10 @@ public class FamilyTreeRenderer
 	}
 
 	// 左键点击：命中节点 → 回调重居中；命中空白 → 复位视图
-	public boolean handleClick(double mx, double my)
+	public boolean handleClick(double mousePosX, double mousePosY)
 	{
-		float wx = toWorldX(mx);
-		float wy = toWorldY(my);
+		float wx = toWorldX(mousePosX);
+		float wy = toWorldY(mousePosY);
 		for (Map.Entry<String, Rect> e : rects.entrySet())
 		{
 			Rect r = e.getValue();
@@ -398,21 +399,21 @@ public class FamilyTreeRenderer
 	}
 
 	// 左键拖动：平移画布
-	public void panBy(double dx, double dy)
+	public void panBy(double deltaPosX, double deltaPosY)
 	{
-		panX += (float) dx;
-		panY += (float) dy;
+		panX += (float) deltaPosX;
+		panY += (float) deltaPosY;
 	}
 
 	// 滚轮：以鼠标位置为锚点缩放（0.5~2.0）
-	public void zoomAt(double mx, double my, double scrollAmount)
+	public void zoomAt(double mousePosX, double mousePosY, double scrollAmount)
 	{
 		float factor = scrollAmount > 0 ? 1.1F : 0.9F;
 		float newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom * factor));
 		if (newZoom == zoom) return;
-		float k = newZoom / zoom;
-		panX = (float) (mx - (mx - panX) * k);
-		panY = (float) (my - (my - panY) * k);
+		float ratio = newZoom / zoom;
+		panX = (float) (mousePosX - (mousePosX - panX) * ratio);
+		panY = (float) (mousePosY - (mousePosY - panY) * ratio);
 		zoom = newZoom;
 	}
 

@@ -9,6 +9,7 @@ import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.npc.NpcGoals;
 import com.wenzai.neosim.storage.FileCreater;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -32,7 +33,8 @@ public class TerraformTask
 	private static final float MAX_LEVEL = 10.0f;
 	private static final int RAISE_ANIM_MS = 400;
 	private static final int LOWER_ANIM_MS = 400;
-	private static final int RESOURCE_RECHECK_TICKS = 60; // 3 秒
+	// 缺料后重新检查箱子的间隔（3 秒）
+	private static final int RESOURCE_RECHECK_TICKS = 60;
 
 	public enum TerraformState
 	{
@@ -268,10 +270,11 @@ public class TerraformTask
 			{
 				chestNoticeSent = true;
 				sendPacketToCityPlayers(new com.wenzai.neosim.network.ServerToClientPayloads.ResourceShortagePacket(
-						"§e整地需要箱子：请在建筑模盒旁放置一个箱子"));
+						Component.translatable("msg.neosim.terraform.needChest")));
 			}
 			clearHand();
-			return; // 等待玩家放箱子
+			// 等待玩家放箱子
+			return;
 		}
 		chestNoticeSent = false;
 		setState(TerraformState.SCAN);
@@ -283,7 +286,7 @@ public class TerraformTask
 		TerraformPlan plan = getPlan();
 		if (plan == null)
 		{
-			finishComplete("§e整地任务已失效（方案不存在）");
+			finishComplete(Component.translatable("msg.neosim.terraform.planMissing"));
 			return;
 		}
 		plan.scan(level, record.minX(), record.minZ(), record.maxX(), record.maxZ(),
@@ -294,7 +297,7 @@ public class TerraformTask
 
 		if (targets.isEmpty())
 		{
-			finishComplete("§e该地块内没有可整地的目标");
+			finishComplete(Component.translatable("msg.neosim.terraform.scanEmpty"));
 			return;
 		}
 		setState(TerraformState.TERRAFORMING);
@@ -304,7 +307,7 @@ public class TerraformTask
 	{
 		if (processedIndex >= targets.size())
 		{
-			finishComplete("§e整地完成！");
+			finishComplete(Component.translatable("msg.neosim.terraform.complete"));
 			return;
 		}
 		if (animateHand(System.currentTimeMillis())) return;
@@ -363,7 +366,7 @@ public class TerraformTask
 		{
 			lastMissingItem = item;
 			sendPacketToCityPlayers(new com.wenzai.neosim.network.ServerToClientPayloads.ResourceShortagePacket(
-					"§c整地缺料：" + item.getDescription().getString() + "，请放入模盒旁的箱子"));
+					Component.translatable("msg.neosim.terraform.missingMaterial", item.getDescription())));
 		}
 		setState(TerraformState.WAITING_RESOURCE);
 		resourceWaitTicks = 0;
@@ -398,7 +401,7 @@ public class TerraformTask
 	}
 
 	// 完工：公告 + 清理（记录与任务由 TerraformEngine 移除）
-	private void finishComplete(String message)
+	private void finishComplete(Component message)
 	{
 		setState(TerraformState.COMPLETE);
 		clearHand();

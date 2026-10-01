@@ -17,6 +17,8 @@ public class PreviewState
 	private Direction facing;
 	private boolean isActive;
 	private boolean needsRebuild = true;
+	// 落地链缓存：任何状态改动都会让它在 markNeedsRebuild() 里失效
+	private BlueprintPlacement placement;
 
 	public PreviewState()
 	{
@@ -95,6 +97,7 @@ public class PreviewState
 	public void markNeedsRebuild()
 	{
 		this.needsRebuild = true;
+		this.placement = null;
 	}
 
 	public void clearNeedsRebuild()
@@ -137,13 +140,27 @@ public class PreviewState
 	}
 
 	// 蓝图局部坐标同步到世界坐标
-	// 先按 Sim-U-Kraft buildDirection 基础映射（facing），再叠加旋转/镜像
+	// 该预览用的坐标系算法（.txt 与 .litematic 分开）
+	public SchematicFrame frame()
+	{
+		return SchematicFrame.of(schematic);
+	}
+
+	// 落地链（位置 + 朝向的唯一实现，见 BlueprintPlacement）：缓存，状态一改就重建
+	public BlueprintPlacement placement()
+	{
+		if (placement == null)
+		{
+			int sx = schematic != null ? schematic.getSizeX() : 0;
+			int sz = schematic != null ? schematic.getSizeZ() : 0;
+			placement = new BlueprintPlacement(frame(), sx, sz, origin, facing, mirror, rotation);
+		}
+		return placement;
+	}
+
+	// 蓝图局部坐标同步到世界坐标
 	public BlockPos blueprintToWorld(int bx, int by, int bz)
 	{
-		BlockPos base = facing != null
-				? CoordTransform.simukraftPos(bx, by, bz, facing)
-				: new BlockPos(bx, by, bz);
-		BlockPos transformed = CoordTransform.transformPos(base, mirror, rotation);
-		return origin.offset(transformed);
+		return placement().pos(bx, by, bz);
 	}
 }

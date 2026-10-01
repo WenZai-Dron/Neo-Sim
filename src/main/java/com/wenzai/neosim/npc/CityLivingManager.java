@@ -8,8 +8,8 @@ import com.wenzai.neosim.building.ControlBoxPersistence;
 import com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord;
 import com.wenzai.neosim.building.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.life.LifeSystem;
-import com.wenzai.neosim.schematic.BuildingType;
 import com.wenzai.neosim.storage.FileCreater;
+import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -89,13 +89,26 @@ public class CityLivingManager
 	}
 
 	// 退房（NPC死亡等）：从记录居民列表移除，空位归还
+	// 不能只按"本城 + 当前姓名"找：房子可能是别的城市/玩家建的（记录在别的城市文件里），
+	// NPC 也可能中途改过名 —— 两者都会让退房静默失败，控制箱里一直挂着这个已死/已搬走的住户。
+	// 所以本城找不到时再扫全部城市，按姓名 或 与家的同一列(x,z) 兜底。
 	public static void releaseHome(ServerLevel level, Entity npc)
 	{
 		String name = npc.getNpcName();
 		String city = npc.getCityName();
-		if (name.isEmpty() || city.isEmpty()) return;
+		if (name.isEmpty()) return;
 
-		if (releaseHomeByName(level, city, name))
+		boolean released = false;
+		if (!city.isEmpty())
+		{
+			released = releaseHomeByName(level, city, name);
+		}
+		if (!released)
+		{
+			released = ControlBoxPersistence.removeResidentAnywhere(level, name, npc.getHomePos());
+		}
+
+		if (released)
 		{
 			npc.clearHomeAndSync();
 		}
@@ -165,7 +178,7 @@ public class CityLivingManager
 		rec.residents().remove(target);
 		ControlBoxPersistence.updateRecord(level, cityName, rec);
 		announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_EVICT_RESIDENT,
-				residentName, rec.schematicName()));
+				residentName, BlueprintName.component(rec.schematicName())));
 		LOGGER.info("NeoSim-CityLivingManager: evicted '{}' from '{}'", residentName, rec.schematicName());
 		return true;
 	}
@@ -185,21 +198,21 @@ public class CityLivingManager
 		rec.residents().clear();
 		ControlBoxPersistence.updateRecord(level, cityName, rec);
 		announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_EVICT_ALL,
-				rec.schematicName(), count));
+				BlueprintName.component(rec.schematicName()), count));
 		LOGGER.info("NeoSim-CityLivingManager: evicted all {} residents from '{}'", count, rec.schematicName());
 		return count;
 	}
 
-	// 手动安排无家NPC入住：校验本城+无家，复用空位分配；返回null=成功，否则为玩家聊天提示
+	// 手动安排无家NPC入住：校验本城+无家，复用空位分配；返回null=成功，否则为按客户端语言显示的提示组件
 	@Nullable
-	public static String moveInHomeless(ServerLevel level, String cityName, ControlBoxRecord rec, String npcName)
+	public static Component moveInHomeless(ServerLevel level, String cityName, ControlBoxRecord rec, String npcName)
 	{
-		if (npcName == null || npcName.isEmpty()) return "§c没有指定 NPC";
+		if (npcName == null || npcName.isEmpty()) return Component.translatable("msg.neosim.living.noNpc");
 		Entity npc = findNpc(level, npcName);
-		if (npc == null) return "§c找不到 NPC: §f" + npcName;
-		if (!cityName.equals(npc.getCityName())) return "§c" + npcName + " §e不属于这座城市";
-		if (npc.getHomePos() != null) return "§c" + npcName + " §e已经有家了";
-		if (!assignToExistingHome(level, cityName, npc, rec)) return "§c没有空房间";
+		if (npc == null) return Component.translatable("msg.neosim.living.npcNotFound", npcName);
+		if (!cityName.equals(npc.getCityName())) return Component.translatable("msg.neosim.living.notYourCity", npcName);
+		if (npc.getHomePos() != null) return Component.translatable("msg.neosim.living.alreadyHasHome", npcName);
+		if (!assignToExistingHome(level, cityName, npc, rec)) return Component.translatable("msg.neosim.living.noFreeRoom");
 		return null;
 	}
 
@@ -211,7 +224,8 @@ public class CityLivingManager
 
 	private static int freeSlotCount(ControlBoxRecord rec, BuildingInstance building)
 	{
-		int slots = rec.livingPoints().size();
+		// 生活点按列去重：占用是按列判定的，同一列上叠两个点只算一个位（旧存档也据此纠正）
+		int slots = ControlBoxPersistence.uniqueColumns(rec.livingPoints()).size();
 		if (slots == 0 && isResidential(building))
 		{
 			// 控制箱位
@@ -220,11 +234,12 @@ public class CityLivingManager
 		return slots - rec.residents().size();
 	}
 
+
 	private static boolean isResidential(BuildingInstance building)
 	{
 		return building != null
 				&& building.getSchematic() != null
-				&& building.getSchematic().getType() == BuildingType.RESIDENTIAL;
+				&& building.getSchematic().isResidential();
 	}
 
 	// 入住：取第一个未被占用的生活点，登记并公告
@@ -262,12 +277,15 @@ public class CityLivingManager
 			Set<Long> occupied = new HashSet<>();
 			for (Resident r : rec.residents())
 			{
-				occupied.add(columnKey(r.x(), r.z()));
+				occupied.add(ControlBoxPersistence.columnKey(r.x(), r.z()));
 			}
 			for (BlockPos p : rec.livingPoints())
 			{
-				if (!occupied.contains(columnKey(p.getX(), p.getZ())))
+				long key = ControlBoxPersistence.columnKey(p.getX(), p.getZ());
+				// occupied.add 顺带把同一列重复的点跳过，避免把同一个位当成两个
+				if (!occupied.contains(key))
 				{
+					occupied.add(key);
 					return p;
 				}
 			}
@@ -290,6 +308,7 @@ public class CityLivingManager
 	}
 
 	// 登记入住：记录生活点原坐标（占用判定依据），NPC回家坐标用抬升后的站立点
+	// 副作用：本方法会广播入住公告。调用方必须先广播自己的主事件公告，否则聊天栏顺序颠倒
 	private static void registerResident(ServerLevel level, String cityName, ControlBoxRecord rec,
 										 Entity npc, BlockPos slot, BlockPos stand)
 	{
@@ -298,16 +317,12 @@ public class CityLivingManager
 		ControlBoxPersistence.updateRecord(level, cityName, rec);
 
 		announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_MOVE_IN,
-				npc.getNpcName(), rec.schematicName()));
+				npc.getNpcName(), BlueprintName.component(rec.schematicName())));
 		LOGGER.info("NeoSim-CityLivingManager: '{}' moved into '{}' at {} (stand {})", npc.getNpcName(),
 				rec.schematicName(), slot, stand);
 	}
 
-	// (x,z) 列打包成唯一long key
-	private static long columnKey(int x, int z)
-	{
-		return ((long) x << 32) | (z & 0xFFFFFFFFL);
-	}
+	// (x,z) 列键统一走 ControlBoxPersistence.columnKey
 
 	// 生活点被堵：向上最多8格找空气
 	private static BlockPos findAirAbove(ServerLevel level, BlockPos pos)
@@ -329,8 +344,8 @@ public class CityLivingManager
 		return NpcRegistry.findByName(name);
 	}
 
-	// 公告给该城市在线玩家
-	private static void announce(ServerLevel level, String cityName, String msg)
+	// 公告给该城市在线玩家（组件在客户端按各自语言解析）
+	private static void announce(ServerLevel level, String cityName, Component msg)
 	{
 		if (level.getServer() == null) return;
 		boolean dedicated = level.getServer().isDedicatedServer();
@@ -342,7 +357,7 @@ public class CityLivingManager
 					: FileCreater.isPlayerInCity(cityName, saveName, player.getName().getString());
 			if (inCity)
 			{
-				player.displayClientMessage(Component.literal(msg), false);
+				player.displayClientMessage(msg, false);
 			}
 		}
 	}

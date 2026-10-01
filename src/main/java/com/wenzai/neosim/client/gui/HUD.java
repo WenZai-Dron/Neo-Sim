@@ -1,21 +1,24 @@
 package com.wenzai.neosim.client.gui;
 
+import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSimClient;
 import com.wenzai.neosim.client.ClientDataHolder;
+import com.wenzai.neosim.client.ui.UiSettings;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.network.chat.Component;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 
+import java.util.List;
+
 @OnlyIn(Dist.CLIENT)
 public class HUD
 {
-	// L12：HUD 行缓存（仅数据变化时重建字符串；时间每分钟变一次）
-	private static String cachedLine = "";
+	// HUD 行缓存：数据、游戏内时间或界面设置（UiSettings.revision）没变就不重建字符串
+	private static List<String> cachedLines = List.of();
+	private static int cachedRevision = -1;
 	private static int cachedMode = -1;
 	private static int cachedDayOfWeek = -1;
 	private static int cachedDay = -1;
@@ -24,6 +27,7 @@ public class HUD
 	private static String cachedCity = "";
 	private static int cachedHour = -1;
 	private static int cachedMinute = -1;
+	private static int cachedRunTimer = -1;
 
 	@SubscribeEvent
 	public void renderHUD(RenderGuiEvent.Post event)
@@ -36,77 +40,57 @@ public class HUD
 			return;
 		}
 
-		LocalPlayer player = mc.player;
+		// 打开任意界面时隐藏 HUD：原版在 GameRenderer 里无条件渲染 HUD、界面叠加在它之后，
+		// 不隐藏的话这行城市信息会透在界面背后（RenderGuiEvent.Pre 取消会连原版血条一起隐藏，故用早退）
+		if (Config.HIDE_HUD_IN_GUI.get() && mc.screen != null)
+		{
+			return;
+		}
+
+		UiSettings.Hud settings = UiSettings.hud();
+
+		if (!settings.enabled)
+		{
+			return;
+		}
 
 		// 获取客户端缓存的数据
 		ClientDataHolder data = ClientDataHolder.getInstance();
-
 		int runTimer = NeoSimClient.getOpenGuiTimer();
 
-		// 不渲染
-		if (data.getMode() == 0 && runTimer <= 0)
-		{
-			return;
-		}
-
-		// 显示倒计时
-		if (data.getMode() == 0 && runTimer > 0)
-		{
-			String countdown = ((runTimer + 19) / 20) + "";
-			guiGraphics.drawString(mc.font, countdown, 10, 10, 0xFFFFFF);
-			return;
-		}
-
 		// 游戏内时间（分钟粒度，缓存对比用）
-		long dayTime = mc.level.getDayTime() % 24000;
-		long adjustedTicks = (dayTime + 6000) % 24000;
-		int hour = (int) (adjustedTicks / 1000);
-		int minute = (int) ((adjustedTicks % 1000) * 60 / 1000);
+		int[] time = HudInfo.timeParts(mc);
 
-		if (cachedMode != data.getMode()
+		if (cachedRevision != UiSettings.revision()
+				|| cachedMode != data.getMode()
 				|| cachedDayOfWeek != data.getDayOfWeek()
 				|| cachedDay != data.getDay()
 				|| cachedPopulation != data.getPopulation()
 				|| Double.compare(cachedCredit, data.getCredit()) != 0
 				|| !cachedCity.equals(data.getCityName())
-				|| cachedHour != hour || cachedMinute != minute)
+				|| cachedHour != time[0] || cachedMinute != time[1]
+				|| cachedRunTimer != runTimer)
 		{
-			String modeStr = switch (data.getMode())
-			{
-				case 1 -> Component.translatable("gui.neosim.run.buttonNormal").getString();
-				case 2 -> Component.translatable("gui.neosim.run.buttonCreative").getString();
-				case 3 -> Component.translatable("gui.neosim.run.buttonHardcore").getString();
-				default -> "Null";
-			};
-
-			String dayOfWeekStr = switch (data.getDayOfWeek())
-			{
-				case 0 -> Component.translatable("gui.neosim.hud.sunday").getString();
-				case 1 -> Component.translatable("gui.neosim.hud.monday").getString();
-				case 2 -> Component.translatable("gui.neosim.hud.tuesday").getString();
-				case 3 -> Component.translatable("gui.neosim.hud.wednesday").getString();
-				case 4 -> Component.translatable("gui.neosim.hud.thursday").getString();
-				case 5 -> Component.translatable("gui.neosim.hud.friday").getString();
-				case 6 -> Component.translatable("gui.neosim.hud.saturday").getString();
-				default -> "Null";
-			};
-
-			cachedLine = data.getCityName() + " - "
-					+ String.format("%02d:%02d", hour, minute) + " - "
-					+ dayOfWeekStr + " - "
-					+ Component.translatable("gui.neosim.hud.day", data.getDay()).getString() + " - "
-					+ Component.translatable("gui.neosim.hud.population").getString() + ": " + data.getPopulation() + " - "
-					+ Component.translatable("gui.neosim.hud.credit").getString() + ": " + String.format("%.2f", data.getCredit());
+			// 行内容统一由 HudRenderer 生成：字段、顺序、分隔符都来自界面设置
+			cachedLines = HudRenderer.lines(mc, settings);
+			cachedRevision = UiSettings.revision();
 			cachedMode = data.getMode();
 			cachedDayOfWeek = data.getDayOfWeek();
 			cachedDay = data.getDay();
 			cachedPopulation = data.getPopulation();
 			cachedCredit = data.getCredit();
 			cachedCity = data.getCityName();
-			cachedHour = hour;
-			cachedMinute = minute;
+			cachedHour = time[0];
+			cachedMinute = time[1];
+			cachedRunTimer = runTimer;
 		}
 
-		guiGraphics.drawString(mc.font, cachedLine, 10, 10, 0xFFFFFF);
+		if (cachedLines.isEmpty())
+		{
+			return;
+		}
+
+		HudRenderer.draw(guiGraphics, mc.font,
+				mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight(), cachedLines);
 	}
 }

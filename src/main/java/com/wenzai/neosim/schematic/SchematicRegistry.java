@@ -2,10 +2,6 @@ package com.wenzai.neosim.schematic;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
-import com.wenzai.neosim.schematic.mapping.BlockIdMapping;
-import com.wenzai.neosim.schematic.reader.ISchematicReader;
-import com.wenzai.neosim.schematic.reader.LitematicaSchematicReader;
-import com.wenzai.neosim.schematic.reader.SimUKraftSchematicReader;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
@@ -228,8 +224,8 @@ public class SchematicRegistry
 		}
 	}
 
-	// 自定义蓝图目录
-	private Path customDir()
+	// 自定义蓝图目录（转换功能也用它，保证读写同一个目录）
+	public Path customDir()
 	{
 		return FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("Buildings");
 	}
@@ -290,11 +286,7 @@ public class SchematicRegistry
 				customFileStamps.put(file.getFileName().toString(), Files.getLastModifiedTime(file).toMillis());
 
 				// 按扩展名选择解析器
-				String fileName = file.getFileName().toString().toLowerCase();
-				ISchematicReader reader = fileName.endsWith(".txt")
-						? new SimUKraftSchematicReader(blockIdMapping)
-						: new LitematicaSchematicReader();
-				SchematicData data = reader.read(file);
+				SchematicData data = readerFor(file).read(file);
 				SchematicData typed = SchematicData.builder()
 						.name(data.getName()).author(data.getAuthor()).description(data.getDescription())
 						.type(BuildingType.CUSTOM)
@@ -306,6 +298,13 @@ public class SchematicRegistry
 						.entities(data.getEntities().isEmpty() ? null : data.getEntities())
 						.specialMarkers(data.getSpecialMarkers().isEmpty() ? null : data.getSpecialMarkers())
 						.build();
+
+				// 自定义建筑没有目录归类：含控制箱的自动按住宅处理
+				if (typed.hasControlBox())
+				{
+					LOGGER.info("NeoSim-SchematicRegistry: custom '{}' contains a control box — treated as residential",
+						typed.getName());
+				}
 
 				loadedSchematics.put(typed.getName(), typed);
 				customList.add(typed);
@@ -358,6 +357,15 @@ public class SchematicRegistry
 
 		if (current.equals(customFileStamps)) return;
 		loadCustomDir();
+	}
+
+	// 按扩展名给解析器；转换功能复用同一份 id 映射表，口径与蓝图库加载完全一致
+	public ISchematicReader readerFor(Path file)
+	{
+		String fileName = file.getFileName().toString().toLowerCase();
+		return fileName.endsWith(".txt")
+				? new SimUKraftSchematicReader(blockIdMapping)
+				: new LitematicaSchematicReader();
 	}
 
 	public Map<String, SchematicData> getAll()

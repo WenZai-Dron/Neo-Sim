@@ -6,6 +6,7 @@ import com.wenzai.neosim.building.BuildingInstance;
 import com.wenzai.neosim.building.ConstructionEngine;
 import com.wenzai.neosim.building.ConstructionTask;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -34,45 +35,45 @@ public class TerraformEngine
 	private static boolean restoredFromDisk;
 	private static int saveTimer;
 
-	// 创建整地任务：返回 null=成功，否则为玩家提示文本
+	// 创建整地任务：返回 null=成功，否则为按客户端语言显示的提示组件
 	@Nullable
-	public static String start(ServerLevel level, String cityName, BlockPos boxPos,
+	public static Component start(ServerLevel level, String cityName, BlockPos boxPos,
 			TerraformPlan plan, int minX, int minZ, int maxX, int maxZ, int baselineY)
 	{
-		if (cityName == null || cityName.isEmpty()) return "§c请先加入城市";
+		if (cityName == null || cityName.isEmpty()) return Component.translatable("msg.neosim.terraform.noCity");
 		if (!(level.getBlockState(boxPos).getBlock() instanceof BuildingConstructor))
 		{
-			return "§c建筑模盒不存在";
+			return Component.translatable("msg.neosim.terraform.boxMissing");
 		}
 		if (findTask(boxPos) != null)
 		{
-			return "§c该模盒已有整地任务";
+			return Component.translatable("msg.neosim.terraform.taskExists");
 		}
 		ConstructionTask ct = ConstructionEngine.findTask(boxPos);
 		if (ct != null && ct.getState() != BuildingInstance.BuildState.COMPLETE)
 		{
-			return "§c当前有进行中的建造任务，请先完成或取消";
+			return Component.translatable("msg.neosim.terraform.buildingRunning");
 		}
-		if (minX > maxX || minZ > maxZ) return "§c地块无效";
+		if (minX > maxX || minZ > maxZ) return Component.translatable("msg.neosim.terraform.invalidRect");
 		if (maxX - minX > MarkerManager.MAX_SPAN || maxZ - minZ > MarkerManager.MAX_SPAN)
 		{
-			return "§c地块过大（单边不能超过 64 格）";
+			return Component.translatable("msg.neosim.terraform.tooLarge", MarkerManager.MAX_SPAN);
 		}
 		if (baselineY < level.getMinBuildHeight() || baselineY >= level.getMaxBuildHeight())
 		{
-			return "§c地表基准超出世界高度";
+			return Component.translatable("msg.neosim.terraform.baselineOutOfRange");
 		}
 
 		// 地块必须由与模盒相邻的标记棒构成（同农业/矿业盒规则）
 		MarkerManager.MarkerRect adj = MarkerManager.findRectAdjacentToMarker(level, boxPos);
 		if (adj == null)
 		{
-			return "§c标记棒需与建筑模盒相连才能构成地块";
+			return Component.translatable("msg.neosim.terraform.markerNotAdjacent");
 		}
 		if (adj.minX() != minX || adj.minZ() != minZ || adj.maxX() != maxX
 				|| adj.maxZ() != maxZ || adj.minY() != baselineY)
 		{
-			return "§c地块与标记不符，请重新圈地";
+			return Component.translatable("msg.neosim.terraform.markerMismatch");
 		}
 
 		// 预扫描：空则拒绝
@@ -80,7 +81,7 @@ public class TerraformEngine
 		plan.scan(level, minX, minZ, maxX, maxZ, baselineY, targets);
 		if (targets.isEmpty())
 		{
-			return "§c该地块内没有可整地的目标";
+			return Component.translatable("msg.neosim.terraform.noTargets");
 		}
 
 		TerraformPersistence.TerraformRecord rec =

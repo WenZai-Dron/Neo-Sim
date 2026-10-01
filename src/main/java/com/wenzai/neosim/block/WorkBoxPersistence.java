@@ -25,19 +25,36 @@ public class WorkBoxPersistence
 
 	// 记录：盒子+绑定矩形快照+雇佣+游标/状态
 	public record WorkBoxRecord(
-			String type,                        // 盒子名
-			int bx, int by, int bz,             // 盒子位置
-			int rx1, int ry, int rz1,           // 绑定矩形
-			int rx2, int rz2,                   // 绑定矩形
+			// 盒子名
+			String type,
+
+			// 盒子位置
+			int bx, int by, int bz,
+
+			// 绑定矩形
+			int rx1, int ry, int rz1,
+			int rx2, int rz2,
+
 			String worker,
 			boolean paused,
-			int row, int col,                   // 农业/矿业游标
+
+			// 农业/矿业游标
+			int row, int col,
+
 			String state,
 			String placer,
-			String farmType,                    // 农业专属：作物名
-			int discards,                       // 矿业专属：丢弃过滤
-			int depth,                          // 矿业专属：当前已挖到Y
-			boolean bound)                      // 是否已绑定矩形
+
+			// 农业专属：作物名
+			String farmType,
+
+			// 矿业专属：丢弃过滤
+			int discards,
+
+			// 矿业专属：当前已挖到 Y
+			int depth,
+
+			// 是否已绑定矩形
+			boolean bound)
 	{
 		public static WorkBoxRecord of(String type, BlockPos box, MarkerManager.MarkerRect rect, String placer)
 		{

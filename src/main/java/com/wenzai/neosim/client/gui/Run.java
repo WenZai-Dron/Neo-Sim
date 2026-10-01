@@ -35,8 +35,8 @@ public class Run extends Screen
 	@Override
 	protected void init()
 	{
-		int btnW = this.width / 3;
-		int btnH = this.height / 13;
+		int btnPosX = this.width / 3;
+		int btnSizeH = this.height / 13;
 
 		buttonNormal = Button.builder(Component.translatable("gui.neosim.run.buttonNormal"), btn -> {
 			mode = 1;
@@ -48,8 +48,8 @@ public class Run extends Screen
 				buttonClose.active = true;
 			}
 		})
-				.pos(btnW, this.height / 3)
-				.size(btnW + this.width / 24, btnH)
+				.pos(btnPosX, this.height / 3)
+				.size(btnPosX + this.width / 24, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonNormal);
 
@@ -63,8 +63,8 @@ public class Run extends Screen
 				buttonClose.active = true;
 			}
 		})
-				.pos(btnW, this.height / 2)
-				.size(btnW + this.width / 24, btnH)
+				.pos(btnPosX, this.height / 2)
+				.size(btnPosX + this.width / 24, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonCreative);
 
@@ -78,8 +78,8 @@ public class Run extends Screen
 				buttonClose.active = true;
 			}
 		})
-				.pos(btnW, this.height * 2 / 3)
-				.size(btnW + this.width / 24, btnH)
+				.pos(btnPosX, this.height * 2 / 3)
+				.size(btnPosX + this.width / 24, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonHardcore);
 
@@ -88,8 +88,8 @@ public class Run extends Screen
 			onClose();
 			Minecraft.getInstance().setScreen(new City());
 		})
-				.pos(btnW - this.width / 48, this.height * 5 / 6)
-				.size(btnW + this.width / 12, btnH)
+				.pos(btnPosX - this.width / 48, this.height * 5 / 6)
+				.size(btnPosX + this.width / 12, btnSizeH)
 				.build();
 		this.addRenderableWidget(buttonClose);
 
@@ -106,15 +106,15 @@ public class Run extends Screen
 		// 调用父类渲染，即渲染按钮
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 
-		int textX = this.width / 2 - this.width / 16;
-		int btnH = this.height / 13;
+		int textPosX = this.width / 2 - this.width / 16;
+		int btnSizeH = this.height / 13;
 		int textGap = this.height / 54;
 
-		guiGraphics.drawCenteredString(this.font, tipNormal, textX, this.height / 3 + btnH + textGap, 0xFFFFFF00);
-		guiGraphics.drawCenteredString(this.font, tipCreative, textX - this.width / 48, this.height / 2 + btnH + textGap, 0xFFFFFF00);
-		guiGraphics.drawCenteredString(this.font, tipHardcore, textX - this.width / 96, this.height * 2 / 3 + btnH + textGap, 0xFFFFFF00);
+		guiGraphics.drawCenteredString(this.font, tipNormal, textPosX, this.height / 3 + btnSizeH + textGap, 0xFFFFFF00);
+		guiGraphics.drawCenteredString(this.font, tipCreative, textPosX - this.width / 48, this.height / 2 + btnSizeH + textGap, 0xFFFFFF00);
+		guiGraphics.drawCenteredString(this.font, tipHardcore, textPosX - this.width / 96, this.height * 2 / 3 + btnSizeH + textGap, 0xFFFFFF00);
 
 		// 渲染Logo
-		guiGraphics.blit(LOGO, textX - this.width / 12, 3, this.width / 3, this.height * 3 / 8, 0.0F, 0.0F, 400, 250, 400, 250);
+		guiGraphics.blit(LOGO, textPosX - this.width / 12, 3, this.width / 3, this.height * 3 / 8, 0.0F, 0.0F, 400, 250, 400, 250);
 	}
 }

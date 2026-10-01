@@ -1,9 +1,18 @@
 package com.wenzai.neosim.datagen;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.ModBlocks;
 import net.minecraft.data.PackOutput;
 import net.neoforged.neoforge.common.data.LanguageProvider;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class LangZhCn extends LanguageProvider
 {
@@ -41,6 +50,187 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.DeliveryBox.state.walking","配送中");
 		add("gui.neosim.DeliveryBox.state.depositing","投料中");
 		add("gui.neosim.DeliveryBox.state.returning","返回站点");
+
+
+		// 城市信息 GUI（I 键唯一入口）
+		add("key.categories.neo_sim","新模拟城市");
+		add("key.neosim.cityinfo","城市信息");
+		add("gui.neosim.cityinfo.title","城市信息");
+		add("gui.neosim.cityinfo.tab.overview","概览");
+		add("gui.neosim.cityinfo.tab.residents","居民");
+		add("gui.neosim.cityinfo.tab.buildings","建筑");
+		add("gui.neosim.cityinfo.tab.config","配置");
+		add("gui.neosim.cityinfo.tab.convert","转换");
+
+		// 转换页（.txt → .litematic）
+		add("gui.neosim.cityinfo.convert.dir","目录：%s");
+		add("gui.neosim.cityinfo.convert.hint","列出自定义目录下还没转换的 .txt；旁边已有同名 .litematic 的会自动隐藏");
+		add("gui.neosim.cityinfo.convert.empty","这个目录里没有待转换的 .txt 蓝图");
+		add("gui.neosim.cityinfo.convert.row","%s · %s · %s · %s");
+		add("gui.neosim.cityinfo.convert.authorNone","无作者");
+		add("gui.neosim.cityinfo.convert.info","选中：%s（%s · %s · %s）");
+		add("gui.neosim.cityinfo.convert.author","作者");
+		add("gui.neosim.cityinfo.convert.authorHint","作者名写进 Metadata.Author；清空则用文件里的 AU=，都没有就是 Unknown。「全部转换」始终用各自的 AU=");
+		add("gui.neosim.cityinfo.convert.convertSelected","转换选中");
+		add("gui.neosim.cityinfo.convert.convertAll","全部转换");
+		add("gui.neosim.cityinfo.convert.openFolder","打开文件夹");
+		add("gui.neosim.cityinfo.convert.rescan","刷新");
+		add("gui.neosim.cityinfo.convert.prevPage","上一页");
+		add("gui.neosim.cityinfo.convert.nextPage","下一页");
+		add("gui.neosim.cityinfo.convert.pageInfo","第 %s/%s 页 · 共 %s 份");
+		add("gui.neosim.cityinfo.convert.progress","转换中 %s/%s…");
+		add("gui.neosim.cityinfo.convert.done","转换完成：成功 %s 份（作者名已写入 Metadata.Author）");
+		add("gui.neosim.cityinfo.convert.doneWithErrors","转换完成：成功 %s 份，失败 %s 份 — %s");
+		add("gui.neosim.cityinfo.convert.openFailed","打开目录失败：%s");
+		add("gui.neosim.cityinfo.close","关闭");
+		add("gui.neosim.cityinfo.prevPage","上一页");
+		add("gui.neosim.cityinfo.nextPage","下一页");
+		add("gui.neosim.cityinfo.pageInfo","第 %s/%s 页 · 共 %s 条");
+		add("gui.neosim.cityinfo.noCity","尚未加入城市（配置页仍可用）");
+		add("gui.neosim.cityinfo.mode.none","未选择");
+		add("gui.neosim.cityinfo.overview.city","城市：%s");
+		add("gui.neosim.cityinfo.overview.time","时间：%s");
+		add("gui.neosim.cityinfo.overview.weekday","星期：%s");
+		add("gui.neosim.cityinfo.overview.day","天数：%s");
+		add("gui.neosim.cityinfo.overview.population","人口：%s");
+		add("gui.neosim.cityinfo.overview.credit","资金：%s");
+		add("gui.neosim.cityinfo.overview.mode","模式：%s");
+		add("gui.neosim.cityinfo.overview.populationMax","人口上限：%s");
+		add("gui.neosim.cityinfo.overview.buildings","控制箱记录：%s");
+		add("gui.neosim.cityinfo.overview.homeless","无家市民：%s");
+		add("gui.neosim.cityinfo.resident.row","%s - %s");
+		add("gui.neosim.cityinfo.resident.homelessTag","无家");
+		add("gui.neosim.cityinfo.resident.none","暂无居民记录");
+		add("gui.neosim.cityinfo.building.row","%s - %s");
+		add("gui.neosim.cityinfo.building.vacant","空余");
+		add("gui.neosim.cityinfo.building.none","该类型暂无建筑记录");
+		add("gui.neosim.cityinfo.type.residential","住宅");
+		add("gui.neosim.cityinfo.type.commercial","商业");
+		add("gui.neosim.cityinfo.type.industrial","工业");
+		add("gui.neosim.cityinfo.type.other","其他");
+		add("gui.neosim.cityinfo.type.count","%s (%s)");
+
+		// 配置中心
+		add("gui.neosim.config.category.compat","兼容");
+		add("gui.neosim.config.category.building","建造");
+		add("gui.neosim.config.category.work","工作");
+		add("gui.neosim.config.category.mapping","映射");
+		add("gui.neosim.config.category.ui","界面");
+		add("gui.neosim.config.category.notOpen","该分类尚未开放管理");
+		add("gui.neosim.config.category.plan","计划中的文件：%s");
+		add("gui.neosim.config.pickCategory","请选择一个分类");
+		add("gui.neosim.config.status","已加载 外部 %s 条 · 内置 %s 条 · 类型规则 %s 条 · 依附方块 %s 个");
+		add("gui.neosim.config.errorHint","有解析错误，见 NeoSim/Json/_state/errors.txt");
+		add("gui.neosim.config.pageInfo","第 %s/%s 页 · 共 %s 条");
+		add("gui.neosim.config.unsaved","未保存");
+		add("gui.neosim.config.search","搜索注册名/类型");
+		add("gui.neosim.config.filter.all","筛选：全部");
+		add("gui.neosim.config.filter.attached","筛选：仅依附");
+		add("gui.neosim.config.filter.solid","筛选：仅非依附");
+		add("gui.neosim.config.detail.none","选中一条规则查看详情");
+		add("gui.neosim.config.detail.mode","模式：%s");
+		add("gui.neosim.config.detail.phase","轮次：%s");
+		add("gui.neosim.config.detail.source","来源：%s");
+		add("gui.neosim.config.detail.typeRule","内置类型规则（只读，可被外部规则覆盖）");
+		add("gui.neosim.config.detail.rule","外部规则 #%s");
+		add("gui.neosim.config.source.external","外部");
+		add("gui.neosim.config.source.builtin","内置");
+		add("gui.neosim.config.state.on","状态：启用");
+		add("gui.neosim.config.state.off","状态：已停用");
+		add("gui.neosim.config.phase.1","第一轮（实心）");
+		add("gui.neosim.config.phase.2","第二轮（依附）");
+		add("gui.neosim.config.mode.auto","自动");
+		add("gui.neosim.config.mode.none","非依附");
+		add("gui.neosim.config.mode.any","任意依附");
+		add("gui.neosim.config.mode.wall","贴墙");
+		add("gui.neosim.config.mode.ground","地面");
+		add("gui.neosim.config.mode.ceiling","悬挂");
+		add("gui.neosim.config.addHeld","加入手持方块");
+		add("gui.neosim.config.cycleMode","切换模式");
+		add("gui.neosim.config.disable","停用");
+		add("gui.neosim.config.enable","启用");
+		add("gui.neosim.config.remove","删除");
+		add("gui.neosim.config.save","保存");
+		add("gui.neosim.config.reload","重载");
+		add("gui.neosim.config.prevPage","上一页");
+		add("gui.neosim.config.nextPage","下一页");
+		add("gui.neosim.config.saved","已保存并生效");
+		add("gui.neosim.config.saveFailed","保存失败（无写权限？）");
+		add("gui.neosim.config.reloaded","已从文件重载");
+		add("gui.neosim.config.added","已加入 %s（记得保存）");
+		add("gui.neosim.config.alreadyAdded","%s 已在表中");
+		add("gui.neosim.config.file.attached","依附方块表");
+		add("gui.neosim.config.file.crops","模组作物表");
+		add("gui.neosim.config.status.attached","已加载 外部 %s 条 · 内置 %s 条 · 依附方块 %s 个");
+		add("gui.neosim.config.status.crops","已检测模组作物 %s 种 · 生效 %s 种 · 外部规则 %s 条 · 内置规则 %s 条");
+		add("gui.neosim.config.detail.detected","自动检测（模组扫描）");
+		add("gui.neosim.config.detail.detectedRule","自动检测（模组扫描） · 外部规则 #%s");
+		add("gui.neosim.config.crop.water","需水");
+		add("gui.neosim.config.crop.noWater","不需水");
+		add("gui.neosim.config.crop.excluded","已排除");
+		add("gui.neosim.config.crop.mature","成熟目标 %s");
+		add("gui.neosim.config.needsWater","需水");
+		add("gui.neosim.config.exclude","排除");
+		add("gui.neosim.config.unexclude","取消排除");
+		add("gui.neosim.config.rescan","重新扫描");
+		add("gui.neosim.config.rescanned","已重新扫描：检测到 %s 种模组作物");
+		add("gui.neosim.config.fileComment.attached","依附性方块表：外部覆盖内置。attach 取值 wall 贴墙 / ground 地面 / ceiling 悬挂 / any 只延后 / none 不是依附方块 / auto 交给 canSurvive 兜底。");
+		add("gui.neosim.config.fileComment.crops","模组作物表覆盖规则：mature 成熟目标 / needsWater 需水 / excluded 排除 / enabled 停用。detected 段由模组自动扫描写入。");
+
+		// 界面（个人外观设置：HUD / 投影）
+		add("gui.neosim.ui.tab.hud","HUD 外观");
+		add("gui.neosim.ui.tab.content","HUD 内容");
+		add("gui.neosim.ui.tab.preview","投影预览");
+		add("gui.neosim.ui.status.crowded","窗口太矮，部分设置没显示：把窗口拉高或降低 GUI 缩放");
+		add("gui.neosim.ui.on","开");
+		add("gui.neosim.ui.off","关");
+		add("gui.neosim.ui.row.anchor","位置");
+		add("gui.neosim.ui.row.offset","偏移");
+		add("gui.neosim.ui.row.scale","大小");
+		add("gui.neosim.ui.row.color","文字颜色");
+		add("gui.neosim.ui.row.layout","排版");
+		add("gui.neosim.ui.row.block","阴影与背景");
+		add("gui.neosim.ui.row.tint","投影颜色");
+		add("gui.neosim.ui.row.alpha","不透明度");
+		add("gui.neosim.ui.row.mix","方块纹理显示度");
+		add("gui.neosim.ui.layout.single","单行");
+		add("gui.neosim.ui.layout.multi","多行");
+		add("gui.neosim.ui.anchor.top_left","左上");
+		add("gui.neosim.ui.anchor.top_center","上中");
+		add("gui.neosim.ui.anchor.top_right","右上");
+		add("gui.neosim.ui.anchor.middle_left","左中");
+		add("gui.neosim.ui.anchor.middle_center","正中");
+		add("gui.neosim.ui.anchor.middle_right","右中");
+		add("gui.neosim.ui.anchor.bottom_left","左下");
+		add("gui.neosim.ui.anchor.bottom_center","下中");
+		add("gui.neosim.ui.anchor.bottom_right","右下");
+		add("gui.neosim.ui.separator.0","短横 (“ - ”)");
+		add("gui.neosim.ui.separator.1","竖线 (“ | ”)");
+		add("gui.neosim.ui.separator.2","空格");
+		add("gui.neosim.ui.separator.3","中点 (“ · ”)");
+		add("gui.neosim.ui.field.city","城市");
+		add("gui.neosim.ui.field.time","时间");
+		add("gui.neosim.ui.field.weekday","星期");
+		add("gui.neosim.ui.field.day","天数");
+		add("gui.neosim.ui.field.population","人口");
+		add("gui.neosim.ui.field.credit","资金");
+		add("gui.neosim.ui.field.mode","模式");
+		add("gui.neosim.ui.preview.hint2","纹理显示度越低，树叶这类镂空方块越接近实心");
+		add("gui.neosim.ui.save","保存");
+		add("gui.neosim.ui.reload","重载");
+		add("gui.neosim.ui.reset.page","重置");
+		add("gui.neosim.ui.row.hud","HUD显示");
+		add("gui.neosim.ui.row.shadow","阴影显示");
+		add("gui.neosim.ui.preset","预设");
+		add("gui.neosim.ui.status.other","另一页还有未保存的改动");
+		add("gui.neosim.ui.confirm","确认重置？");
+		add("gui.neosim.ui.saved","已保存");
+		add("gui.neosim.ui.saveFailed","保存失败，见 NeoSim/Json/_state/errors.txt");
+		add("gui.neosim.ui.reloaded","已重新读取文件");
+		add("gui.neosim.ui.resetPage","本页已恢复默认（原文件已备份为 .bak）");
+		add("gui.neosim.ui.status.unsaved","有未保存的改动");
+		add("gui.neosim.ui.status.saved","已与文件一致");
+		add("config.neosim.hideHudInGui","打开界面时隐藏 HUD");
 
 		add("config.neosim.deliveryCreditPerUnit","每件材料送达扣款");
 		add("config.neosim.deliveryChunkRadius","快递员区块窗口半径");
@@ -230,6 +420,9 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.ControlBox.homelessTitle","安排入住（无家 NPC）");
 		add("gui.neosim.ControlBox.noHomeless","城市里没有无家可归的 NPC");
 		add("gui.neosim.ControlBox.residentsLabel","居民");
+		add("gui.neosim.ControlBox.livingPoints","生活点 %s · 已住 %s");
+		add("gui.neosim.ControlBox.livingPointFree","空闲");
+		add("gui.neosim.ControlBox.livingPointOccupant","住户: %s");
 		add("gui.neosim.ControlBox.back","返回");
 
 		add("gui.neosim.FarmingBox.title","农业盒");
@@ -388,6 +581,8 @@ public class LangZhCn extends LanguageProvider
 		add("config.neosim.npcMinAge.tooltip","NPC的最小随机年龄");
 		add("config.neosim.npcMaxAge","NPC最大年龄");
 		add("config.neosim.npcMaxAge.tooltip","NPC的最大随机年龄");
+		add("config.neosim.npcNameLocale","NPC 姓名池语言");
+		add("config.neosim.npcNameLocale.tooltip","auto=跟随创建该 NPC 的玩家语言；zh=永远中文名；en=永远英文名（已存在的 NPC 不受影响）");
 		add("config.neosim.lifeRentDefault","住宅默认租金");
 		add("config.neosim.lifeRentDefault.tooltip","每天每座有居民的住宅收取的租金，未按体积定价的记录使用此默认值");
 		add("config.neosim.lifeRentPerBlock","按建筑体积定价系数");
@@ -445,7 +640,7 @@ public class LangZhCn extends LanguageProvider
 		add("neo_sim.configuration.general.tooltip","城市初始资金、建造费用、人口上限与 NPC 年龄范围");
 		add("neo_sim.configuration.life","生活系统");
 		add("neo_sim.configuration.life.button","生活系统");
-		add("neo_sim.configuration.life.tooltip","居民生命周期相关参数：房租、衰老、作息、生育、社交、关系与婚姻");
+		add("neo_sim.configuration.life.tooltip","居民生命周期相关参数");
 		add("neo_sim.configuration.rent","房租与收入");
 		add("neo_sim.configuration.rent.button","房租与收入");
 		add("neo_sim.configuration.rent.tooltip","住宅每日收租的默认值与按建筑体积定价系数");
@@ -470,5 +665,102 @@ public class LangZhCn extends LanguageProvider
 		add("neo_sim.configuration.workplot","农业与矿业");
 		add("neo_sim.configuration.workplot.button","农业与矿业");
 		add("neo_sim.configuration.workplot.tooltip","工作盒绑定半径、农业/矿业每方块信用点");
+
+		// 玩家提示与公告（按客户端语言解析）
+		add("msg.neosim.city.nameEmpty","§c城市名不能为空");
+		add("msg.neosim.city.illegalChars","§c城市名含有非法字符");
+		add("msg.neosim.city.exists","§c城市已存在");
+		add("msg.neosim.city.alreadyJoined","§c你已经加入了城市");
+		add("msg.neosim.city.notFound","§c城市不存在");
+		add("msg.neosim.city.joinedOther","§c你已经加入了其他城市");
+		add("msg.neosim.worker.noCity","§c请先加入城市");
+		add("msg.neosim.worker.invalidCitizen","§c无效的市民");
+		add("msg.neosim.worker.alreadyWorking","§c该市民已在别处工作");
+		add("msg.neosim.worker.noProfile","§c市民档案不存在");
+		add("msg.neosim.worker.underage","§c未成年不可雇佣");
+		add("msg.neosim.worker.maternity","§c产假中不可雇佣");
+		add("msg.neosim.worker.restoreFailed","§c市民恢复失败");
+		add("msg.neosim.worker.notYourCity","§c该市民不属于你的城市");
+		add("msg.neosim.worker.noHirePost","§c此处没有可雇佣的岗位");
+		add("msg.neosim.worker.noFirePost","§c此处没有可解雇的岗位");
+		add("msg.neosim.living.noNpc","§c没有指定 NPC");
+		add("msg.neosim.living.npcNotFound","§c找不到 NPC: §f%s");
+		add("msg.neosim.living.notYourCity","§c%s §e不属于这座城市");
+		add("msg.neosim.living.alreadyHasHome","§c%s §e已经有家了");
+		add("msg.neosim.living.noFreeRoom","§c没有空房间");
+		add("msg.neosim.terraform.noCity","§c请先加入城市");
+		add("msg.neosim.terraform.boxMissing","§c建筑模盒不存在");
+		add("msg.neosim.terraform.taskExists","§c该模盒已有整地任务");
+		add("msg.neosim.terraform.buildingRunning","§c当前有进行中的建造任务，请先完成或取消");
+		add("msg.neosim.terraform.invalidRect","§c地块无效");
+		add("msg.neosim.terraform.tooLarge","§c地块过大（单边不能超过 %s 格）");
+		add("msg.neosim.terraform.baselineOutOfRange","§c地表基准超出世界高度");
+		add("msg.neosim.terraform.markerNotAdjacent","§c标记棒需与建筑模盒相连才能构成地块");
+		add("msg.neosim.terraform.markerMismatch","§c地块与标记不符，请重新圈地");
+		add("msg.neosim.terraform.noTargets","§c该地块内没有可整地的目标");
+		add("msg.neosim.terraform.noMarkerRect","§c请先用标记棒圈出矩形地块，且标记需与模盒相连");
+		add("msg.neosim.terraform.running","§c整地进行中，请先完成整地");
+		add("msg.neosim.terraform.needChest","§e整地需要箱子：请在建筑模盒旁放置一个箱子");
+		add("msg.neosim.terraform.planMissing","§e整地任务已失效（方案不存在）");
+		add("msg.neosim.terraform.scanEmpty","§e该地块内没有可整地的目标");
+		add("msg.neosim.terraform.complete","§e整地完成！");
+		add("msg.neosim.terraform.missingMaterial","§c整地缺料：%s，请放入模盒旁的箱子");
+		add("msg.neosim.preview.overlap","§c无法放置：区域与已有建筑重叠");
+		add("msg.neosim.payload.rateLimited","§c请稍后再试");
+		add("msg.neosim.payload.invalidPlan","§c无效的整地方案");
+		add("msg.neosim.delivery.noChest","工地无箱子");
+		add("msg.neosim.delivery.stationMissing","站点缺少 %s");
+		add("msg.neosim.command.cityNotFound","§c城市 '%s' 不存在");
+		add("msg.neosim.command.summonBlocked","§c请用 Neo-Sim 指令生成 NPC，禁止 /summon");
+		add("announce.neosim.spawn","§f%s §e来到了城市");
+		add("announce.neosim.deathTemplate","§f%s §e%s §f(%s)");
+		add("announce.neosim.evictResident","§f%s §e被赶出了 §f%s");
+		add("announce.neosim.evictAll","§f%s §e已清空，§f%s §e名住户被赶出");
+		add("announce.neosim.moveIn","§f%s §e搬进了 §f%s");
+		add("announce.neosim.pregnancy","§f好消息！§f%s §e和 §f%s §e要有宝宝了！");
+		add("announce.neosim.birth","§f%s §e诞生了！");
+		add("announce.neosim.marriage","§f%s §e与 §f%s §e结为夫妻了");
+		add("announce.neosim.cohabit","§f%s §e与 §f%s §e开始同居了");
+		add("announce.neosim.breakup","§f%s §e和 §f%s §e的关系破裂了，结束了同居生活");
+		add("announce.neosim.rent","§e今天共收取了 §f $%s");
+		add("announce.neosim.deliveryDispatch","§e%s §f正前往 §e%s §f运送 §e%s §f个 §e%s");
+		add("announce.neosim.adultLeave","§f%s §e现在 %s 岁了，他们会开始找房子，你也可以雇佣他们了");
+		add("announce.neosim.missingMaterial","§6建造 §f%s §e缺少材料 §b%s");
+		add("announce.neosim.buildingComplete","§f%s §e已完工");
+		add("announce.neosim.deathCause.oldAge","年纪大了，感觉不太舒服……哦不！");
+		add("announce.neosim.deathCause.drown","淹死了");
+		add("announce.neosim.deathCause.lava","掉进了岩浆里");
+		add("announce.neosim.deathCause.suffocate","被卡在墙里窒息了");
+		add("announce.neosim.deathCause.fall","从高处摔了下来");
+		add("announce.neosim.deathCause.starve","饿死了（建个农场吧…）");
+		add("announce.neosim.deathCause.fire","被火烧死了");
+		add("announce.neosim.deathCause.lightning","被雷劈了");
+		add("announce.neosim.deathCause.cactus","被仙人掌扎了");
+		add("announce.neosim.deathCause.other","不幸去世了");
+		add("announce.neosim.deathRemark.old","享年 %s 岁，也算寿终正寝了！");
+		add("announce.neosim.deathRemark.young","年仅 %s 岁");
+
+		// 蓝图名：供服务端公告/提示按客户端语言显示建筑名（英文等语言在代码里用 fallback 回落原名）
+		addBlueprintNames();
+	}
+
+	private void addBlueprintNames()
+	{
+		try (InputStream is = LangZhCn.class.getResourceAsStream("/assets/neo_sim/buildings/zh_cn_names.json"))
+		{
+			if (is == null) return;
+			try (Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8))
+			{
+				JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+				for (Map.Entry<String, JsonElement> e : root.entrySet())
+				{
+					add("blueprint.neosim." + e.getKey(), e.getValue().getAsString());
+				}
+			}
+		}
+		catch (Exception ignored)
+		{
+			// 汉化表缺失不影响其余语言键生成
+		}
 	}
 }

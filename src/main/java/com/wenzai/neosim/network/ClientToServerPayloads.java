@@ -7,7 +7,7 @@ import com.wenzai.neosim.building.ControlBoxPersistence;
 import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.npc.CityLivingManager;
 import com.wenzai.neosim.npc.Entity;
-import com.wenzai.neosim.schematic.BuildingType;
+import com.wenzai.neosim.npc.PlayerLocales;
 import com.wenzai.neosim.schematic.PreviewState;
 import com.wenzai.neosim.schematic.SchematicRegistry;
 import com.wenzai.neosim.storage.*;
@@ -311,7 +311,7 @@ public class ClientToServerPayloads
 				if (!JsonUtil.check(player.getUUID(), "confirm_placement", 1000))
 				{
 					player.displayClientMessage(
-							Component.literal("§cPlease wait before confirming again."), true);
+							Component.translatable("msg.neosim.payload.rateLimited"), true);
 					return;
 				}
 
@@ -355,7 +355,7 @@ public class ClientToServerPayloads
 				if (building == null)
 				{
 					player.displayClientMessage(
-							Component.literal("§cCannot place: area overlaps an existing building."), false);
+							Component.translatable("msg.neosim.preview.overlap"), false);
 				}
 			});
 		}
@@ -512,7 +512,7 @@ public class ClientToServerPayloads
 
 				// 仅住宅可管理（非住宅双保险）
 				var schematic = SchematicRegistry.getInstance().get(rec.schematicName());
-				if (schematic == null || schematic.getType() != BuildingType.RESIDENTIAL)
+				if (schematic == null || !schematic.isResidential())
 				{
 					NeoSim.LOGGER.warn("NeoSim-ControlBoxManage: '{}' is not residential, reject", rec.schematicName());
 					return;
@@ -526,10 +526,10 @@ public class ClientToServerPayloads
 							CityLivingManager.evictAllResidents(level, city, rec);
 					case 3 ->
 					{
-						String err = CityLivingManager.moveInHomeless(level, city, rec, payload.targetName());
+						Component err = CityLivingManager.moveInHomeless(level, city, rec, payload.targetName());
 						if (err != null)
 						{
-							player.displayClientMessage(Component.literal(err), false);
+							player.displayClientMessage(err, false);
 						}
 					}
 					default ->
@@ -637,7 +637,7 @@ public class ClientToServerPayloads
 				// 1 秒限流防刷包
 				if (!JsonUtil.check(player.getUUID(), "terraform_start", 1000))
 				{
-					player.displayClientMessage(Component.literal("§c请稍后再试"), true);
+					player.displayClientMessage(Component.translatable("msg.neosim.payload.rateLimited"), true);
 					return;
 				}
 
@@ -650,15 +650,15 @@ public class ClientToServerPayloads
 				TerraformPlan plan = TerraformPlan.valueOfSafe(payload.plan());
 				if (plan == null)
 				{
-					player.displayClientMessage(Component.literal("§c无效的整地方案"), false);
+					player.displayClientMessage(Component.translatable("msg.neosim.payload.invalidPlan"), false);
 					return;
 				}
 
-				String err = TerraformEngine.start(level, city, payload.boxPos(), plan,
+				Component err = TerraformEngine.start(level, city, payload.boxPos(), plan,
 						payload.minX(), payload.minZ(), payload.maxX(), payload.maxZ(), payload.baselineY());
 				if (err != null)
 				{
-					player.displayClientMessage(Component.literal(err), false);
+					player.displayClientMessage(err, false);
 				}
 			}).exceptionally(e ->
 			{
@@ -684,10 +684,15 @@ public class ClientToServerPayloads
 			context.enqueueWork(() ->
 			{
 				if (!(context.player() instanceof ServerPlayer player) || !player.isAlive()) return;
-				String err = CityManager.createCity(player.serverLevel(), player, payload.cityName());
+				Component err = CityManager.createCity(player.serverLevel(), player, payload.cityName());
 				if (err != null)
 				{
-					player.displayClientMessage(Component.literal(err), false);
+					player.displayClientMessage(err, false);
+				}
+				else
+				{
+					// 建城成功：把该玩家的语言绑定到城市（新建 NPC 的命名池依据）
+					PlayerLocales.bindCity(player.getUUID(), payload.cityName());
 				}
 			}).exceptionally(e ->
 			{
@@ -719,10 +724,14 @@ public class ClientToServerPayloads
 			context.enqueueWork(() ->
 			{
 				if (!(context.player() instanceof ServerPlayer player) || !player.isAlive()) return;
-				String err = CityManager.joinCity(player.serverLevel(), player, payload.cityName());
+				Component err = CityManager.joinCity(player.serverLevel(), player, payload.cityName());
 				if (err != null)
 				{
-					player.displayClientMessage(Component.literal(err), false);
+					player.displayClientMessage(err, false);
+				}
+				else
+				{
+					PlayerLocales.bindCity(player.getUUID(), payload.cityName());
 				}
 			}).exceptionally(e ->
 			{
@@ -822,11 +831,11 @@ public class ClientToServerPayloads
 			{
 				if (!(context.player() instanceof ServerPlayer player) || !player.isAlive()) return;
 				if (!com.wenzai.neosim.util.JsonUtil.check(player.getUUID(), "hire", 1000)) return;
-				String err = com.wenzai.neosim.building.WorkerService.tryHire(
+				Component err = com.wenzai.neosim.building.WorkerService.tryHire(
 						player.serverLevel(), player, payload.boxPos(), payload.npcName());
 				if (err != null)
 				{
-					player.displayClientMessage(Component.literal(err), false);
+					player.displayClientMessage(err, false);
 				}
 				else
 				{
@@ -864,11 +873,11 @@ public class ClientToServerPayloads
 			{
 				if (!(context.player() instanceof ServerPlayer player) || !player.isAlive()) return;
 				if (!com.wenzai.neosim.util.JsonUtil.check(player.getUUID(), "fire", 1000)) return;
-				String err = com.wenzai.neosim.building.WorkerService.tryFire(
+				Component err = com.wenzai.neosim.building.WorkerService.tryFire(
 						player.serverLevel(), payload.boxPos());
 				if (err != null)
 				{
-					player.displayClientMessage(Component.literal(err), false);
+					player.displayClientMessage(err, false);
 				}
 				else
 				{
@@ -912,6 +921,36 @@ public class ClientToServerPayloads
 			}).exceptionally(e ->
 			{
 				NeoSim.LOGGER.error("NeoSim-MissingScanRequest: Fail", e);
+				return null;
+			});
+		}
+
+		@Override
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
+	}
+
+	// 客户端上报界面语言（C→S；仅用于新建 NPC 选择姓名池，不改变已有 NPC）
+	public record ClientLocalePayload(String language) implements CustomPacketPayload
+	{
+		public static final Type<ClientLocalePayload> TYPE =
+				new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "client_locale"));
+
+		public static final StreamCodec<ByteBuf, ClientLocalePayload> STREAM_CODEC =
+				ByteBufCodecs.STRING_UTF8.map(ClientLocalePayload::new, ClientLocalePayload::language);
+
+		public static void handle(ClientLocalePayload payload, IPayloadContext context)
+		{
+			context.enqueueWork(() ->
+			{
+				if (!(context.player() instanceof ServerPlayer player) || !player.isAlive()) return;
+				String city = CityManager.getCity(player.getUUID());
+				PlayerLocales.update(player.getUUID(), payload.language(), city);
+			}).exceptionally(e ->
+			{
+				NeoSim.LOGGER.error("NeoSim-ClientLocale: Fail", e);
 				return null;
 			});
 		}

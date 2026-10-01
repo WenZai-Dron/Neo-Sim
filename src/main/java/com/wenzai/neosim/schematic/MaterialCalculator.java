@@ -1,5 +1,6 @@
 package com.wenzai.neosim.schematic;
 
+import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockState;
@@ -9,64 +10,26 @@ import java.util.*;
 // 统计蓝图所需的全部方块数量
 public class MaterialCalculator
 {
-	// Block → 分类 静态 IdentityHashMap 缓存（首次判定后查表，消灭每格 instanceof/contains/字符串分配）
+	// Block → [0]=普通模式耗材, [1]=困难模式免费 静态 IdentityHashMap 缓存（首次判定后查表，消灭每格 contains/字符串分配）
 	private static final IdentityHashMap<Block, boolean[]> CLASS_CACHE = new IdentityHashMap<>();
 
 	// 材料清单按 (schematicName, mode) 缓存（进页/模式变化时键变化即失效）
 	private static String cachedCalcKey;
 	private static List<MaterialEntry> cachedCalcResult;
 
+	// 依附性方块：判定统一交给可编辑的 AttachedBlockTable
+	// （内置类型规则 = instanceof 注册 + jar 内置 JSON + NeoSim/Json/ 外部覆盖 + canSurvive 兜底）
 	public static boolean isAttachedBlock(BlockState state)
 	{
-		Block block = state.getBlock();
-		boolean[] c = CLASS_CACHE.get(block);
-		if (c == null)
-		{
-			c = new boolean[3];
-			c[0] = computeAttached(block);
-			c[1] = computeNormalRequired(block);
-			c[2] = computeHardcoreFree(block);
-			CLASS_CACHE.put(block, c);
-		}
-		return c[0];
+		return AttachedBlockTable.isAttached(state);
 	}
 
-	// 依附性方块：铁轨/火把/梯子/门/按钮/拉杆/藤蔓/立牌/墙牌/压力板/红石线/农作物/南瓜·西瓜茎/附着茎/树苗/花丛/甘蔗/花盆/旗帜/床/可可豆/绊线钩/绊线/雪层/铁砧/地毯（需下方支撑，第二阶段放）
-	private static boolean computeAttached(Block block)
+	// 内容表重载后清空分类缓存（依附判定与材料清单都重新计算）
+	public static void invalidateClassification()
 	{
-		if (block instanceof BaseRailBlock) return true;
-		if (block instanceof TorchBlock) return true;
-		if (block instanceof LadderBlock) return true;
-		if (block instanceof DoorBlock) return true;
-		if (block instanceof ButtonBlock) return true;
-		if (block instanceof LeverBlock) return true;
-		if (block instanceof VineBlock) return true;
-		if (block instanceof StandingSignBlock) return true;
-		if (block instanceof WallSignBlock) return true;
-		if (block instanceof PressurePlateBlock) return true;
-		if (block instanceof RedStoneWireBlock) return true;
-		if (block instanceof CropBlock) return true;
-		if (block instanceof StemBlock) return true;
-		if (block instanceof AttachedStemBlock) return true;
-		if (block instanceof SaplingBlock) return true;
-		if (block instanceof BushBlock) return true;
-		if (block instanceof SugarCaneBlock) return true;
-		if (block instanceof FlowerPotBlock) return true;
-		if (block instanceof BannerBlock) return true;
-		if (block instanceof BedBlock) return true;
-		if (block instanceof CocoaBlock) return true;
-		if (block instanceof TripWireHookBlock) return true;
-		if (block instanceof TripWireBlock) return true;
-		if (block instanceof SnowLayerBlock) return true;
-		if (block instanceof AnvilBlock) return true;
-		if (block instanceof CarpetBlock) return true;
-
-		// 连接性方块：墙/栅栏/铁栏杆/玻璃板
-		if (block instanceof WallBlock) return true;
-		if (block instanceof FenceBlock) return true;
-		if (block instanceof IronBarsBlock) return true;
-		if (block instanceof StainedGlassPaneBlock) return true;
-		return false;
+		CLASS_CACHE.clear();
+		cachedCalcKey = null;
+		cachedCalcResult = null;
 	}
 
 	// 方块注册名
@@ -172,26 +135,24 @@ public class MaterialCalculator
 				boolean[] c = CLASS_CACHE.get(block);
 				if (c == null)
 				{
-					c = new boolean[3];
-					c[0] = computeAttached(block);
-					c[1] = computeNormalRequired(block);
-					c[2] = computeHardcoreFree(block);
+					c = new boolean[2];
+					c[0] = computeNormalRequired(block);
+					c[1] = computeHardcoreFree(block);
 					CLASS_CACHE.put(block, c);
 				}
-				yield !c[2];
+				yield !c[1];
 			}
 			default -> {
 				Block block = state.getBlock();
 				boolean[] c = CLASS_CACHE.get(block);
 				if (c == null)
 				{
-					c = new boolean[3];
-					c[0] = computeAttached(block);
-					c[1] = computeNormalRequired(block);
-					c[2] = computeHardcoreFree(block);
+					c = new boolean[2];
+					c[0] = computeNormalRequired(block);
+					c[1] = computeHardcoreFree(block);
 					CLASS_CACHE.put(block, c);
 				}
-				yield c[1];
+				yield c[0];
 			}
 		};
 	}

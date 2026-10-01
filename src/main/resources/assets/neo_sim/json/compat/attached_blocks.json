@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "_comment": "依附性方块表：决定方块在第几轮放置、按哪种支撑修正朝向。规则后写覆盖先写，外部文件（NeoSim/Json/compat/attached_blocks.json）覆盖本内置文件。attach 取值：wall 贴墙 / ground 地面 / ceiling 悬挂 / any 只延后 / none 不是依附方块 / auto 交给 canSurvive 兜底。",
+  "rules": [
+    { "id": "minecraft:*_hanging_sign", "attach": "ceiling", "note": "挂式告示牌：上方需支撑" },
+    { "id": "minecraft:*_wall_hanging_sign", "attach": "wall", "facing": ["facing"], "note": "墙挂式告示牌：贴墙" },
+    { "id": "minecraft:lantern", "attach": "ceiling", "note": "灯笼：挂在上方" },
+    { "id": "minecraft:chain", "attach": "ceiling", "note": "锁链：吊挂" }
+  ]
+}
