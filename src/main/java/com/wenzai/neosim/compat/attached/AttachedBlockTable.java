@@ -21,7 +21,7 @@ import javax.annotation.Nullable;
 // 依附性方块表：
 //   ① 内置类型规则（instanceof 注册）
 //   ② 数据规则（jar 内置 JSON + NeoSim/Json/compat/attached_blocks.json 外部覆盖）
-// 合并结果按方块注册 id 缓存成字节数组，重载时整体重建。
+// 合并结果按方块注册 id 缓存成字节数组，重载时整体重建
 public final class AttachedBlockTable
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

@@ -33,6 +33,7 @@ public class TerraformTask
 	private static final float MAX_LEVEL = 10.0f;
 	private static final int RAISE_ANIM_MS = 400;
 	private static final int LOWER_ANIM_MS = 400;
+
 	// 缺料后重新检查箱子的间隔（3 秒）
 	private static final int RESOURCE_RECHECK_TICKS = 60;
 
@@ -273,6 +274,7 @@ public class TerraformTask
 						Component.translatable("msg.neosim.terraform.needChest")));
 			}
 			clearHand();
+
 			// 等待玩家放箱子
 			return;
 		}
@@ -459,6 +461,7 @@ public class TerraformTask
 			clearHand();
 			return true;
 		}
+
 		// 创造模式：不等待动作延迟，每 tick 执行一个动作
 		if (currentMode() == 2)
 		{
@@ -559,7 +562,7 @@ public class TerraformTask
 		}
 	}
 
-	// 按模盒坐标找雇佣的 NPC 实体，找到后读取建筑师等级（C1：名字索引 O(1)）
+	// 按模盒坐标找雇佣的 NPC 实体，找到后读取建筑师等级（名字索引 O(1)）
 	private void resolveWorkerNpc()
 	{
 		if (worker != null && worker.isAlive()) return;

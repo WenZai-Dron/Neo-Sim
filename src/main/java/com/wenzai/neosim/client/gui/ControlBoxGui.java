@@ -32,6 +32,7 @@ public class ControlBoxGui extends Screen
 	private boolean residential;
 	private String currentPage = "main";
 	private List<String> homelessNames = new ArrayList<>();
+
 	// 记录每秒重读一次：NPC 死亡/被驱逐后控制箱不再挂着陈旧住户
 	private long lastReloadTick;
 

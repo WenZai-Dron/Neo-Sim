@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
 
 // NeoSim/Json/ 内容表读写：
 // 内置规则打包在 jar 内（assets/neo_sim/json/<分类>/<同名文件>），外部文件在 {游戏根目录}/NeoSim/Json/<分类>/，
-// 外部优先；解析失败单文件跳过并写 _state/errors.txt，不拖垮其他分类。
+// 外部优先；解析失败单文件跳过并写 _state/errors.txt，不拖垮其他分类
 public final class JsonContent
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

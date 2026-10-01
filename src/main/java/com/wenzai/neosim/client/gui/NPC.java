@@ -331,7 +331,7 @@ public class NPC extends Screen
 					}
 					catch (IOException e)
 					{
-						LOGGER.error("NeoSim: Failed to open skins folder", e);
+						LOGGER.error("NeoSim-NPC: Failed to open skins folder", e);
 					}
 				})
 				.pos(btnPosX, folderPosY)
@@ -435,6 +435,7 @@ public class NPC extends Screen
 		{
 			renderTransparentBackground(guiGraphics);
 		}
+
 		// 其余页完全透明，不绘背景
 	}
 
@@ -594,6 +595,7 @@ public class NPC extends Screen
 		{
 			previewEntity = new Entity(Entity.NPC.get(), mc.level);
 			previewEntity.setSkin(npc.getSkin());
+
 			// 同步年龄，未成年预览也显示缩小模型
 			previewEntity.setAge(npc.getAge());
 		}
@@ -826,7 +828,7 @@ public class NPC extends Screen
 		});
 	}
 
-	// 联网获取玩家皮肤并保存（L20：HttpClient 提为静态字段复用 + 超时，防每次新建连接与无超时挂死）
+	// 联网获取玩家皮肤并保存（HttpClient 提为静态字段复用 + 超时，防每次新建连接与无超时挂死）
 	private static final HttpClient SKIN_HTTP_CLIENT = HttpClient.newBuilder()
 			.followRedirects(HttpClient.Redirect.NORMAL)
 			.connectTimeout(java.time.Duration.ofSeconds(10))
@@ -895,7 +897,7 @@ public class NPC extends Screen
 			throw new Exception("No skin found for player: " + playerName);
 		}
 
-		// 下载皮肤（L20：加超时，防无响应挂死）
+		// 下载皮肤（加超时，防无响应挂死）
 		HttpRequest skinRequest = HttpRequest.newBuilder()
 				.uri(URI.create(skinUrl))
 				.timeout(java.time.Duration.ofSeconds(20))

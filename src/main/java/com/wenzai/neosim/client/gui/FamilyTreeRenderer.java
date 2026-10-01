@@ -16,7 +16,7 @@ import java.util.function.Consumer;
 public class FamilyTreeRenderer
 {
 	// 节点世界坐标矩形
-	public record Rect(float x, float y, float w, float h)
+	public record Rect(float posX, float posY, float sizeW, float sizeH)
 	{
 	}
 
@@ -40,6 +40,7 @@ public class FamilyTreeRenderer
 	private final Map<String, FamilyNode> nodes = new HashMap<>();
 	private final Map<String, Rect> rects = new HashMap<>();
 	private final List<Edge> edges = new ArrayList<>();
+
 	// 称谓预计算缓存（layout 时一次算全，渲染每帧不再对每个节点重算）
 	private final Map<String, String> titles = new HashMap<>();
 
@@ -83,14 +84,14 @@ public class FamilyTreeRenderer
 		return (float) ((screenPosY - panY) / zoom);
 	}
 
-	private int toScreenX(float wx)
+	private int toScreenX(float worldPosX)
 	{
-		return Math.round(wx * zoom + panX);
+		return Math.round(worldPosX * zoom + panX);
 	}
 
-	private int toScreenY(float wy)
+	private int toScreenY(float worldPosY)
 	{
-		return Math.round(wy * zoom + panY);
+		return Math.round(worldPosY * zoom + panY);
 	}
 
 	// 计算某节点相对中心节点的代差：祖辈-2 / 父母、姻亲-1 / 本人、配偶、兄弟姐妹0 / 子女+1
@@ -109,12 +110,14 @@ public class FamilyTreeRenderer
 			FamilyNode sp = nodes.get(c.partner());
 			if (sp != null && sp.parents().contains(name)) return -1;
 		}
+
 		// 祖辈：父母的父母
 		for (String p : c.parents())
 		{
 			FamilyNode pn = nodes.get(p);
 			if (pn != null && pn.parents().contains(name)) return -2;
 		}
+
 		// 兄弟姐妹：共享任一父母
 		for (String p : c.parents())
 		{
@@ -140,13 +143,13 @@ public class FamilyTreeRenderer
 		}
 
 		// 代差 -2 → +1 逐层往下
-		float y = 0.0F;
+		float posY = 0.0F;
 		for (int g = -2; g <= 1; g++)
 		{
 			List<String> layer = layers.get(g);
 			if (layer == null || layer.isEmpty())
 			{
-				y += NODE_H + LAYER_GAP_Y;
+				posY += NODE_H + LAYER_GAP_Y;
 				continue;
 			}
 
@@ -158,26 +161,23 @@ public class FamilyTreeRenderer
 				layer.add(0, centerName);
 			}
 
-			// 计算每节点宽度
-			float totalW = 0;
-			List<Float> widths = new ArrayList<>();
+			// 先量出整层宽度，再让整层相对中心居中
+			List<Float> sizeWs = new ArrayList<>();
+			float totalSizeW = NODE_GAP_X * (layer.size() - 1);
 			for (String name : layer)
 			{
-				float w = font.width(name) + 16.0F;
-				widths.add(w);
-				totalW += w;
+				float sizeW = font.width(name) + 16.0F;
+				sizeWs.add(sizeW);
+				totalSizeW += sizeW;
 			}
-			totalW += NODE_GAP_X * (layer.size() - 1);
 
-			float x = -totalW / 2.0F;
+			float posX = -totalSizeW / 2.0F;
 			for (int i = 0; i < layer.size(); i++)
 			{
-				String name = layer.get(i);
-				float w = widths.get(i);
-				rects.put(name, new Rect(x, y, w, NODE_H));
-				x += w + NODE_GAP_X;
+				rects.put(layer.get(i), new Rect(posX, posY, sizeWs.get(i), NODE_H));
+				posX += sizeWs.get(i) + NODE_GAP_X;
 			}
-			y += NODE_H + LAYER_GAP_Y;
+			posY += NODE_H + LAYER_GAP_Y;
 		}
 
 		// 连线：父子（竖线）+ 配偶（横线）
@@ -225,26 +225,26 @@ public class FamilyTreeRenderer
 		int screenHeight = Minecraft.getInstance().getWindow().getGuiScaledHeight();
 
 		// 整棵树包围盒
-		float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
-		float maxX = -Float.MAX_VALUE, maxY = -Float.MAX_VALUE;
+		float minPosX = Float.MAX_VALUE, minPosY = Float.MAX_VALUE;
+		float maxPosX = -Float.MAX_VALUE, maxPosY = -Float.MAX_VALUE;
 		for (Rect r : rects.values())
 		{
-			minX = Math.min(minX, r.x());
-			minY = Math.min(minY, r.y());
-			maxX = Math.max(maxX, r.x() + r.w());
-			maxY = Math.max(maxY, r.y() + r.h());
+			minPosX = Math.min(minPosX, r.posX());
+			minPosY = Math.min(minPosY, r.posY());
+			maxPosX = Math.max(maxPosX, r.posX() + r.sizeW());
+			maxPosY = Math.max(maxPosY, r.posY() + r.sizeH());
 		}
-		float treeSizeW = Math.max(1.0F, maxX - minX);
-		float treeSizeH = Math.max(1.0F, maxY - minY);
+		float treeSizeW = Math.max(1.0F, maxPosX - minPosX);
+		float treeSizeH = Math.max(1.0F, maxPosY - minPosY);
 
 		// 适配缩放：四周留 40px 边距；树小不放大（上限 1.0），树大完全缩小到能放下
 		float margin = 40.0F;
-		float fit = Math.min((screenWidth - margin * 2) / treeSizeW, (screenHeight - margin * 2) / treeSizeH);
-		zoom = Math.min(1.0F, fit);
+		zoom = Math.min(1.0F, Math.min((screenWidth - margin * 2) / treeSizeW,
+				(screenHeight - margin * 2) / treeSizeH));
 
 		// 整棵树居中
-		panX = screenWidth / 2.0F - (minX + treeSizeW / 2.0F) * zoom;
-		panY = screenHeight / 2.0F - (minY + treeSizeH / 2.0F) * zoom;
+		panX = screenWidth / 2.0F - (minPosX + treeSizeW / 2.0F) * zoom;
+		panY = screenHeight / 2.0F - (minPosY + treeSizeH / 2.0F) * zoom;
 	}
 
 	// 计算某节点的关系称谓（基于与中心节点的关系；layout 时预计算一次进 titles 缓存）
@@ -296,24 +296,23 @@ public class FamilyTreeRenderer
 			if (e.spouse())
 			{
 				// 配偶：水平线连接两节点中心
-				int ya = toScreenY(ra.y() + ra.h() / 2.0F);
-				int yb = toScreenY(rb.y() + rb.h() / 2.0F);
-				int ym = (ya + yb) / 2;
-				int xa = toScreenX(ra.x() + ra.w());
-				int xb = toScreenX(rb.x());
-				gfx.hLine(Math.min(xa, xb), Math.max(xa, xb), ym, 0xFF888888);
+				int midPosY = (toScreenY(ra.posY() + ra.sizeH() / 2.0F)
+						+ toScreenY(rb.posY() + rb.sizeH() / 2.0F)) / 2;
+				int fromPosX = toScreenX(ra.posX() + ra.sizeW());
+				int toPosX = toScreenX(rb.posX());
+				gfx.hLine(Math.min(fromPosX, toPosX), Math.max(fromPosX, toPosX), midPosY, 0xFF888888);
 			}
 			else
 			{
 				// 父子：父底部中心 → 子顶部中心（竖线折线）
-				int xa = toScreenX(ra.x() + ra.w() / 2.0F);
-				int ya = toScreenY(ra.y() + ra.h());
-				int xb = toScreenX(rb.x() + rb.w() / 2.0F);
-				int yb = toScreenY(rb.y());
-				int ym = (ya + yb) / 2;
-				gfx.vLine(xa, ya, ym, 0xFF888888);
-				gfx.hLine(Math.min(xa, xb), Math.max(xa, xb), ym, 0xFF888888);
-				gfx.vLine(xb, ym, yb, 0xFF888888);
+				int fromPosX = toScreenX(ra.posX() + ra.sizeW() / 2.0F);
+				int fromPosY = toScreenY(ra.posY() + ra.sizeH());
+				int toPosX = toScreenX(rb.posX() + rb.sizeW() / 2.0F);
+				int toPosY = toScreenY(rb.posY());
+				int midPosY = (fromPosY + toPosY) / 2;
+				gfx.vLine(fromPosX, fromPosY, midPosY, 0xFF888888);
+				gfx.hLine(Math.min(fromPosX, toPosX), Math.max(fromPosX, toPosX), midPosY, 0xFF888888);
+				gfx.vLine(toPosX, midPosY, toPosY, 0xFF888888);
 			}
 		}
 
@@ -327,10 +326,10 @@ public class FamilyTreeRenderer
 	// 绘制单个节点：男直角/女圆角，名字+称谓整体垂直居中、随 zoom 缩放
 	private void drawNode(GuiGraphics gfx, String name, Rect r)
 	{
-		int nodePosX = toScreenX(r.x());
-		int nodePosY = toScreenY(r.y());
-		int nodeSizeW = Math.max(1, Math.round(r.w() * zoom));
-		int nodeSizeH = Math.max(1, Math.round(r.h() * zoom));
+		int nodePosX = toScreenX(r.posX());
+		int nodePosY = toScreenY(r.posY());
+		int nodeSizeW = Math.max(1, Math.round(r.sizeW() * zoom));
+		int nodeSizeH = Math.max(1, Math.round(r.sizeH() * zoom));
 
 		FamilyNode n = nodes.get(name);
 		boolean male = !"female".equals(n == null ? "" : n.sex());
@@ -357,18 +356,17 @@ public class FamilyTreeRenderer
 
 		// 文字：同样从世界坐标 → 屏幕坐标（与框完全同源）
 		// 名字（正常字号，水平居中）
-		int nameSizeW = font.width(name);
-		float namePosX = nodePosX + (nodeSizeW - nameSizeW * zoom) / 2.0F;
+		float namePosX = nodePosX + (nodeSizeW - font.width(name) * zoom) / 2.0F;
+
 		// 内容总高 = 名字行高(9) + 称谓行高(0.7*9≈6.3)；垂直居中
-		float contentSizeH = 9.0F + (title.isEmpty() ? 0.0F : 6.3F);
-		float textPosY = nodePosY + Math.max(1.0F, (nodeSizeH - contentSizeH * zoom) / 2.0F);
+		float textPosY = nodePosY + Math.max(1.0F,
+				(nodeSizeH - (9.0F + (title.isEmpty() ? 0.0F : 6.3F)) * zoom) / 2.0F);
 		gfx.drawString(font, name, Math.round(namePosX), Math.round(textPosY), 0xFFFFFF);
 
 		// 称谓（0.7 倍小字号，水平居中）
 		if (!title.isEmpty())
 		{
-			float titleSizeW = font.width(title) * 0.7F * zoom;
-			float titlePosX = nodePosX + (nodeSizeW - titleSizeW) / 2.0F;
+			float titlePosX = nodePosX + (nodeSizeW - font.width(title) * 0.7F * zoom) / 2.0F;
 			gfx.pose().pushPose();
 			gfx.pose().translate(titlePosX, textPosY + 9.0F * zoom, 0.0F);
 			gfx.pose().scale(0.7F * zoom, 0.7F * zoom, 1.0F);
@@ -380,12 +378,13 @@ public class FamilyTreeRenderer
 	// 左键点击：命中节点 → 回调重居中；命中空白 → 复位视图
 	public boolean handleClick(double mousePosX, double mousePosY)
 	{
-		float wx = toWorldX(mousePosX);
-		float wy = toWorldY(mousePosY);
+		float worldPosX = toWorldX(mousePosX);
+		float worldPosY = toWorldY(mousePosY);
 		for (Map.Entry<String, Rect> e : rects.entrySet())
 		{
 			Rect r = e.getValue();
-			if (wx >= r.x() && wx <= r.x() + r.w() && wy >= r.y() && wy <= r.y() + r.h())
+			if (worldPosX >= r.posX() && worldPosX <= r.posX() + r.sizeW()
+					&& worldPosY >= r.posY() && worldPosY <= r.posY() + r.sizeH())
 			{
 				if (!e.getKey().equals(centerName))
 				{
@@ -418,12 +417,12 @@ public class FamilyTreeRenderer
 	}
 
 	// 画圆角矩形：用 gfx.fill 分块（中心 + 上下左右条 + 四角阶梯圆角），绝不产生畸形形状
-	private static void fillRoundRect(GuiGraphics gfx, float x1, float y1, float x2, float y2,
+	private static void fillRoundRect(GuiGraphics gfx, float posX1, float posY1, float posX2, float posY2,
 									  float radius, int color)
 	{
-		float r = Math.min(radius, Math.min((x2 - x1) / 2.0F, (y2 - y1) / 2.0F));
-		int ix1 = Math.round(x1), iy1 = Math.round(y1);
-		int ix2 = Math.round(x2), iy2 = Math.round(y2);
+		float r = Math.min(radius, Math.min((posX2 - posX1) / 2.0F, (posY2 - posY1) / 2.0F));
+		int ix1 = Math.round(posX1), iy1 = Math.round(posY1);
+		int ix2 = Math.round(posX2), iy2 = Math.round(posY2);
 		int ir = Math.max(1, Math.round(r));
 		if (ix2 - ix1 < ir * 2 || iy2 - iy1 < ir * 2)
 		{
@@ -433,26 +432,33 @@ public class FamilyTreeRenderer
 
 		// 中心矩形
 		gfx.fill(ix1 + ir, iy1, ix2 - ir, iy2, color);
+
 		// 左条 / 右条
 		gfx.fill(ix1, iy1 + ir, ix1 + ir, iy2 - ir, color);
 		gfx.fill(ix2 - ir, iy1 + ir, ix2, iy2 - ir, color);
+
 		// 上条 / 下条
 		gfx.fill(ix1 + ir, iy1, ix2 - ir, iy1 + ir, color);
 		gfx.fill(ix1 + ir, iy2 - ir, ix2 - ir, iy2, color);
+
 		// 四角：两级阶梯近似 1/4 圆弧
 		int s2 = (ir * 2) / 3, s1 = ir / 3;
+
 		// 左上
 		gfx.fill(ix1, iy1 + s2, ix1 + s1, iy1 + ir, color);
 		gfx.fill(ix1, iy1 + s1, ix1 + s2, iy1 + s2, color);
 		gfx.fill(ix1, iy1, ix1 + ir, iy1 + s1, color);
+
 		// 右上
 		gfx.fill(ix2 - s1, iy1 + s2, ix2, iy1 + ir, color);
 		gfx.fill(ix2 - s2, iy1 + s1, ix2 - s1, iy1 + s2, color);
 		gfx.fill(ix2 - ir, iy1, ix2, iy1 + s1, color);
+
 		// 左下
 		gfx.fill(ix1, iy2 - ir, ix1 + s1, iy2 - s2, color);
 		gfx.fill(ix1, iy2 - s2, ix1 + s2, iy2 - s1, color);
 		gfx.fill(ix1, iy2 - s1, ix1 + ir, iy2, color);
+
 		// 右下
 		gfx.fill(ix2 - s1, iy2 - ir, ix2, iy2 - s2, color);
 		gfx.fill(ix2 - s2, iy2 - s2, ix2 - s1, iy2 - s1, color);

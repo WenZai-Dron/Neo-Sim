@@ -25,6 +25,7 @@ public class WorkBoxPersistence
 
 	// 记录：盒子+绑定矩形快照+雇佣+游标/状态
 	public record WorkBoxRecord(
+
 			// 盒子名
 			String type,
 
@@ -464,6 +465,7 @@ public class WorkBoxPersistence
 			{
 				bound = false;
 			}
+
 			// 矩形与盒子相距过远：判定为篡改数据，退回未绑定（防远处区块强制加载卡服）
 			else if (bound && (Math.abs(rx1 - bx) > PROX_MARGIN || Math.abs(rx2 - bx) > PROX_MARGIN
 					|| Math.abs(rz1 - bz) > PROX_MARGIN || Math.abs(rz2 - bz) > PROX_MARGIN

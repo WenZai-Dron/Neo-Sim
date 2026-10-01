@@ -17,8 +17,8 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-// 界面个人设置：HUD 外观 + 世界投影外观，一人一份文件 NeoSim/Json/ui/<玩家名>.json。
-// 纯客户端：联机时服务器那份文件不参与；字段级容错，缺失/类型错的字段一律回落默认值。
+// 界面个人设置：HUD 外观 + 世界投影外观，一人一份文件 NeoSim/Json/ui/<玩家名>.json
+// 纯客户端：联机时服务器那份文件不参与；字段级容错，缺失/类型错的字段一律回落默认值
 @OnlyIn(Dist.CLIENT)
 public final class UiSettings
 {
@@ -94,7 +94,7 @@ public final class UiSettings
 		return "NeoSim/Json/" + CATEGORY + "/" + fileName() + ".json";
 	}
 
-	// 两段设置各自的"本地有未保存改动"标记。
+	// 两段设置各自的"本地有未保存改动"标记
 	// 保存 / 重载是按段落做的：只覆盖被操作的那一段，另一段留在内存里的未保存改动不会被
 	// mtime 轮询的自动重载悄悄冲掉（否则"在 HUD 页保存一下"就能吃掉投影页刚调好的颜色）
 	private static boolean hudDirty;
@@ -497,6 +497,7 @@ public final class UiSettings
 			o.addProperty("lineSpacing", lineSpacing);
 			o.addProperty("multiLine", multiLine);
 			o.addProperty("separator", separator);
+
 			// 带透明度的文字颜色写成 #AARRGGBB：否则每次保存都会把玩家手写的 alpha 悄悄抹掉
 			o.addProperty("color", (color >>> 24) == 0xFF ? rgbHex(color) : argbHex(color));
 			o.addProperty("shadow", shadow);

@@ -61,6 +61,7 @@ public class SchematicPreviewManager
 		}
 
 		this.constructorPos = constructorPos;
+
 		// state 是单例字段，跨蓝图复用：不清掉上一次预览残留的旋转/镜像，新预览会一直带着转
 		state.setRotation(Rotation.NONE);
 		state.setMirror(Mirror.NONE);

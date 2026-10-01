@@ -7,6 +7,7 @@ import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ChestBlock;
@@ -21,6 +22,8 @@ import net.minecraft.world.level.block.state.properties.DoorHingeSide;
 import net.minecraft.world.level.block.state.properties.DoubleBlockHalf;
 import net.minecraft.world.level.block.state.properties.Property;
 import org.slf4j.Logger;
+
+import java.util.function.Function;
 
 import javax.annotation.Nullable;
 
@@ -104,10 +107,23 @@ public final class PlacementSupport
 	// 连接性方块：放置时逐个方向按实际相邻方块重算连接，避免蓝图的连接臂指向空气
 	public static BlockState fixConnectiveConnections(ServerLevel level, BlockPos pos, BlockState state)
 	{
+		return connect(level, pos, state, neighborPos -> PhysicsWorld.getBlockState(level, neighborPos));
+	}
+
+	// 连接性方块：同一套重算规则，供拿不到 ServerLevel 的调用方（GUI 缩略图、世界幽灵预览）
+	// 用方块视图当世界取邻居，避免"预览里断开、建出来连着"
+	public static BlockState fixConnectiveConnections(LevelAccessor level, BlockPos pos, BlockState state)
+	{
+		return connect(level, pos, state, level::getBlockState);
+	}
+
+	private static BlockState connect(LevelAccessor level, BlockPos pos, BlockState state,
+									  Function<BlockPos, BlockState> neighborAt)
+	{
 		for (Direction dir : Direction.values())
 		{
 			BlockPos neighborPos = pos.relative(dir);
-			state = state.updateShape(dir, PhysicsWorld.getBlockState(level, neighborPos), level, pos, neighborPos);
+			state = state.updateShape(dir, neighborAt.apply(neighborPos), level, pos, neighborPos);
 		}
 		return state;
 	}

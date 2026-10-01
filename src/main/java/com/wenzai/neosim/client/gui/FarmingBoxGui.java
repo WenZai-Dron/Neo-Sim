@@ -105,6 +105,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		Minecraft mc = Minecraft.getInstance();
 		this.task = (mc != null && mc.hasSingleplayerServer())
 				? WorkPlotEngine.findTask(boxPos) : null;
+
 		// 任务/记录变化 → worker 等级缓存失效
 		cachedWorkerKey = "";
 		cachedWorkerLevel = -1;
@@ -199,6 +200,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			addButton(998, centerPosX - 50, height - 25, 100, 20,
 					Component.translatable(P + "apply"),
 					b -> applyCrops());
+
 			// 使用骨粉开关：确认按钮右侧（带图标）
 			addUseBoneMealCheckbox(centerPosX + 56, height - 25);
 
@@ -212,6 +214,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 				addCropCheckbox(left, rowPosY, t);
 				rowPosY += 24;
 			}
+
 			// 模组作物列：自动检测的可种植作物（排除需水条目，如 FD 水稻）；防超屏最多 8 行
 			int modRows = 0;
 			for (CropEntry e : CropRegistry.plantable())
@@ -662,6 +665,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			gfx.renderItem(cropIcon(t), left + 30 + font.width(label) + 4, rowPosY + 2, 16);
 			rowPosY += 24;
 		}
+
 		// 模组作物图标：与复选框同列同节奏（种子物品图标）
 		for (CropEntry e : CropRegistry.plantable())
 		{
@@ -669,6 +673,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 			gfx.renderItem(icon, left + 30 + font.width(icon.getHoverName()) + 4, rowPosY + 2, 16);
 			rowPosY += 24;
 		}
+
 		// 使用骨粉图标：确认按钮右侧，与复选框对齐
 		{
 			Component label = Component.translatable(P + "useBoneMeal");
@@ -735,6 +740,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		if (task != null) return (int) task.getJobLevel();
 		String worker = record != null && record.worker() != null ? record.worker() : "";
 		if (worker.isEmpty()) return 1;
+
 		// 同一 worker 的等级缓存（reload/refreshTask 时失效），避免每帧读 JSON
 		if (worker.equals(cachedWorkerKey) && cachedWorkerLevel >= 0) return cachedWorkerLevel;
 		try
@@ -778,6 +784,7 @@ public class FarmingBoxGui extends Screen implements HireListPanel.HostScreen
 		{
 			st = PlotTask.PlotState.IDLE;
 		}
+
 		// 林业专属：仅林业模式下，田间作业显示「伐木中」，缺树苗显示「缺少树苗」
 		if (isForestryMode() && !hasCrops()
 				&& (st == PlotTask.PlotState.HARVEST || st == PlotTask.PlotState.TILL || st == PlotTask.PlotState.PLANT))

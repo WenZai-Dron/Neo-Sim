@@ -13,10 +13,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-// 服务端权威的"玩家 → 城市"会话表。
-// 替代全局静态 activeCityName 的多人语义：每个玩家独立属于一个城市；
-// 城市只在有玩家在线时演化（LifeSystem 遍历 onlineCities）。
-// 模式为全服全局（立项基线 0.1），不按城市存储。
+// 服务端权威的"玩家 → 城市"会话表
+// 替代全局静态 activeCityName 的多人语义：每个玩家独立属于一个城市
+// 城市只在有玩家在线时演化（LifeSystem 遍历 onlineCities）
+// 模式为全服全局（立项基线 0.1），不按城市存储
 public final class CityManager
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

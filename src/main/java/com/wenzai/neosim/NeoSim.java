@@ -58,8 +58,8 @@ public class NeoSim
 	// 内容表热重载计时（每 100 tick 检查一次 NeoSim/Json/）
 	private int contentCheckTimer = 0;
 
-	// 模组类的构造方法是模组加载时最先运行的代码。
-	// FML 会识别一些参数类型（如 IEventBus 或 ModContainer）并自动传入。
+	// 模组类的构造方法是模组加载时最先运行的代码
+	// FML 会识别一些参数类型（如 IEventBus 或 ModContainer）并自动传入
 	public NeoSim(IEventBus modEventBus, ModContainer modContainer)
 	{
 		// 注册用于模组加载的 commonSetup 方法
@@ -68,7 +68,6 @@ public class NeoSim
 		// 注册物理模组适配器（Sable 等）：仅加载已安装模组的适配器，保持零硬依赖
 		PhysicsAdapterRegistry.init();
 
-		// 此处进行注册
 		ModItems.register(modEventBus);
 		ModBlocks.register(modEventBus);
 		Entity.register(modEventBus);
@@ -77,7 +76,7 @@ public class NeoSim
 		// 注册实体属性
 		modEventBus.addListener(this::registerEntityAttributes);
 
-		// 将自身注册到服务器及其他感兴趣的游戏事件。
+		// 将自身注册到服务器及其他感兴趣的游戏事件
 		NeoForge.EVENT_BUS.register(this);
 
 		// 注册命令
@@ -150,9 +149,9 @@ public class NeoSim
 		}
 
 		// 强制向导：每次加入都按"需求是否满足"判断，不依赖"是否已显示过"——
-		// 修复重进存档时 runGuiSent/joinedPlayers 已置位而跳过 GUI 的问题。
+		// 修复重进存档时 runGuiSent/joinedPlayers 已置位而跳过 GUI 的问题
 		// ① 游玩模式（全服全局）必须先选择：mode==0（未选）→ 打开 Run；
-		// ② 玩家必须先入城：已选模式但会话无城市 → 打开 City。
+		// ② 玩家必须先入城：已选模式但会话无城市 → 打开 City
 		if (data.getMode() == 0)
 		{
 			PacketDistributor.sendToPlayer(player, new ServerToClientPayloads.OpenGuiPayload(ServerToClientPayloads.OpenGuiPayload.GuiType.RUN));
@@ -191,6 +190,7 @@ public class NeoSim
 					}
 				}
 			}
+
 			// 会话清理（玩家→城市表）
 			CityManager.onPlayerLogout(playerUUID);
 			NeoSim.LOGGER.debug("NeoSim-onPlayerLogout: cleaned up GUI refs for player={}", playerUUID);
@@ -267,6 +267,7 @@ public class NeoSim
 		{
 			ModSavedData data = ModSavedData.get(level);
 			data.incrementDay(level);
+
 			// 生活系统每日结算入口（Phase 5+）
 			LifeSystem.onDayStart(level, data.getDayOfWeek());
 			level.setDayTime(0);
@@ -471,10 +472,10 @@ public class NeoSim
 
 	private void commonSetup(FMLCommonSetupEvent event)
 	{
-		LOGGER.info("TOML: initialCredit={}", Config.INITIAL_CREDIT.get());
-		LOGGER.info("maxPopulation={}", Config.MAX_POPULATION.get());
+		LOGGER.info("NeoSim-Config: initialCredit={}", Config.INITIAL_CREDIT.get());
+		LOGGER.info("NeoSim-Config: maxPopulation={}", Config.MAX_POPULATION.get());
 
-		LOGGER.info("npcAgeRange=[{}, {}]", Config.NPC_MIN_AGE.get(), Config.NPC_MAX_AGE.get());
+		LOGGER.info("NeoSim-Config: npcAgeRange=[{}, {}]", Config.NPC_MIN_AGE.get(), Config.NPC_MAX_AGE.get());
 	}
 
 	// 将示例方块物品添加到建筑方块标签页
@@ -488,13 +489,9 @@ public class NeoSim
 		event.put(Entity.NPC.get(), Entity.createAttributes().build());
 	}
 
-	// 你可以使用 SubscribeEvent，让事件总线自动发现要调用的方法
 	@SubscribeEvent
 	public void onServerStarting(ServerStartingEvent event)
 	{
-		// 在服务器启动时执行一些操作
-		LOGGER.info("HELLO from server starting");
-
 		// 预热模组作物注册表（懒加载扫描放启动时，避免首个农业盒放置时卡顿）
 		com.wenzai.neosim.compat.crops.CropRegistry.all();
 
@@ -523,14 +520,19 @@ public class NeoSim
 		MarkerManager.clear();
 		CityManager.clear();
 		com.wenzai.neosim.npc.NpcRegistry.clear();
-		// L1：工人分配静态表跨存档/跨会话残留 → 统一 clear
+
+		// 工人分配静态表跨存档/跨会话残留 → 统一 clear
 		WORKER_MAP.clear();
-		// L2：临产目标缓存跨存档残留 → 统一 clear
+
+		// 临产目标缓存跨存档残留 → 统一 clear
 		com.wenzai.neosim.life.ReproductionSystem.clearAllBirthTargets();
+
 		// 客户端语言上报缓存跨存档残留 → 统一 clear
 		com.wenzai.neosim.npc.PlayerLocales.clear();
-		// L3：单例持 ServerLevel，关档后钉住旧世界 → 置空
+
+		// 单例持 ServerLevel，关档后钉住旧世界 → 置空
 		com.wenzai.neosim.storage.ModSavedData.resetInstance();
+
 		// player.json 成员缓存跨存档残留 → 清空
 		com.wenzai.neosim.storage.FileCreater.clearPlayerCache();
 

@@ -159,7 +159,7 @@ public class FarmTask extends PlotTask
 	// 畜牧整轮动作节流计数（20 tick 才整轮处理一次，中间 tick 直接让位）
 	private int herdTimer;
 
-	// C8：本轮「可选作物/树苗」缓存（refreshChests 时失效；整田扫描/逐格判断时只算一次，避免每格每物种 countItems 扫箱子）
+	// 本轮「可选作物/树苗」缓存（refreshChests 时失效；整田扫描/逐格判断时只算一次，避免每格每物种 countItems 扫箱子）
 	private Plantable cachedPlantable;
 	private boolean plantableComputed;
 	private TreeType cachedTreePlantable;
@@ -169,16 +169,19 @@ public class FarmTask extends PlotTask
 	private boolean boneMealComputed;
 	private boolean boneMealAvailable;
 
-	// L10：游标原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
+	// 游标原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
 	private int cursorRow;
 	private int cursorCol;
 
 	// 林业：树苗 6 步格位（两树苗之间空 5 格，树冠 5×5 留 1 格余量）
 	private static final int TREE_STEP = 6;
+
 	// 砍树：单棵树 BFS 连通原木上限（防误扫连片森林）
 	private static final int CHOP_LOG_LIMIT = 64;
-	// C7：创造模式每 tick 方块动作预算上限（对齐性能文档 4 块/tick）
+
+	// 创造模式每 tick 方块动作预算上限（对齐性能文档 4 块/tick）
 	private static final int CREATIVE_BLOCK_BUDGET = 4;
+
 	// 砍树：每 tick 处理的方块数上限
 	private static final int CHOP_BATCH = 12;
 
@@ -209,12 +212,13 @@ public class FarmTask extends PlotTask
 		this.useBoneMeal = parseUseBoneMeal(record.farmType());
 		this.livestockTypes = parseLivestockTypes(record.farmType());
 		this.forestryTypes = parseForestryTypes(record.farmType());
-		// L10：游标改为任务内原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
+
+		// 游标改为任务内原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
 		this.cursorRow = record.row();
 		this.cursorCol = record.col();
 	}
 
-	// L10：持久化前把游标同步进 record
+	// 持久化前把游标同步进 record
 	@Override
 	protected void updateRecord()
 	{
@@ -661,6 +665,7 @@ public class FarmTask extends PlotTask
 	{
 		if (hasCrops()) ensureFieldWater();
 		refreshChests();
+
 		// 空轮节流：上一整轮无动作时，10 tick 内不重扫（不烧延迟、不做无谓扫描）
 		if (!fieldBusy && idleRescanTicks > 0 && idleRescanTicks < IDLE_RESCAN_INTERVAL)
 		{
@@ -674,11 +679,13 @@ public class FarmTask extends PlotTask
 		{
 			// C6b：跳过循环每 tick 上限
 			if (++scanned > MAX_SCAN_PER_TICK) return;
+
 			// 砍树队列未清空：继续处理（先于游标扫描）
 			if (!chopLogs.isEmpty() || !chopLeaves.isEmpty())
 			{
 				long now = System.currentTimeMillis();
 				if (animateHand(now)) return;
+
 				// 本 tick 只处理一批：还有剩余就结束本 tick，队列清空则重新取当前格
 				if (processChopBatch()) return;
 				continue;
@@ -901,6 +908,7 @@ public class FarmTask extends PlotTask
 				}
 			}
 		}
+
 		// 树冠树叶：以原木包围盒 XZ±4、Y 向上扩 8 收集选中树种树叶（上限 256）
 		Block leavesBlock = leavesOf(treeTypeOf(logBlock));
 		if (leavesBlock != null)
@@ -935,7 +943,7 @@ public class FarmTask extends PlotTask
 	// 处理一批砍树方块（先原木后树叶）；返回是否仍有剩余
 	private boolean processChopBatch()
 	{
-		// C7：创造模式每 tick 动作预算上限（4 块），避免砍树 12 块/tick 的 setBlock 风暴
+		// 创造模式每 tick 动作预算上限（4 块），避免砍树 12 块/tick 的 setBlock 风暴
 		int budget = currentMode() == 2 ? Math.min(CHOP_BATCH, CREATIVE_BLOCK_BUDGET) : CHOP_BATCH;
 		int done = 0;
 		while (done < budget)
@@ -1001,6 +1009,7 @@ public class FarmTask extends PlotTask
 		{
 			List<Animal> animals = penAnimals(t);
 			int adults = adultCount(animals);
+
 			// 待办判定：成畜超上限需屠宰；不足 2 只需补种（免费，不算缺料）
 			if (adults > Config.WORK_FARM_MAX_ADULTS.get()) return true;
 			if (adults < 2) return true;
@@ -1030,6 +1039,7 @@ public class FarmTask extends PlotTask
 				if (cellOutsideBuildHeight(pos)) continue;
 				BlockState bs = level.getBlockState(pos);
 				BlockState below = level.getBlockState(pos.below());
+
 				// 该格作业判定：有树可砍 / 有成熟作物 / 有杂物可清
 				if (isSelectedLog(bs)) return true;
 				if (bs.getBlock() instanceof CropBlock cb
@@ -1125,6 +1135,7 @@ public class FarmTask extends PlotTask
 	private void doLivestock()
 	{
 		refreshChests();
+
 		// 本轮物种实体缓存重建（每 tick 每物种只扫一次）
 		penCache.clear();
 		if (++herdTimer >= 20)
@@ -1135,6 +1146,7 @@ public class FarmTask extends PlotTask
 				herdAnimals(t);
 			}
 		}
+
 		// 先查后等：本轮无活立即让位，不烧动作延迟
 		if (!livestockHasWork())
 		{
@@ -1461,7 +1473,7 @@ public class FarmTask extends PlotTask
 		return new BlockPos(record.rx1() + insetX() + col, record.ry(), record.rz1() + insetZ() + row);
 	}
 
-	// 游标前进：走完一整轮返回true（L10：操作 int 字段，record 仅持久化时同步）
+	// 游标前进：走完一整轮返回true（操作 int 字段，record 仅持久化时同步）
 	private boolean advanceCursor()
 	{
 		int col = cursorCol + 1;
@@ -1486,7 +1498,8 @@ public class FarmTask extends PlotTask
 	private void refreshChests()
 	{
 		nearbyChests = InventoryManager.findNearbyChests(level, boxPos());
-		// C8：箱子内容可能变化 → 作物/树苗/骨粉缓存失效（下轮扫描重算一次）
+
+		// 箱子内容可能变化 → 作物/树苗/骨粉缓存失效（下轮扫描重算一次）
 		plantableComputed = false;
 		treePlantableComputed = false;
 		boneMealComputed = false;
@@ -1506,11 +1519,11 @@ public class FarmTask extends PlotTask
 		return false;
 	}
 
-	// 选中作物按种植游标轮转，取箱子里有种子的，全缺返回null（创造模式免种子）。
-	// 原版枚举与模组作物统一轮转；模组作物排除需水条目（如水稻）。
+	// 选中作物按种植游标轮转，取箱子里有种子的，全缺返回null（创造模式免种子）
+	// 原版枚举与模组作物统一轮转；模组作物排除需水条目（如水稻）
 	private Plantable pickPlantable()
 	{
-		// C8：本轮缓存一次（refreshChests 时失效），整田扫描/逐格判断不再每格每物种扫箱子
+		// 本轮缓存一次（refreshChests 时失效），整田扫描/逐格判断不再每格每物种扫箱子
 		if (plantableComputed) return cachedPlantable;
 		plantableComputed = true;
 		cachedPlantable = null;
@@ -1572,7 +1585,7 @@ public class FarmTask extends PlotTask
 	// 取箱子里有树苗的选中树种（创造模式免树苗；按 treePlantIndex 轮转，多树种轮流种植）
 	private TreeType pickPlantableTree()
 	{
-		// C8：本轮缓存一次（refreshChests 时失效），整田扫描不再每格每物种扫箱子
+		// 本轮缓存一次（refreshChests 时失效），整田扫描不再每格每物种扫箱子
 		if (treePlantableComputed) return cachedTreePlantable;
 		treePlantableComputed = true;
 		cachedTreePlantable = null;

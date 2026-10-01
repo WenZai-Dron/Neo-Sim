@@ -31,7 +31,8 @@ public class BlockIdMapping
 	public static final BlockState UNKNOWN_BLOCK = Blocks.STRUCTURE_VOID.defaultBlockState();
 
 	private final Map<String, BlockState> mapping = new HashMap<>();
-	// L19：整数键 (id<<8)|meta → BlockState（构建时一次性转换，运行期免字符串拼接查表）
+
+	// 整数键 (id<<8)|meta → BlockState（构建时一次性转换，运行期免字符串拼接查表）
 	private final Map<Integer, BlockState> intMapping = new HashMap<>();
 
 	public BlockIdMapping()
@@ -123,7 +124,7 @@ public class BlockIdMapping
 	@Nullable
 	public BlockState convert(int blockId, int meta)
 	{
-		// L19：整数键查表，免每格字符串拼接
+		// 整数键查表，免每格字符串拼接
 		BlockState state = intMapping.get((blockId << 8) | meta);
 		if (state != null)
 		{
@@ -172,6 +173,7 @@ public class BlockIdMapping
 		}
 
 		ResourceLocation rl = ResourceLocation.parse(blockName);
+
 		// 注意：BuiltInRegistries.BLOCK 是带默认值的注册表，get() 对不存在的 id 返回 air 而不是 null，
 		// 所以必须用 containsKey 判断：否则「名字改了/写错了」的映射条目会**静默变成空气**，
 		// 加载 500 多条的表时一声不响（1.21.1 把 grass_path 改名成 dirt_path 就是这么丢的）

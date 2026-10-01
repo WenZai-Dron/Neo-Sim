@@ -24,6 +24,7 @@ public class TerraformPersistence
 
 	// 记录：模盒 + 地块快照 + 方案 + 雇佣 + 游标/状态
 	public record TerraformRecord(
+
 			// 模盒位置
 			int bx, int by, int bz,
 
@@ -297,6 +298,7 @@ public class TerraformPersistence
 				LOGGER.warn("NeoSim-TerraformPersistence: bad plan '{}' at {}, drop record", plan, boxPos);
 				return null;
 			}
+
 			// 矩形与模盒相距过远：判定为篡改数据，丢弃（防远处区块强制加载卡服）
 			if (Math.abs(minX - bx) > PROX_MARGIN || Math.abs(maxX - bx) > PROX_MARGIN
 					|| Math.abs(minZ - bz) > PROX_MARGIN || Math.abs(maxZ - bz) > PROX_MARGIN

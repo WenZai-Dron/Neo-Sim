@@ -356,7 +356,7 @@ public class ConstructionTask
 		Map<BlockPos, SpecialMarker> specialMarkers = schematic.getSpecialMarkers();
 		BlockPos.MutableBlockPos markerScanPos = new BlockPos.MutableBlockPos();
 
-		// C6：建造 flag 按模式降级（创造模式不触发全量光照/邻居更新）
+		// 建造 flag 按模式降级（创造模式不触发全量光照/邻居更新）
 		// 放置后触发完整方块更新（邻居更新/形状传播/onPlace），保证模组方块（机械连接、红石等）正确联动
 		int placeFlags = Block.UPDATE_ALL;
 
@@ -496,7 +496,7 @@ public class ConstructionTask
 				extractMaterial(item);
 			}
 
-			// 渲染NPC手持要放置的方块（C6：仅物品变化时更新，避免每块触发装备同步）
+			// 渲染NPC手持要放置的方块（仅物品变化时更新，避免每块触发装备同步）
 			resolveBuilderNpc();
 			if (builderNpc != null)
 			{
@@ -531,7 +531,7 @@ public class ConstructionTask
 						findAdjacentBedCellWorld(width, layer, depth, container, sx, sz));
 			}
 
-			// 放置音效（C6：创造模式静音，普通模式随机音高防单调）
+			// 放置音效（创造模式静音，普通模式随机音高防单调）
 			if (currentMode() != 2)
 			{
 				level.playSound(null, worldPos,
@@ -1210,7 +1210,7 @@ public class ConstructionTask
 		}
 	}
 
-	// 按模盒坐标找雇佣的NPC实体（C1：名字索引 O(1)）
+	// 按模盒坐标找雇佣的NPC实体（名字索引 O(1)）
 	private void resolveBuilderNpc()
 	{
 		if (builderNpc != null && builderNpc.isAlive()) return;

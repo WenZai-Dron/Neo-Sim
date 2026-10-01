@@ -19,10 +19,10 @@ import java.util.Locale;
 
 import javax.annotation.Nullable;
 
-// 蓝图格式转换（城市信息 GUI 的「转换」页）。
+// 蓝图格式转换（城市信息 GUI 的「转换」页）
 // 只管一个目录：<gamedir>/NeoSim/Buildings 下的 .txt；旁边已经有同名 .litematic 的（= 转换过的）
-// 不再列出，所以转完一份就从列表里消失，不会重复转。
-// 页面结构跟配置页一样：路径行 / 状态行 / 列表 / 作者框 / 底部两行按钮，右下角留给「关闭」按钮。
+// 不再列出，所以转完一份就从列表里消失，不会重复转
+// 页面结构跟配置页一样：路径行 / 状态行 / 列表 / 作者框 / 底部两行按钮，右下角留给「关闭」按钮
 public class ConvertPanel
 {
 	private static final String P = "gui.neosim.cityinfo.convert.";
@@ -78,8 +78,8 @@ public class ConvertPanel
 		this.building = false;
 	}
 
-	// 每次重建都重扫目录：文件是外部增删的，扫描很便宜（每份只读两行）。
-	// 选中项按文件名找回，所以翻页/重建不会丢选中。
+	// 每次重建都重扫目录：文件是外部增删的，扫描很便宜（每份只读两行）
+	// 选中项按文件名找回，所以翻页/重建不会丢选中
 	private void rescan()
 	{
 		String previous = selectedSource() != null ? selectedSource().file().getFileName().toString() : null;
@@ -99,6 +99,7 @@ public class ConvertPanel
 				}
 			}
 		}
+
 		// 选中的文件已经转换掉/被删掉：作者框跟着收起来
 		if (selected < 0) authorDraft = "";
 
@@ -126,6 +127,7 @@ public class ConvertPanel
 			Button row = Button.builder(rowLabel(source), b ->
 					{
 						selected = index;
+
 						// 换选中：作者框跟着换成该文件自己的 AU（没有则玩家名）
 						authorDraft = prefillAuthor(source);
 						host.rebuild();

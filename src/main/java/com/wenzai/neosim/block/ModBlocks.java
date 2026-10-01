@@ -17,7 +17,6 @@ public class ModBlocks
 	public static final DeferredRegister.Blocks BLOCKS =
 			DeferredRegister.createBlocks(NeoSim.MOD_ID);
 
-	// 此处注册方块
 	public static final DeferredBlock<Block> BUILDING_CONSTRUCTOR =
 			registerBlocks("building_constructor", () -> new BuildingConstructor(BlockBehaviour.Properties.of().strength(0.5F)));
 	public static final DeferredBlock<Block> CONTROL_BOX =
@@ -34,7 +33,7 @@ public class ModBlocks
 			registerBlocks("delivery_box", () -> new DeliveryBox(BlockBehaviour.Properties.of().strength(0.5F)));
 	public static final DeferredBlock<Block> REBUILD_BOX =
 			registerBlocks("rebuild_box", () -> new RebuildBox(BlockBehaviour.Properties.of().strength(0.5F)));
-	
+
 	// 生活点：可被替换（作者随手覆盖）、无碰撞（放站立点不挡路）、瞬破（易移除）、不掉落、不遮挡
 	public static final DeferredBlock<Block> LIVING_POINT =
 			registerBlocks("living_point", () -> new Block(BlockBehaviour.Properties.of()

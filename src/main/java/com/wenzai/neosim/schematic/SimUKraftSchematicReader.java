@@ -107,7 +107,7 @@ public class SimUKraftSchematicReader implements ISchematicReader
 					+ " layers, got " + (lines.size() - 2) + " in " + filePath);
 		}
 
-		// L17：先预扫各层建立最终 palette，再按最终 bits 一次性分配存储，避免 set 过程中 palette 跳档反复整容器重拷
+		// 先预扫各层建立最终 palette，再按最终 bits 一次性分配存储，避免 set 过程中 palette 跳档反复整容器重拷
 		int expectedLen = sizeX * sizeZ;
 		List<String> layerLines = new ArrayList<>();
 		for (int y = 0; y < sizeY; y++)
@@ -211,7 +211,7 @@ public class SimUKraftSchematicReader implements ISchematicReader
 				.build();
 	}
 
-	// 从第 2 行字符映射里取 AU=<作者>；没有则返回 null。
+	// 从第 2 行字符映射里取 AU=<作者>；没有则返回 null
 	// 抽成静态方法是因为蓝图库列表页只读头两行就能显示作者，不必整份解析
 	@Nullable
 	public static String parseAuthorFromMapLine(String mapLine)
@@ -230,7 +230,7 @@ public class SimUKraftSchematicReader implements ISchematicReader
 		return null;
 	}
 
-	// 旧版把作者写成序列化列表：AU=["Connie"]、AU=["a","b"]。
+	// 旧版把作者写成序列化列表：AU=["Connie"]、AU=["a","b"]
 	// 取第一个名字并去掉方括号和引号，否则蓝图库里会显示成 ["Connie"]
 	public static String cleanAuthorValue(String raw)
 	{

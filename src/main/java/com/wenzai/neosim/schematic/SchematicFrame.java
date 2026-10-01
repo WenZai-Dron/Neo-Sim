@@ -9,12 +9,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import javax.annotation.Nullable;
 
 // 蓝图坐标系算法：一种蓝图格式对应一套，位置和方块状态共用同一个函数，
-// 避免"位置转过去了、朝向没转"这类口径不一致。
+// 避免"位置转过去了、朝向没转"这类口径不一致
 public enum SchematicFrame
 {
 	// Sim-U-Kraft 旧版 .txt：数据在作者上传时的蓝图帧里，
 	// 必须走 Suk 的 buildDirection 映射（已与 0.12.1 原版源码逐行核对一致）
 	SUKRAFT,
+
 	// 世界坐标帧：.litematic 等（投影是照世界导出的）
 	WORLD;
 
@@ -24,8 +25,9 @@ public enum SchematicFrame
 	// 基准角 = 朝南放置时相对"保存时的朝向"把蓝图转几次：
 	// NONE=不转、CLOCKWISE_90=转 1 次、CLOCKWISE_180=转 2 次、COUNTERCLOCKWISE_90=转 3 次
 	// 现在选「转 3 次」（270°）。注意：转 1 次时落点才会和同名 .txt 完全重合；
-	// 转 2/3 次会把投影甩到 origin 的另一侧（和 .txt 不重叠，可能把模盒圈进地基）。
+	// 转 2/3 次会把投影甩到 origin 的另一侧（和 .txt 不重叠，可能把模盒圈进地基）
 	private static final Rotation LITEMATIC_BASE = Rotation.COUNTERCLOCKWISE_90;
+
 	// 是否跟随玩家面朝方向：真 = 南按基准角、东=基准+90°、西=基准-90°、北=基准+180°
 	private static final boolean LITEMATIC_FOLLOW_FACING = true;
 
@@ -34,7 +36,7 @@ public enum SchematicFrame
 	// .txt 的数据本来就存在「作者帧」里（作者上传时那一帧），缩略图照原样画才对；
 	// .litematic 的数据是照世界坐标导出的，照原样画会和 .txt 蓝图库差 90° + 镜像，
 	// 所以缩略图先把它转进 .txt 那套蓝图帧（四套映射本身就是"转 N 次 + 镜像"）：
-	// NORTH=转 0 次、EAST=转 1 次、SOUTH=转 2 次、WEST=转 3 次，各自都带那一次镜像。
+	// NORTH=转 0 次、EAST=转 1 次、SOUTH=转 2 次、WEST=转 3 次，各自都带那一次镜像
 	// 现在是「转 3 次 + 镜像」，和世界那边同一个转数（世界那边是转 3 次、不带镜像）
 	private static final Direction BLUEPRINT_VIEW = Direction.WEST;
 
@@ -79,8 +81,8 @@ public enum SchematicFrame
 
 	// 落点对齐（只给世界帧用）：把"映射 + 玩家镜像/旋转"之后的整块区域平移到模盒外侧那一象限，
 	// 规则和 .txt 天生做出来的落点一致 —— 南：区域在 origin 的 x 小/z 大侧，北：x 大/z 小，
-	// 东：x 小/z 小，西：x 大/z 大（也就是把这张象限里"最贴 origin"的那个包围盒角钉在 origin 上）。
-	// 这样不管基准角转了几次、玩家又按了几次 R，投影都落在模盒前方那一侧，不会把模盒圈进地基。
+	// 东：x 小/z 小，西：x 大/z 大（也就是把这张象限里"最贴 origin"的那个包围盒角钉在 origin 上）
+	// 这样不管基准角转了几次、玩家又按了几次 R，投影都落在模盒前方那一侧，不会把模盒圈进地基
 	public BlockPos landingOffset(int sizeX, int sizeZ, @Nullable Direction facing,
 								Mirror mirror, Rotation rotation)
 	{
@@ -99,6 +101,7 @@ public enum SchematicFrame
 			}
 		}
 		Direction f = facing == null ? Direction.SOUTH : facing;
+
 		// 南/西 把 x 大的那个角贴 origin；北/西 把 z 大的那个角贴 origin
 		boolean anchorMaxX = f == Direction.SOUTH || f == Direction.WEST;
 		boolean anchorMaxZ = f == Direction.NORTH || f == Direction.WEST;

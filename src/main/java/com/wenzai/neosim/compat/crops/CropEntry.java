@@ -5,8 +5,8 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 
-// 可种植作物条目：种子 → 种下后方块（可能非 CropBlock，如 FD 番茄幼苗/水稻）。
-// matureBlock 仅在两阶段作物（幼苗 → 成株）时与 plantBlock 不同，其余情况等于 plantBlock。
+// 可种植作物条目：种子 → 种下后方块（可能非 CropBlock，如 FD 番茄幼苗/水稻）
+// matureBlock 仅在两阶段作物（幼苗 → 成株）时与 plantBlock 不同，其余情况等于 plantBlock
 public record CropEntry(
 		Item seed,
 		Block plantBlock,

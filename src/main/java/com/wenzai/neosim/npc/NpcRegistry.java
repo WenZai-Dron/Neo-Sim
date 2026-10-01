@@ -4,9 +4,9 @@ import java.util.*;
 
 import javax.annotation.Nullable;
 
-// NPC索引：名字→已加载实体、城市→已加载实体集合。
-// 在 Entity.onAddedToWorld/onRemovedFromWorld 维护（见 Entity），改名时重挂键。
-// 仅服务端使用（客户端实体不注册），服务器主线程访问，无需加锁。
+// NPC索引：名字→已加载实体、城市→已加载实体集合
+// 在 Entity.onAddedToWorld/onRemovedFromWorld 维护（见 Entity），改名时重挂键
+// 仅服务端使用（客户端实体不注册），服务器主线程访问，无需加锁
 public final class NpcRegistry
 {
 	private static final Map<String, Entity> BY_NAME = new HashMap<>();

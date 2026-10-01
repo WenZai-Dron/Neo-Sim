@@ -60,7 +60,7 @@ public class BuildingInstance
 	// 强制加载的区块（不持久化，重启后由恢复流程重新注册）
 	private final List<ChunkPos> loadedChunks = new ArrayList<>();
 
-	// C9：所属城市缓存（放置者城市不变；首次查询后不再目录遍历）
+	// 所属城市缓存（放置者城市不变；首次查询后不再目录遍历）
 	private String cachedCity;
 	private boolean cityComputed;
 

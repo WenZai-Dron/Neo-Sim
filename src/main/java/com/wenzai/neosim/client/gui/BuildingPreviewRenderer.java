@@ -4,9 +4,10 @@ import com.mojang.blaze3d.platform.GlConst;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.*;
 import com.mojang.math.Axis;
+import com.wenzai.neosim.client.preview.PreviewFrame;
 import com.wenzai.neosim.schematic.LightweightBlockContainer;
-import com.wenzai.neosim.schematic.SchematicFrame;
 import com.wenzai.neosim.schematic.SchematicData;
+import com.wenzai.neosim.schematic.SchematicFrame;
 import com.wenzai.neosim.schematic.SpecialMarker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.color.block.BlockColors;
@@ -89,7 +90,7 @@ public final class BuildingPreviewRenderer
 
 		poseStack.scale(1.0F, 1.0F, -1.0F);
 
-		// L13：深度清空 + 绘制限定在面板矩形内（GL_SCISSOR），避免每帧全屏深度清空拖慢后续 GUI 元素
+		// 深度清空 + 绘制限定在面板矩形内（GL_SCISSOR），避免每帧全屏深度清空拖慢后续 GUI 元素
 		int half = Math.max(8, size / 2);
 		gfx.enableScissor(centerPosX - half, centerPosY - half, centerPosX + half, centerPosY + half);
 
@@ -126,9 +127,6 @@ public final class BuildingPreviewRenderer
 		poseStack.popPose();
 	}
 
-
-
-
 	// 按蓝图名 LRU 缓存，命中直接复用；未命中重建（超容量时 removeEldestEntry 自动释放最久未用项）
 	private static CacheEntry ensureMesh(SchematicData schematic)
 	{
@@ -144,29 +142,16 @@ public final class BuildingPreviewRenderer
 		if (sx <= 0 || sy <= 0 || sz <= 0) return null;
 
 		CacheEntry entry = new CacheEntry();
+
 		// 缩略图画的是「蓝图帧」：.txt 原样，.litematic 转 1 次 + 镜像（见 SchematicFrame）
 		BlueprintView view = new BlueprintView(schematic.frame());
-		int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
-		int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
-		for (int i = 0; i < 2; i++)
-		{
-			for (int k = 0; k < 2; k++)
-			{
-				for (int m = 0; m < 2; m++)
-				{
-					BlockPos p = view.pos(i * (sx - 1), k * (sy - 1), m * (sz - 1));
-					minX = Math.min(minX, p.getX());
-					minY = Math.min(minY, p.getY());
-					minZ = Math.min(minZ, p.getZ());
-					maxX = Math.max(maxX, p.getX());
-					maxY = Math.max(maxY, p.getY());
-					maxZ = Math.max(maxZ, p.getZ());
-				}
-			}
-		}
-		entry.dimX = maxX - minX + 1;
-		entry.dimY = maxY - minY + 1;
-		entry.dimZ = maxZ - minZ + 1;
+
+		// 铺进蓝图帧时顺手重算连接性方块：栅栏/墙/玻璃板/铁栏杆的连接臂按帧内邻居算，
+		// 否则 .txt 蓝图（只存方块 id + meta，映射出来四个连接臂全 false）在缩略图里是一根根孤立的柱子
+		PreviewFrame.Framed framed = PreviewFrame.build(container, view::pos, view::state);
+		entry.dimX = framed.sizeX();
+		entry.dimY = framed.sizeY();
+		entry.dimZ = framed.sizeZ();
 
 		Minecraft mc = Minecraft.getInstance();
 		BlockRenderDispatcher blockRenderer = mc.getBlockRenderer();
@@ -177,17 +162,17 @@ public final class BuildingPreviewRenderer
 		BufferBuilder buf = new BufferBuilder(byteBuffer,
 				VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
 
-		MeshBuilder mesh = new MeshBuilder(buf, blockRenderer, blockColors, random, view,
-				minX + entry.dimX / 2.0F, minY + entry.dimY / 2.0F, minZ + entry.dimZ / 2.0F);
+		MeshBuilder mesh = new MeshBuilder(buf, blockRenderer, blockColors, random, framed.container(),
+				entry.dimX / 2.0F, entry.dimY / 2.0F, entry.dimZ / 2.0F);
 
-		// 逐方块生成网格（按蓝图局部坐标遍历，蓝图帧映射由 BlueprintView 统一处理）
-		for (int y = 0; y < sy; y++)
+		// 逐方块生成网格（坐标已在蓝图帧里，位置/朝向/连接臂都由 PreviewFrame 统一处理）
+		for (int y = 0; y < entry.dimY; y++)
 		{
-			for (int z = 0; z < sz; z++)
+			for (int z = 0; z < entry.dimZ; z++)
 			{
-				for (int x = 0; x < sx; x++)
+				for (int x = 0; x < entry.dimX; x++)
 				{
-					mesh.addBlock(container, x, y, z);
+					mesh.addBlock(x, y, z);
 				}
 			}
 		}
@@ -201,7 +186,11 @@ public final class BuildingPreviewRenderer
 				BlockState markerState = markerEntry.getValue().toBlockState();
 				if (markerState != null)
 				{
-					mesh.addMarker(markerState, markerEntry.getKey());
+					BlockPos local = markerEntry.getKey();
+					BlockPos p = view.pos(local.getX(), local.getY(), local.getZ());
+					mesh.addMarker(view.state(markerState),
+							p.getX() - framed.min().getX(), p.getY() - framed.min().getY(),
+							p.getZ() - framed.min().getZ());
 				}
 			}
 		}
@@ -238,91 +227,84 @@ public final class BuildingPreviewRenderer
 		}
 	}
 
-	// 网格构建上下文
+	// 网格构建上下文：坐标已经在蓝图帧里，取方块与剔除邻居都直接用帧内坐标
 	private static final class MeshBuilder
 	{
 		private final BufferBuilder buf;
 		private final BlockRenderDispatcher blockRenderer;
 		private final BlockColors blockColors;
 		private final RandomSource random;
-		private final BlueprintView view;
+		private final LightweightBlockContainer container;
 		private final PoseStack ps = new PoseStack();
 		private final float cx, cy, cz;
 
 		MeshBuilder(BufferBuilder buf, BlockRenderDispatcher blockRenderer,
-					BlockColors blockColors, RandomSource random, BlueprintView view,
+					BlockColors blockColors, RandomSource random, LightweightBlockContainer container,
 					float cx, float cy, float cz)
 		{
 			this.buf = buf;
 			this.blockRenderer = blockRenderer;
 			this.blockColors = blockColors;
 			this.random = random;
-			this.view = view;
+			this.container = container;
 			this.cx = cx;
 			this.cy = cy;
 			this.cz = cz;
 		}
 
 		// 渲染单个方块：缺模型时画灰色兜底立方体
-		void addBlock(LightweightBlockContainer container, int x, int y, int z)
+		void addBlock(int x, int y, int z)
 		{
 			BlockState state = container.get(x, y, z);
 			if (state.isAir()) return;
 
-			// 位置与朝向都过蓝图帧：.txt 原样，.litematic 转 1 次 + 镜像
-			BlockPos p = view.pos(x, y, z);
-			BlockState mapped = view.state(state);
-			BakedModel model = blockRenderer.getBlockModel(mapped);
+			BakedModel model = blockRenderer.getBlockModel(state);
 			ps.setIdentity();
-
-			ps.translate(p.getX() - cx, p.getY() - cy, p.getZ() - cz);
+			ps.translate(x - cx, y - cy, z - cz);
 			PoseStack.Pose pose = ps.last();
 
 			boolean hasQuads = false;
 			boolean anyVisibleSide = false;
 			for (Direction side : Direction.values())
 			{
-				// 转置会换轴：邻居挡住的是映射后的第 view.side(d) 个面，剔除按映射后的面判断
+				// 越界＝建筑边缘，没被挡，照画
 				if (isNeighborOpaque(container, x, y, z, side)) continue;
 				anyVisibleSide = true;
-				Direction mappedSide = view.side(x, y, z, side);
-				for (BakedQuad q : model.getQuads(mapped, mappedSide, random))
+				for (BakedQuad q : model.getQuads(state, side, random))
 				{
-					emitQuad(buf, pose, q, blockColors, mapped);
+					emitQuad(buf, pose, q, blockColors, state);
 					hasQuads = true;
 				}
 			}
-			for (BakedQuad q : model.getQuads(mapped, null, random))
+			for (BakedQuad q : model.getQuads(state, null, random))
 			{
-				emitQuad(buf, pose, q, blockColors, mapped);
+				emitQuad(buf, pose, q, blockColors, state);
 				hasQuads = true;
 			}
 
 			if (!hasQuads && anyVisibleSide)
 			{
-				emitFallbackCube(buf, p.getX() - cx, p.getY() - cy, p.getZ() - cz);
+				emitFallbackCube(buf, x - cx, y - cy, z - cz);
 			}
 		}
 
-		// 特殊标记方块（位置与朝向同样过蓝图帧）
-		void addMarker(BlockState state, BlockPos pos)
+		// 特殊标记方块：坐标与朝向已过蓝图帧，这里只画
+		void addMarker(BlockState state, int x, int y, int z)
 		{
-			BlockPos p = view.pos(pos.getX(), pos.getY(), pos.getZ());
-			BlockState mapped = view.state(state);
-			BakedModel model = blockRenderer.getBlockModel(mapped);
+			BakedModel model = blockRenderer.getBlockModel(state);
 			ps.setIdentity();
-			ps.translate(p.getX() - cx, p.getY() - cy, p.getZ() - cz);
+			ps.translate(x - cx, y - cy, z - cz);
 			PoseStack.Pose pose = ps.last();
 			for (Direction side : Direction.values())
 			{
-				for (BakedQuad q : model.getQuads(mapped, side, random))
+				for (BakedQuad q : model.getQuads(state, side, random))
 				{
-					emitQuad(buf, pose, q, blockColors, mapped);
+					emitQuad(buf, pose, q, blockColors, state);
 				}
 			}
-			for (BakedQuad q : model.getQuads(mapped, null, random))
+			for (BakedQuad q : model.getQuads(state, null, random))
 			{
-				emitQuad(buf, pose, q, blockColors, mapped);
+				emitQuad(buf, pose, q, blockColors, state);
 			}
 		}
 	}
@@ -400,10 +382,10 @@ public final class BuildingPreviewRenderer
 		}
 	}
 
-	// GUI 缩略图的坐标系：画的是「蓝图帧」，不是会建出来的世界朝向。
+	// GUI 缩略图的坐标系：画的是「蓝图帧」，不是会建出来的世界朝向
 	// .txt 的数据本来就在蓝图帧里（照原样画，与蓝图库一致）；
 	// .litematic 的数据是照世界坐标导出的，照原样画会和 .txt 蓝图库差 90° + 镜像，
-	// 所以先转进蓝图帧（= 转 1 次 + 镜像，见 SchematicFrame.toBlueprintView）。
+	// 所以先转进蓝图帧（= 转 1 次 + 镜像，见 SchematicFrame.toBlueprintView）
 	private static final class BlueprintView
 	{
 		private final SchematicFrame frame;
@@ -421,23 +403,6 @@ public final class BuildingPreviewRenderer
 		BlockState state(BlockState s)
 		{
 			return frame.toBlueprintViewState(s);
-		}
-
-		// 局部方向 d 映射到的蓝图帧方向（转置会换轴，遮挡剔除要按映射后的面判断）
-		Direction side(int x, int y, int z, Direction d)
-		{
-			BlockPos a = pos(x, y, z);
-			BlockPos b = pos(x + d.getStepX(), y + d.getStepY(), z + d.getStepZ());
-			int dx = b.getX() - a.getX();
-			int dy = b.getY() - a.getY();
-			int dz = b.getZ() - a.getZ();
-			if (dx > 0) return Direction.EAST;
-			if (dx < 0) return Direction.WEST;
-			if (dy > 0) return Direction.UP;
-			if (dy < 0) return Direction.DOWN;
-			if (dz > 0) return Direction.SOUTH;
-			if (dz < 0) return Direction.NORTH;
-			return d;
 		}
 	}
 }

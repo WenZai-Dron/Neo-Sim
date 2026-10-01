@@ -20,8 +20,8 @@ public class NpcData
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	// NPC 写盘去抖队列（弱引用：实体被卸载/GC 后自动消失，防泄漏）。
-	// 卸载路径在 discard 前会强制写盘，因此这里只兜底"仍加载"实体的合并窗口落盘。
+	// NPC 写盘去抖队列（弱引用：实体被卸载/GC 后自动消失，防泄漏）
+	// 卸载路径在 discard 前会强制写盘，因此这里只兜底"仍加载"实体的合并窗口落盘
 	private static final Set<Entity> DIRTY_NPCS = Collections.newSetFromMap(new WeakHashMap<Entity, Boolean>());
 
 	// 标记 NPC 脏（高频写盘路径调用，周期 flush 合并落盘）
@@ -42,8 +42,6 @@ public class NpcData
 		}
 		DIRTY_NPCS.clear();
 	}
-
-	// ---- 轻量读取（流式解析，只取所需字段，避免完整 Gson 解析 + 日志）----
 
 	// NPC 档案文件路径（按服务端环境解析）
 	private static Path npcFile(ServerLevel level, String cityName, String npcName)

@@ -18,6 +18,7 @@ public class ClientPreviewState extends PreviewState
 	public void setActive(boolean v)
 	{
 		super.setActive(v);
+
 		// 预览结束：释放缓存的GPU显存
 		if (!v && meshCache != null) meshCache.invalidate();
 	}

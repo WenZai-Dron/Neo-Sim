@@ -51,6 +51,7 @@ public class Model<T extends Entity> extends HumanoidModel<T>
 		float eased = 1.0F - (1.0F - t) * (1.0F - t);
 
 		this.rightArm.xRot = -0.1F + (-(float) Math.PI * 0.98F + 0.1F) * eased;
+
 		// 抬手时轻微外展
 		this.rightArm.zRot = 0.06F * eased;
 	}

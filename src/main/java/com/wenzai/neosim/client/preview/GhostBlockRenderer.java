@@ -107,6 +107,7 @@ public class GhostBlockRenderer
 			if (vertexBuffer == null) return false;
 			SchematicData s = state.getSchematic();
 			if (s == null) return false;
+
 			// 蓝图重载后名字不变但对象会换新：只比名字会一直画旧网格
 			if (s != lastSchematic) return false;
 			if (state.getRotation().ordinal() != lastRotationOrdinal) return false;
@@ -138,23 +139,28 @@ public class GhostBlockRenderer
 
 			BlockPos origin = state.getOrigin();
 
-			for (int y = 0; y < container.getSizeY(); y++)
+			// 朝向与位置都走同一条落地链（BlueprintPlacement）：铺进落地帧时顺手重算连接性方块，
+			// 否则 .txt 蓝图（只存方块 id + meta）的栅栏/墙/玻璃板在幽灵预览里是断开的；
+			// 帧外与蓝图空气格读真实世界——建造不清场，蓝图边缘的连接臂本来就是连到旁边既有方块的
+			BlueprintPlacement placement = state.placement();
+			PreviewFrame.Framed framed = PreviewFrame.build(container, placement::pos, placement::state,
+					Minecraft.getInstance().level);
+			LightweightBlockContainer blocks = framed.container();
+			BlockPos min = framed.min();
+
+			for (int y = 0; y < framed.sizeY(); y++)
 			{
-				for (int z = 0; z < container.getSizeZ(); z++)
+				for (int z = 0; z < framed.sizeZ(); z++)
 				{
-					for (int x = 0; x < container.getSizeX(); x++)
+					for (int x = 0; x < framed.sizeX(); x++)
 					{
-						BlockState blockState = container.get(x, y, z);
+						BlockState blockState = blocks.get(x, y, z);
 						if (blockState.isAir()) continue;
 
-						// 朝向与位置都走同一条落地链（BlueprintPlacement），与实际建造逐格一致
-						blockState = state.placement().state(blockState);
-
 						// 顶点存为相对origin的坐标
-						BlockPos world = state.placement().pos(x, y, z);
-						float wx = world.getX() - origin.getX();
-						float wy = world.getY() - origin.getY();
-						float wz = world.getZ() - origin.getZ();
+						float wx = min.getX() + x - origin.getX();
+						float wy = min.getY() + y - origin.getY();
+						float wz = min.getZ() + z - origin.getZ();
 
 						BakedModel model = blockRenderer.getBlockModel(blockState);
 
@@ -204,7 +210,7 @@ public class GhostBlockRenderer
 					if (markerState == null) continue;
 
 					BlockPos local = entry.getKey();
-					BlockPos world = state.placement().pos(local.getX(), local.getY(), local.getZ());
+					BlockPos world = placement.pos(local.getX(), local.getY(), local.getZ());
 					float wx = world.getX() - origin.getX();
 					float wy = world.getY() - origin.getY();
 					float wz = world.getZ() - origin.getZ();
@@ -339,6 +345,7 @@ public class GhostBlockRenderer
 					float vx = f[i * 3] + ox;
 					float vy = f[i * 3 + 1] + oy;
 					float vz = f[i * 3 + 2] + oz;
+
 					// 面内 UV 对角展开，避免整面采样单点
 					float u = (i == 1 || i == 2) ? u1 : u0;
 					float v = (i >= 2) ? v1 : v0;

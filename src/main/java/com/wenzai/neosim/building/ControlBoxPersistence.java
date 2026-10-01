@@ -68,7 +68,7 @@ public class ControlBoxPersistence
 
 	// 控制箱记录：位置<->建筑信息（含生活点与居民 / 落地几何）
 	// 落地几何（rotation/mirror/facing）供"重建模盒"还原蓝图到世界的映射；
-	// 旧存档缺这三个字段时读取为 NONE/NONE/null，由重建盒做定向探测兜底。
+	// 旧存档缺这三个字段时读取为 NONE/NONE/null，由重建盒做定向探测兜底
 	public record ControlBoxRecord(int x, int y, int z, String schematicName,
 								   int originX, int originY, int originZ,
 								   String rotation, String mirror, String facing,
@@ -373,6 +373,7 @@ public class ControlBoxPersistence
 		obj.addProperty("originX", r.originX());
 		obj.addProperty("originY", r.originY());
 		obj.addProperty("originZ", r.originZ());
+
 		// 落地几何（旧版无此字段，读取端按 NONE/NONE/null 兜底）
 		obj.addProperty("rotation", r.rotation() != null ? r.rotation() : "NONE");
 		obj.addProperty("mirror", r.mirror() != null ? r.mirror() : "NONE");

@@ -28,6 +28,7 @@ public class HireListPanel
 		{
 		}
 	}
+
 	// 每页 12 名：6 行 × 2 列
 	private static final int PER_PAGE = 12;
 	private static final int ROW_H = 24;
@@ -61,12 +62,16 @@ public class HireListPanel
 	// 向所属 Screen 增删控件的宿主
 	private final WidgetHost host;
 	private final BlockPos boxPos;
+
 	// 语言键前缀（如 "gui.neosim.FarmingBox."）
 	private final String langPrefix;
+
 	// 职业类型（0=architect 1=farmer 2=miner 3=courier）
 	private final int jobKind;
+
 	// 雇佣动作回调
 	private final Consumer<String> hireAction;
+
 	// 返回主页
 	private final Runnable goBack;
 

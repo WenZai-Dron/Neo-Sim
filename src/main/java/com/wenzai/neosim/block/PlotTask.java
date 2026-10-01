@@ -321,6 +321,7 @@ public abstract class PlotTask
 			clearHand();
 			return true;
 		}
+
 		// 创造模式：不等待动作延迟，每 tick 执行一个动作（对齐建筑模盒）
 		if (currentMode() == 2)
 		{
@@ -439,7 +440,7 @@ public abstract class PlotTask
 		}
 	}
 
-	// 按盒子坐标找雇佣的NPC实体，找到后从NPC读取职业等级（C1：名字索引 O(1)）
+	// 按盒子坐标找雇佣的NPC实体，找到后从NPC读取职业等级（名字索引 O(1)）
 	private void resolveWorkerNpc()
 	{
 		if (worker != null && worker.isAlive()) return;

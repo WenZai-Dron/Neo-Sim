@@ -32,9 +32,9 @@ import java.util.function.ToIntFunction;
 
 import javax.annotation.Nullable;
 
-// 配置中心（城市信息 GUI 的「配置」页）。
-// 结构：分类按钮 → 工具行（文件标签 / 搜索 / 筛选）→ 列表 → 底部两行操作 → 右侧详情面板。
-// 两张内容表（依附方块表、模组作物表）共用同一套列表与操作，差异点集中在 TableKind 分支里。
+// 配置中心（城市信息 GUI 的「配置」页）
+// 结构：分类按钮 → 工具行（文件标签 / 搜索 / 筛选）→ 列表 → 底部两行操作 → 右侧详情面板
+// 两张内容表（依附方块表、模组作物表）共用同一套列表与操作，差异点集中在 TableKind 分支里
 public class ConfigPanel
 {
 	// ---- 宿主 ----
@@ -112,7 +112,7 @@ public class ConfigPanel
 					   boolean enabled, String note, ItemStack icon, String blockId,
 					   boolean needsWater, boolean excluded, boolean attached) {}
 
-	// 底部一个操作按钮：宽度只是首选值，排不下时整行一起收窄（见 layoutActions）。
+	// 底部一个操作按钮：宽度只是首选值，排不下时整行一起收窄（见 layoutActions）
 	// onBuild 可以把建好的按钮交回调用方：保存按钮要靠它把"可用"状态即时点亮，而不是等下次重建
 	record BottomAction(int sizeW, Component label, boolean active, Runnable action,
 						@Nullable Consumer<Button> onBuild)
@@ -136,6 +136,7 @@ public class ConfigPanel
 	private int page;
 	private int pageRows = 6;
 	private int selected = -1;
+
 	// 两张表的未保存改动各自记账：切换文件不拦截，保存时只写有改动的那张
 	private boolean attachedDirty;
 	private boolean cropDirty;
@@ -623,7 +624,7 @@ public class ConfigPanel
 	}
 
 	// 模组作物表：自动检测结果与指向它的外部规则合并成同一行（同一作物只出现一次）；
-	// 未被任何检测作物命中的规则（命名空间 / 标签 / 正则 / 已卸载模组的 id）才单独成行。
+	// 未被任何检测作物命中的规则（命名空间 / 标签 / 正则 / 已卸载模组的 id）才单独成行
 	private void buildCropRows()
 	{
 		Set<String> detectedIds = new HashSet<>();
@@ -638,6 +639,7 @@ public class ConfigPanel
 			boolean needsWater = rule != null && rule.needsWater() != null ? rule.needsWater() : crop.needsWater();
 			boolean excluded = rule != null && rule.excluded() != null ? rule.excluded() : crop.excluded();
 			boolean enabled = rule == null || !Boolean.FALSE.equals(rule.enabled());
+
 			// 行首圆点看"是否生效"：启用且未排除才是 ●（否则点启用看不出变化）
 			boolean active = enabled && !excluded;
 			String matureId = rule != null && rule.matureId() != null ? rule.matureId() : crop.matureId();
@@ -791,6 +793,7 @@ public class ConfigPanel
 			int index = row.external() && row.ruleIndex() >= 0 ? row.ruleIndex() : ensureCropRule(row.blockId());
 			if (index < 0) return;
 			CropRule rule = cropEditable.get(index);
+
 			// 生效 → 停用（只关 enabled）；停用/排除 → 启用（enabled 与 excluded 一起复位，排除过的也能真正重新生效）
 			cropEditable.set(index, row.enabled()
 					? rule.withEnabled(false)

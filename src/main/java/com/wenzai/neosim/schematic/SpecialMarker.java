@@ -62,6 +62,7 @@ public enum SpecialMarker
 
 			// 生活点：居民生成点，不放置方块
 			case LIVING_POINT -> null;
+
 			// MARKER_0-9
 			default           -> com.wenzai.neosim.block.ModBlocks.MARKER.get().defaultBlockState();
 		};

@@ -19,9 +19,9 @@ import java.util.List;
 
 import javax.annotation.Nullable;
 
-// 模组作物表：扫描已装模组的注册表自动发现可种植作物，并把结果写进 NeoSim/Json/compat/crops.json。
-// 判定：种子为 BlockItem && 方块可骨粉催熟 && 方块状态含 age 生长属性；排除原版命名空间（原版作物走 FarmTask 枚举）。
-// 覆盖规则（成熟目标 / 需水 / 排除 / 停用）来自 jar 内置 JSON + 外部 JSON，外部与后写者优先。
+// 模组作物表：扫描已装模组的注册表自动发现可种植作物，并把结果写进 NeoSim/Json/compat/crops.json
+// 判定：种子为 BlockItem && 方块可骨粉催熟 && 方块状态含 age 生长属性；排除原版命名空间（原版作物走 FarmTask 枚举）
+// 覆盖规则（成熟目标 / 需水 / 排除 / 停用）来自 jar 内置 JSON + 外部 JSON，外部与后写者优先
 public final class CropRegistry
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

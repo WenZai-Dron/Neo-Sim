@@ -35,9 +35,8 @@ import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.lwjgl.glfw.GLFW;
 
-// 此类不会在专用服务器上加载。从这里访问客户端代码是安全的。
+// 此类不会在专用服务器上加载。从这里访问客户端代码是安全的
 @Mod(value = NeoSim.MOD_ID, dist = Dist.CLIENT)
-// 你可以使用 EventBusSubscriber 自动注册类中所有带有 @SubscribeEvent 注解的静态方法
 @EventBusSubscriber(modid = NeoSim.MOD_ID, value = Dist.CLIENT)
 public class NeoSimClient
 {
@@ -69,9 +68,8 @@ public class NeoSimClient
 
 	public NeoSimClient(IEventBus modEventBus, ModContainer container)
 	{
-		// 允许 NeoForge 为本模组的配置创建配置界面。
-		// 可通过“模组界面 > 点击你的模组 > 点击配置”访问该配置界面。
-		// 别忘了在 en_us.json 文件中为你的配置项添加翻译。
+		// 允许 NeoForge 为本模组的配置创建配置界面
+		// 可通过“模组界面 > 点击你的模组 > 点击配置”访问该配置界面
 		container.registerExtensionPoint(IConfigScreenFactory.class, ConfigurationScreen::new);
 
 		// 城市信息 GUI 按键（I）：走 mod 事件总线显式注册，只注册一次
@@ -81,10 +79,6 @@ public class NeoSimClient
 	@SubscribeEvent
 	static void onClientSetup(FMLClientSetupEvent event)
 	{
-		// 一些客户端初始化代码
-		NeoSim.LOGGER.info("HELLO FROM CLIENT SETUP");
-		NeoSim.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
-
 		// 预热模组作物注册表（客户端）：GUI 模组作物栏依赖检测结果
 		com.wenzai.neosim.compat.crops.CropRegistry.all();
 

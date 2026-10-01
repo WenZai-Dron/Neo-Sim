@@ -37,18 +37,18 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-// .txt（Sim-U-Kraft 旧版）→ .litematic 转换核心，GUI 与命令共用。
+// .txt（Sim-U-Kraft 旧版）→ .litematic 转换核心，GUI 与命令共用
 //
 // 为什么要转：作者名只活在 .txt 第 2 行的 AU= 里，转成 .litematic 后进 Metadata.Author，
-// 而 Metadata.Author 在 Litematica 的元数据白名单里，用 Litematica 再存一次也不会丢。
+// 而 Metadata.Author 在 Litematica 的元数据白名单里，用 Litematica 再存一次也不会丢
 //
-// 坐标系：.txt 的数据在「作者帧」（SchematicFrame.SUKRAFT），.litematic 存的是世界帧。
+// 坐标系：.txt 的数据在「作者帧」（SchematicFrame.SUKRAFT），.litematic 存的是世界帧
 // 两帧之间就是 C = 左右镜像 + 逆时针 90°，位置和方块状态都必须走同一条变换：
 //   位置  C(x,y,z) = (-z, y, -x)            等价于 CoordTransform.transformPos(p, LEFT_RIGHT, CCW90)
 //   状态  state.mirror(LEFT_RIGHT).rotate(CCW90)
-// C 在平移意义下自反（C∘C = 恒等），所以将来做反向转换时同一套代码可以复用。
+// C 在平移意义下自反（C∘C = 恒等），所以将来做反向转换时同一套代码可以复用
 // 用 MC 自己的 mirror/rotate（而不是像放置路径那样只手改 facing）能顺带把铁轨 shape、
-// 原木 axis、藤蔓四面的布尔值一起转对。
+// 原木 axis、藤蔓四面的布尔值一起转对
 public final class BlueprintConverter
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
@@ -209,6 +209,7 @@ public final class BlueprintConverter
 			return new Outcome(txt, output, baked.getName(), author,
 					container.countSolidBlocks(), container.getPalette().size(), null);
 		}
+
 		// LinkageError 也要接：别的模组给方块状态变换挂的 mixin 出问题时抛的是
 		// ExceptionInInitializerError/NoClassDefFoundError（Error 不是 Exception），
 		// 一份蓝图坏掉不该把整批转换带崩
@@ -232,7 +233,7 @@ public final class BlueprintConverter
 	// 明显不是人名的占位值 → Unknown
 	private static final Set<String> BAD_AUTHOR_VALUES = Set.of("%", "ASYM", "UNKNOWN", "NONE", "NULL");
 
-	// 作者优先级：界面填的名字 > 文件里的 AU= > Unknown。
+	// 作者优先级：界面填的名字 > 文件里的 AU= > Unknown
 	// 内置那 154 份的"没有 AU= 就记老版默认作者 Satscape"是给官方建筑的默认值，
 	// 玩家自己的文件不能替他冒领，所以这里缺失一律 Unknown
 	private static String resolveAuthor(@Nullable String override, @Nullable String rawAuthor)
@@ -332,8 +333,8 @@ public final class BlueprintConverter
 	// 为什么需要：旧版 .txt 里方块元数据的"方向约定"和它自己的几何对不上——把位置和状态都按
 	// 同一条变换搬到世界帧之后，全量 154 份里仍有 340/617 个贴合类方块（梯子、墙上火把、墙上告示牌…）
 	// 把朝向指进空气里，落地就会弹掉。元数据本身已经不可靠（同一个 meta 在不同蓝图里指向不同的支撑方向），
-	// 所以只能按**几何**把朝向改对：支撑必须落在实心邻居那一侧。
-	// 判定用 MC 自己的 canOcclude()（整面方块为真；台阶/楼梯/栅栏/雪片为假），比按名字硬编码可靠。
+	// 所以只能按**几何**把朝向改对：支撑必须落在实心邻居那一侧
+	// 判定用 MC 自己的 canOcclude()（整面方块为真；台阶/楼梯/栅栏/雪片为假），比按名字硬编码可靠
 	private static int repairWallAttachments(LightweightBlockContainer container)
 	{
 		int repaired = 0;
@@ -404,9 +405,9 @@ public final class BlueprintConverter
 		return container.get(nx, y, nz).canOcclude();
 	}
 
-	// 标记在 .txt 里是字符，.litematic / Litematica 只认方块，所以烘焙时必须落成方块。
+	// 标记在 .txt 里是字符，.litematic / Litematica 只认方块，所以烘焙时必须落成方块
 	// 生活点方块会被读取器反解回 LIVING_POINT 标记（LitematicaSchematicReader），
-	// 所以转换前后模组看到的标记语义完全一致，Litematica 里也是看得见的方块。
+	// 所以转换前后模组看到的标记语义完全一致，Litematica 里也是看得见的方块
 	private static BlockState materialize(SpecialMarker marker)
 	{
 		if (marker == SpecialMarker.LIVING_POINT)
@@ -425,8 +426,8 @@ public final class BlueprintConverter
 
 	// ---- 写回自校验 ----
 
-	// 读回产物，逐格与烘焙结果比对；返回 null 表示一致，否则返回问题描述。
-	// 生活点方块读回来会变成空气 + LIVING_POINT 标记，两边都按空气比较标记格。
+	// 读回产物，逐格与烘焙结果比对；返回 null 表示一致，否则返回问题描述
+	// 生活点方块读回来会变成空气 + LIVING_POINT 标记，两边都按空气比较标记格
 	private static String verifyRoundTrip(SchematicData expected, Path file)
 	{
 		SchematicData readBack;

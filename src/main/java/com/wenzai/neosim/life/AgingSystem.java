@@ -34,7 +34,7 @@ public class AgingSystem
 		boolean adultAgingDay = dayOfWeek == Config.LIFE_AGING_ADULT_DAY.get();
 		boolean childAgingDay = Config.LIFE_AGING_CHILD_DAYS.get().contains(dayOfWeek);
 
-		// L15：只扫本城已加载 NPC（快照，避免逐城重复全量扫描 + 同一 NPC 被多城重复结算）
+		// 只扫本城已加载 NPC（快照，避免逐城重复全量扫描 + 同一 NPC 被多城重复结算）
 		List<Entity> loaded = new ArrayList<>(com.wenzai.neosim.npc.NpcRegistry.byCity(city));
 		for (Entity npc : loaded)
 		{

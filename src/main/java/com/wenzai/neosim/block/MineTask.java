@@ -27,7 +27,7 @@ public class MineTask extends PlotTask
 
 	private int discards;
 
-	// L10：游标原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
+	// 游标原始 int 字段（record 仅在持久化时同步，跳过循环不再每格复制 17 字段 record）
 	private int cursorRow;
 	private int cursorCol;
 	private int cursorDepth;
@@ -41,7 +41,7 @@ public class MineTask extends PlotTask
 		this.cursorDepth = record.depth();
 	}
 
-	// L10：持久化前把游标同步进 record
+	// 持久化前把游标同步进 record
 	@Override
 	protected void updateRecord()
 	{
@@ -180,7 +180,7 @@ public class MineTask extends PlotTask
 		}
 	}
 
-	// 深度优先游标：返回true表示已完成，调用方应停止（L10：操作 int 字段）
+	// 深度优先游标：返回true表示已完成，调用方应停止（操作 int 字段）
 	private boolean advanceMineCursor()
 	{
 		int col = cursorCol + 1;
@@ -193,6 +193,7 @@ public class MineTask extends PlotTask
 		if (row >= rows())
 		{
 			int nd = cursorDepth - 1;
+
 			// 下一层越出世界高度（防无基岩世界无限下挖），或已含基岩：挖到基岩，采尽
 			if (nd < level.getMinBuildHeight() || layerHasBedrock(nd))
 			{

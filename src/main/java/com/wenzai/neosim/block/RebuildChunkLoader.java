@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// 重建盒强制加载：整栋建筑覆盖的区块常驻加载，保证玩家离开也能继续重建。
-// 按盒子记账（防跨盒误释放）；数量超过 rebuildMaxChunks 时只加载距盒子最近的若干区块。
+// 重建盒强制加载：整栋建筑覆盖的区块常驻加载，保证玩家离开也能继续重建
+// 按盒子记账（防跨盒误释放）；数量超过 rebuildMaxChunks 时只加载距盒子最近的若干区块
 public class RebuildChunkLoader
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

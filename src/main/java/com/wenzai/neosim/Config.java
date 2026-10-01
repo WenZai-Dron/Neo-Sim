@@ -132,7 +132,8 @@ public class Config
 
 		// 社交与串门
 		BUILDER.push("social");
-		// 社交寻找半径（C2：默认 16，避免每 tick 大半径实体查询）
+
+		// 社交寻找半径（默认 16，避免每 tick 大半径实体查询）
 		LIFE_SOCIAL_RANGE = BUILDER
 				.translation("config.neosim.lifeSocialRange")
 				.defineInRange("socialRange", 16, 1, 128);
@@ -621,7 +622,7 @@ public class Config
 		// 信用点非负检查
 		if (INITIAL_CREDIT.get() < 0.0)
 		{
-			NeoSim.LOGGER.warn("Config 'initialCredit' out of range ({}), clamped to 0.0", INITIAL_CREDIT.get());
+			NeoSim.LOGGER.warn("NeoSim-Config: 'initialCredit' out of range ({}), clamped to 0.0", INITIAL_CREDIT.get());
 			INITIAL_CREDIT.set(0.0);
 		}
 
@@ -630,7 +631,7 @@ public class Config
 		if (pop < 1 || pop > 10000)
 		{
 			int clamped = Math.max(1, Math.min(10000, pop));
-			NeoSim.LOGGER.warn("Config 'maxPopulation' out of range ({}), clamped to {}", pop, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'maxPopulation' out of range ({}), clamped to {}", pop, clamped);
 			MAX_POPULATION.set(clamped);
 		}
 
@@ -639,7 +640,7 @@ public class Config
 		if (minAge < 0 || minAge > 100)
 		{
 			int clamped = Math.max(0, Math.min(100, minAge));
-			NeoSim.LOGGER.warn("Config 'npcMinAge' out of range ({}), clamped to {}", minAge, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'npcMinAge' out of range ({}), clamped to {}", minAge, clamped);
 			NPC_MIN_AGE.set(clamped);
 		}
 
@@ -648,7 +649,7 @@ public class Config
 		if (maxAge < 1 || maxAge > 100)
 		{
 			int clamped = Math.max(1, Math.min(100, maxAge));
-			NeoSim.LOGGER.warn("Config 'npcMaxAge' out of range ({}), clamped to {}", maxAge, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'npcMaxAge' out of range ({}), clamped to {}", maxAge, clamped);
 			NPC_MAX_AGE.set(clamped);
 		}
 
@@ -657,7 +658,7 @@ public class Config
 		if (adultAge < 1 || adultAge > 100)
 		{
 			int clamped = Math.max(1, Math.min(100, adultAge));
-			NeoSim.LOGGER.warn("Config 'lifeAdultAge' out of range ({}), clamped to {}", adultAge, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'lifeAdultAge' out of range ({}), clamped to {}", adultAge, clamped);
 			LIFE_ADULT_AGE.set(clamped);
 		}
 
@@ -666,12 +667,12 @@ public class Config
 		if (lifeMaxAge < 2 || lifeMaxAge > 1000)
 		{
 			int clamped = Math.max(2, Math.min(1000, lifeMaxAge));
-			NeoSim.LOGGER.warn("Config 'lifeMaxAge' out of range ({}), clamped to {}", lifeMaxAge, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'lifeMaxAge' out of range ({}), clamped to {}", lifeMaxAge, clamped);
 			LIFE_MAX_AGE.set(clamped);
 		}
 		if (LIFE_MAX_AGE.get() <= LIFE_ADULT_AGE.get())
 		{
-			NeoSim.LOGGER.warn("Config 'lifeMaxAge' ({}) <= 'lifeAdultAge' ({}), set to adultAge+1",
+			NeoSim.LOGGER.warn("NeoSim-Config: 'lifeMaxAge' ({}) <= 'lifeAdultAge' ({}), set to adultAge+1",
 					LIFE_MAX_AGE.get(), LIFE_ADULT_AGE.get());
 			LIFE_MAX_AGE.set(LIFE_ADULT_AGE.get() + 1);
 		}
@@ -681,7 +682,7 @@ public class Config
 		if (startStage < 0.0 || startStage > 1.0)
 		{
 			double clamped = Math.max(0.0, Math.min(1.0, startStage));
-			NeoSim.LOGGER.warn("Config 'lifePregnancyStartStage' out of range ({}), clamped to {}", startStage, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'lifePregnancyStartStage' out of range ({}), clamped to {}", startStage, clamped);
 			LIFE_PREGNANCY_START_STAGE.set(clamped);
 		}
 
@@ -690,12 +691,12 @@ public class Config
 		if (pregMaxAge < 1 || pregMaxAge > 120)
 		{
 			int clamped = Math.max(1, Math.min(120, pregMaxAge));
-			NeoSim.LOGGER.warn("Config 'lifePregnancyMaxAge' out of range ({}), clamped to {}", pregMaxAge, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'lifePregnancyMaxAge' out of range ({}), clamped to {}", pregMaxAge, clamped);
 			LIFE_PREGNANCY_MAX_AGE.set(clamped);
 		}
 		if (LIFE_PREGNANCY_MAX_AGE.get() <= LIFE_ADULT_AGE.get())
 		{
-			NeoSim.LOGGER.warn("Config 'lifePregnancyMaxAge' ({}) <= 'lifeAdultAge' ({}), set to adultAge+1",
+			NeoSim.LOGGER.warn("NeoSim-Config: 'lifePregnancyMaxAge' ({}) <= 'lifeAdultAge' ({}), set to adultAge+1",
 					LIFE_PREGNANCY_MAX_AGE.get(), LIFE_ADULT_AGE.get());
 			LIFE_PREGNANCY_MAX_AGE.set(LIFE_ADULT_AGE.get() + 1);
 		}
@@ -705,7 +706,7 @@ public class Config
 		if (subLevel < 1 || subLevel > 100)
 		{
 			int clamped = Math.max(1, Math.min(100, subLevel));
-			NeoSim.LOGGER.warn("Config 'lifeMarriageSubLevel' out of range ({}), clamped to {}", subLevel, clamped);
+			NeoSim.LOGGER.warn("NeoSim-Config: 'lifeMarriageSubLevel' out of range ({}), clamped to {}", subLevel, clamped);
 			LIFE_MARRIAGE_SUBLEVEL.set(clamped);
 		}
 	}

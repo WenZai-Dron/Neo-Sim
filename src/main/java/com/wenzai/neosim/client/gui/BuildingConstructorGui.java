@@ -79,6 +79,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	{
 		SELECTED_BUILDING.remove(pos);
 	}
+
 	private String assignedWorker = null;
 	private com.wenzai.neosim.building.ConstructionTask activeTask = null;
 	private EditBox searchField;

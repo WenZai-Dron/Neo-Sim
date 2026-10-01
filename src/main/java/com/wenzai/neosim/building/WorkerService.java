@@ -88,8 +88,8 @@ public final class WorkerService
 			return null;
 		}
 
-		// 建筑模盒：允许先雇佣（尚无建造任务）。
-		// 之后在模盒 GUI 确认蓝图时，createBuilding 会从 WORKER_MAP 快照工人到任务。
+		// 建筑模盒：允许先雇佣（尚无建造任务）
+		// 之后在模盒 GUI 确认蓝图时，createBuilding 会从 WORKER_MAP 快照工人到任务
 		if (level.getBlockState(boxPos).getBlock() instanceof BuildingConstructor)
 		{
 			NeoSim.WORKER_MAP.put(boxPos, npcName);
@@ -121,6 +121,7 @@ public final class WorkerService
 					npc.setBuildAnim(0.0F);
 				}
 			}
+
 			// 状态由 ConstructionTask.tick 自动回落 WAITING_FOR_WORKER
 			ConstructionEngine.saveAllTasks(level);
 			return null;

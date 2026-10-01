@@ -1,7 +1,7 @@
 package com.wenzai.neosim.json;
 
-// 内容表统一热重载入口：NeoSim/Json/ 目录有任何变化就一起重载。
-// 单独让某张表各自轮询 mtime 会互相"吃掉"变更（先轮询到的表消费掉时间戳），所以集中在这里。
+// 内容表统一热重载入口：NeoSim/Json/ 目录有任何变化就一起重载
+// 单独让某张表各自轮询 mtime 会互相"吃掉"变更（先轮询到的表消费掉时间戳），所以集中在这里
 public final class ContentReloader
 {
 	private ContentReloader()

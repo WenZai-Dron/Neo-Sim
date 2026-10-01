@@ -80,7 +80,8 @@ public class SocialGoal extends Goal
 	public void start()
 	{
 		stuckTicks = 0;
-		// L7：相位错开——以 (tickCount + id) % REPATH_INTERVAL 起步，避免全体 NPC 同一 tick 重算寻路
+
+		// 相位错开——以 (tickCount + id) % REPATH_INTERVAL 起步，避免全体 NPC 同一 tick 重算寻路
 		repathTicks = Math.floorMod(npc.tickCount + npc.getId(), REPATH_INTERVAL);
 	}
 

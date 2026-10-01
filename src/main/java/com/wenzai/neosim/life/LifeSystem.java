@@ -58,7 +58,7 @@ public class LifeSystem
 				// 生育：孕期推进，临产者出发去Clinic/Hospital
 				ReproductionSystem.onDayStart(level, city);
 
-				// L9：每日清理低等级过期关系文件（防关系对 O(P²) 无上限）
+				// 每日清理低等级过期关系文件（防关系对 O(P²) 无上限）
 				RelationshipPersistence.cleanupStale(level, city);
 			}
 			catch (Exception e)

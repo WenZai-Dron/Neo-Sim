@@ -432,6 +432,7 @@ public class ServerToClientPayloads
 				{
 					com.wenzai.neosim.NeoSim.WORKER_MAP.put(payload.boxPos(), payload.workerName());
 				}
+
 				// 刷新打开的对应 GUI
 				net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
 				if (mc.screen instanceof com.wenzai.neosim.client.gui.HireListPanel.HostScreen host)

@@ -57,7 +57,7 @@ public class LitematicaSchematicReader implements ISchematicReader
 		CompoundTag root;
 		try (InputStream in = Files.newInputStream(filePath))
 		{
-			// L18：设解压上限（256MB），损坏/恶意文件超限即跳过，防 OOM
+			// 设解压上限（256MB），损坏/恶意文件超限即跳过，防 OOM
 			root = NbtIo.readCompressed(in, NbtAccounter.create(256L * 1024L * 1024L));
 		}
 

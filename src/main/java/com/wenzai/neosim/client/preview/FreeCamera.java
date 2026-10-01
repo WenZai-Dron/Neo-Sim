@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
-// 开启创造飞行，退出时传送回原位。
+// 开启创造飞行，退出时传送回原位
 public class FreeCamera
 {
 	private static Vec3 savedPos;

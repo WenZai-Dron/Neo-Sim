@@ -11,7 +11,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-// .litematic（Litematica v7）写入：把 SchematicData 落成单 region 的投影文件。
+// .litematic（Litematica v7）写入：把 SchematicData 落成单 region 的投影文件
 // 与读取侧严格同口径（LitematicaSchematicReader / BlockStatePalette）：
 //   palette[0] 固定 air、region 索引 (y*sizeZ+z)*sizeX+x、BlockStates 是 LSB-first 打包的 long[]，
 //   bits 由 BlockStatePalette 给出（最低 2 bit，和 Litematica 的 Math.max(2, ...) 一致）
@@ -46,6 +46,7 @@ public final class LitematicaSchematicWriter
 		CompoundTag root = new CompoundTag();
 		root.putInt("Version", VERSION);
 		root.putInt("SubVersion", SUB_VERSION);
+
 		// 用运行期数据版本，升级 MC 时不用手改常量
 		root.putInt("MinecraftDataVersion", SharedConstants.getCurrentVersion().getDataVersion().getVersion());
 		root.put("Metadata", metadataTag(data));
@@ -69,6 +70,7 @@ public final class LitematicaSchematicWriter
 		meta.putInt("RegionCount", 1);
 		meta.putLong("TotalVolume", container.getTotalVolume());
 		meta.putInt("TotalBlocks", container.countSolidBlocks());
+
 		// 源文件没有时间戳时用当前时间，避免写出 0 让 Litematica 显示 1970
 		meta.putLong("TimeCreated", data.getTimeCreated() > 0L ? data.getTimeCreated() : now);
 		meta.putLong("TimeModified", now);

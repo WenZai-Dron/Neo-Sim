@@ -6,10 +6,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
 
-// 外部模组兼容适配接口：只依赖 Minecraft 类型，Neo-Sim 引擎只认识这个接口。
+// 外部模组兼容适配接口：只依赖 Minecraft 类型，Neo-Sim 引擎只认识这个接口
 // 每个需要兼容的外部模组（Sable / Create Simulated 等）提供一个实现，在类静态块中
-// 经 PhysicsAdapterRegistry.register() 注册；未安装的模组其适配器类永远不会被加载。
-// 返回 null / false 表示"该位置不属于该模组管理的结构，请走原版逻辑"。
+// 经 PhysicsAdapterRegistry.register() 注册；未安装的模组其适配器类永远不会被加载
+// 返回 null / false 表示"该位置不属于该模组管理的结构，请走原版逻辑"
 public interface IPhysicsAdapter
 {
 	// 适配器对应的模组 id（注册去重与日志用）
@@ -18,8 +18,8 @@ public interface IPhysicsAdapter
 	// 适配器是否可用（对应模组已加载且功能正常）
 	boolean isAvailable();
 
-	// 是否允许方块读写（对结构内方块的读写集成）。
-	// 具体模组可按自身稳定情况停用（如 Sable 见 关于兼容Sable.md），默认开启。
+	// 是否允许方块读写（对结构内方块的读写集成）
+	// 具体模组可按自身稳定情况停用（如 Sable 见 关于兼容Sable.md），默认开启
 	default boolean isBlockIoSupported()
 	{
 		return true;

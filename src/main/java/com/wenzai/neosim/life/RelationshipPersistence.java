@@ -140,7 +140,7 @@ public class RelationshipPersistence
 		}
 	}
 
-	// L9：每日清理低等级过期关系文件（关系对 O(P²) 无上限 → 只有最近仍在互动的低等级关系保留文件；
+	// 每日清理低等级过期关系文件（关系对 O(P²) 无上限 → 只有最近仍在互动的低等级关系保留文件；
 	// 高等级（GOODFRIEND+，含婚姻门槛 BESTFRIENDS）永不清理）
 	private static final long STALE_MS = 14L * 24L * 60L * 60L * 1000L;
 
@@ -151,6 +151,7 @@ public class RelationshipPersistence
 		Map<String, Relationship.RelationshipData> cache = cityCache(level, city);
 
 		long now = System.currentTimeMillis();
+
 		// 遍历缓存键（文件名 = 键），低等级且 mtime 过旧则删除
 		for (String key : new ArrayList<>(cache.keySet()))
 		{

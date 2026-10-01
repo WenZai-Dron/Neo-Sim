@@ -9,7 +9,7 @@ import org.slf4j.Logger;
 import javax.annotation.Nullable;
 
 // 一条模组作物规则：匹配作物方块 + 可选覆盖（成熟目标 / 需水 / 排除 / 停用）
-// 未在 JSON 中出现的字段保持"未声明"，叠加时不会覆盖上一条规则已设置的值。
+// 未在 JSON 中出现的字段保持"未声明"，叠加时不会覆盖上一条规则已设置的值
 public final class CropRule
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

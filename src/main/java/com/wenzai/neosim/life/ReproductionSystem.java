@@ -37,16 +37,16 @@ public class ReproductionSystem
 	// 职业等级上限
 	private static final int JOB_MAX_LEVEL = 10;
 
-	// 临产目标缓存，分娩后清除（L2：按 NPC 名字 key——名字稳定、防 UUID 丢失/跨存档残留；死亡时由 Entity.die 清除）
+	// 临产目标缓存，分娩后清除（按 NPC 名字 key——名字稳定、防 UUID 丢失/跨存档残留；死亡时由 Entity.die 清除）
 	private static final Map<String, BlockPos> BIRTH_TARGETS = new HashMap<>();
 
-	// L2：按 NPC 名清除临产目标（死亡/卸载时调用）
+	// 按 NPC 名清除临产目标（死亡/卸载时调用）
 	public static void clearBirthTarget(String npcName)
 	{
 		if (npcName != null && !npcName.isEmpty()) BIRTH_TARGETS.remove(npcName);
 	}
 
-	// L2：服务器停止时清空（防跨存档残留）
+	// 服务器停止时清空（防跨存档残留）
 	public static void clearAllBirthTargets()
 	{
 		BIRTH_TARGETS.clear();

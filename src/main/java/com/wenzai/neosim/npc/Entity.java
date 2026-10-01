@@ -85,6 +85,7 @@ public class Entity extends PathfinderMob
 		builder.define(DATA_SKIN, "");
 		builder.define(DATA_FROZEN, false);
 		builder.define(DATA_BUILD_ANIM, 0.0F);
+
 		// -1 哨兵：真实年龄(0+)永远不会等于默认值，保证出生/读档时都会同步到客户端
 		builder.define(DATA_AGE, -1);
 	}
@@ -131,6 +132,7 @@ public class Entity extends PathfinderMob
 	public void setNpcName(String surname, String givenName)
 	{
 		String oldName = getNpcName();
+
 		// 改名：索引重挂键（先摘旧键，避免旧名仍能查到本实体）
 		if (isAddedToLevel()) NpcRegistry.unregister(this);
 		CompoundTag tag = getPersistentData();
@@ -167,6 +169,7 @@ public class Entity extends PathfinderMob
 	public void setNpcName(String name)
 	{
 		String oldName = getNpcName();
+
 		// 改名：索引重挂键
 		if (isAddedToLevel()) NpcRegistry.unregister(this);
 		getPersistentData().putString(KEY_FULL_NAME, name);
@@ -232,6 +235,7 @@ public class Entity extends PathfinderMob
 	public void setAge(short age)
 	{
 		getPersistentData().putShort(KEY_AGE, age);
+
 		// 同步到客户端，供模型缩放渲染使用
 		this.entityData.set(DATA_AGE, (int) age);
 	}
@@ -350,6 +354,7 @@ public class Entity extends PathfinderMob
 	static final String KEY_SURNAME = "nsnpc_surname";
 	static final String KEY_GIVEN_NAME = "nsnpc_givenName";
 	static final String KEY_SEX = "nsnpc_sex";
+
 	// 命名风格（zh/en）：决定全名语序，出生继承、改名沿用
 	static final String KEY_NAME_LOCALE = "nsnpc_nameLocale";
 
@@ -410,7 +415,7 @@ public class Entity extends PathfinderMob
 	// 当前寻路目标，避免每tick重复设置重置卡住检测
 	private BlockPos currentMoveTarget;
 
-	// L6：家/工作点 NBT 缓存（getHomePos/getAssignedSite 每 tick 被高频调用，缓存避免每 tick 解析 CompoundTag + new BlockPos）
+	// 家/工作点 NBT 缓存（getHomePos/getAssignedSite 每 tick 被高频调用，缓存避免每 tick 解析 CompoundTag + new BlockPos）
 	private BlockPos cachedHomePos;
 	private String cachedHomeBuilding;
 	private boolean homeCacheValid;
@@ -444,7 +449,7 @@ public class Entity extends PathfinderMob
 		getPersistentData().putString(KEY_CITY_NAME, cityName);
 	}
 
-	// 获取家（生活点）位置，无家返回null（L6：字段缓存）
+	// 获取家（生活点）位置，无家返回null（字段缓存）
 	@Nullable
 	public BlockPos getHomePos()
 	{
@@ -522,7 +527,7 @@ public class Entity extends PathfinderMob
 		getPersistentData().putBoolean(KEY_REST_TODAY, rest);
 	}
 
-	// 现在是不是休息时间：夜里(12000~24000) 或 抽到"今天休息"。
+	// 现在是不是休息时间：夜里(12000~24000) 或 抽到"今天休息"
 	// 休息期间不工作（赴工/干活全停）、也不许被兜底传送（宁可站着走回去，不要凭空拽）
 	public boolean isRestingNow()
 	{
@@ -830,6 +835,7 @@ public class Entity extends PathfinderMob
 		{
 			// 解冻时重新注册AI
 			registerGoals();
+
 			// 仍在工作：重新裁剪成工作AI（registerGoals 是完整AI，会带回闲逛/社交）
 			BlockPos site = getAssignedSite();
 			if (site != null) assignToSite(site);
@@ -991,7 +997,7 @@ public class Entity extends PathfinderMob
 		String npcName = getNpcName();
 		String cityName = getCityName();
 
-		// L2：死亡时清除临产目标缓存（防 BIRTH_TARGETS 残留）
+		// 死亡时清除临产目标缓存（防 BIRTH_TARGETS 残留）
 		com.wenzai.neosim.life.ReproductionSystem.clearBirthTarget(npcName);
 
 		if (!npcName.isEmpty() && !cityName.isEmpty())
@@ -1111,8 +1117,8 @@ public class Entity extends PathfinderMob
 	{
 		this.goalSelector.addGoal(0, new FloatGoal(this));
 
-		// 安全AI放最高级（0）：敌对生物一律逃；玩家也逃，但工地待料时只躲怪不躲玩家（防乱走）。
-		// L8：合并为一个 AvoidEntityGoal，一次 8 格扫描按 predicate 分流，代替两个独立目标
+		// 安全AI放最高级（0）：敌对生物一律逃；玩家也逃，但工地待料时只躲怪不躲玩家（防乱走）
+		// 合并为一个 AvoidEntityGoal，一次 8 格扫描按 predicate 分流，代替两个独立目标
 		this.fleeHostileGoal = new AvoidEntityGoal<>(this, LivingEntity.class,
 				e -> e.getType().getCategory() == MobCategory.MONSTER
 						|| (e instanceof Player && !isPlayerAvoidBlocked()),
@@ -1134,7 +1140,8 @@ public class Entity extends PathfinderMob
 		getPersistentData().putInt(KEY_ASSIGNED_SITE_X, site.getX());
 		getPersistentData().putInt(KEY_ASSIGNED_SITE_Y, site.getY());
 		getPersistentData().putInt(KEY_ASSIGNED_SITE_Z, site.getZ());
-		// L6：更新工作点缓存
+
+		// 更新工作点缓存
 		siteCacheValid = true;
 		cachedAssignedSite = site;
 
@@ -1148,7 +1155,7 @@ public class Entity extends PathfinderMob
 			this.registerGoals();
 		}
 
-		// 移除AI：保留赴工、夜晚回家、游泳、看向玩家、环视，以及敌对生物逃离。
+		// 移除AI：保留赴工、夜晚回家、游泳、看向玩家、环视，以及敌对生物逃离
 		// 夜晚回家必须留着：休息时间赴工目标停掉后，工人得能自己走回家（不许被传送）
 		this.goalSelector.getAvailableGoals().stream()
 				.filter(w -> !(w.getGoal() instanceof NpcGoals.MoveToSiteGoal)
@@ -1160,9 +1167,9 @@ public class Entity extends PathfinderMob
 				.toList()
 				.forEach(w -> goalSelector.removeGoal(w.getGoal()));
 
-		// 赴工一律交给寻路：能走到就步行过去，不再按固定 320 格传送。
+		// 赴工一律交给寻路：能走到就步行过去，不再按固定 320 格传送
 		// 够不到的情况（超出 FOLLOW_RANGE，或沿途区块未加载导致无路）
-		// 交给 MoveToSiteGoal 的兜底逻辑，那里会先确认确实无路可走才传送。
+		// 交给 MoveToSiteGoal 的兜底逻辑，那里会先确认确实无路可走才传送
 		this.moveToSiteGoal.setTarget(site);
 		this.currentMoveTarget = site;
 	}
@@ -1189,7 +1196,7 @@ public class Entity extends PathfinderMob
 		getNavigation().stop();
 	}
 
-	// 工地待料待命：停住不动。安全AI不摘（最高级，怪物照样逃）；只屏蔽"躲玩家"这一条。
+	// 工地待料待命：停住不动。安全AI不摘（最高级，怪物照样逃）；只屏蔽"躲玩家"这一条
 	// 休息时间不算待命：不拦寻路，NPC 可以自由走动
 	public void setStayPut(boolean v)
 	{
@@ -1215,7 +1222,8 @@ public class Entity extends PathfinderMob
 		getPersistentData().remove(KEY_ASSIGNED_SITE_X);
 		getPersistentData().remove(KEY_ASSIGNED_SITE_Y);
 		getPersistentData().remove(KEY_ASSIGNED_SITE_Z);
-		// L6：清工作点缓存
+
+		// 清工作点缓存
 		siteCacheValid = true;
 		cachedAssignedSite = null;
 		this.currentMoveTarget = null;
@@ -1226,7 +1234,7 @@ public class Entity extends PathfinderMob
 		this.registerGoals();
 	}
 
-	// 当前工作站点；无工作时返回null（L6：字段缓存，assignToSite/releaseFromSite 时失效）
+	// 当前工作站点；无工作时返回null（字段缓存，assignToSite/releaseFromSite 时失效）
 	@Nullable
 	public BlockPos getAssignedSite()
 	{
@@ -1244,8 +1252,8 @@ public class Entity extends PathfinderMob
 		return cachedAssignedSite;
 	}
 
-	// 全服按名字查找已加载的NPC。解雇/释放必须全图搜，限半径会在工人离家/远走时漏掉。
-	// 走 NpcRegistry 索引 O(1)（C1）。
+	// 全服按名字查找已加载的NPC。解雇/释放必须全图搜，限半径会在工人离家/远走时漏掉
+	// 走 NpcRegistry 索引 O(1)（C1）
 	@Nullable
 	public static Entity findByNpcName(ServerLevel level, String name)
 	{
@@ -1254,7 +1262,7 @@ public class Entity extends PathfinderMob
 
 	// ---- 维度隔离 ----
 	// NPC 绑定城市与住宅坐标，跨维度后回家、寻路、寻站、按城市索引全部失效，
-	// 所以这里三道口全堵：传送门、直接 changeDimension、指令传送。
+	// 所以这里三道口全堵：传送门、直接 changeDimension、指令传送
 
 	// 下界门/末地门：vanilla 在 handlePortal 里先问 canChangeDimensions
 	@Override
@@ -1320,9 +1328,9 @@ public class Entity extends PathfinderMob
 		}
 	}
 
-	// 自愈：站点方块已不存在（盒子被破坏/爆炸/命令删除）时，解除工作状态恢复完整AI。
+	// 自愈：站点方块已不存在（盒子被破坏/爆炸/命令删除）时，解除工作状态恢复完整AI
 	// 解雇路径只能覆盖“已加载”的NPC；区块未加载或离得远的NPC由这里兜底，
-	// 否则 NPC 会一直保持工作AI并反复走向已不存在的站点。
+	// 否则 NPC 会一直保持工作AI并反复走向已不存在的站点
 	private void selfHealStaleSite()
 	{
 		if (isFrozen()) return;
@@ -1350,14 +1358,14 @@ public class Entity extends PathfinderMob
 	// 属性
 	public static AttributeSupplier.Builder createAttributes()
 	{
-		// 使用默认值，因为 EntityAttributeCreationEvent 在配置加载之前触发。
-		// 如需运行时修改属性，应在实体生成后通过其他方式覆盖。
+		// 使用默认值，因为 EntityAttributeCreationEvent 在配置加载之前触发
+		// 如需运行时修改属性，应在实体生成后通过其他方式覆盖
 		// FOLLOW_RANGE 同时决定三件事（见 PathNavigation / PathFinder）：
 		//   1. 寻路探索区域半径 FOLLOW_RANGE + 8 格；
 		//   2. 单条路径的最大行走距离（PathFinder 用 maxRange 硬截断，超出的节点不展开）；
-		//   3. 搜索节点预算 FOLLOW_RANGE × 16。
-		// 原版村民是 48；放大到 128 是为了让市民能跨城步行通勤而不是靠传送。
-		// 注意：节点预算在 PathNavigation 构造时读取一次，运行时改属性不会生效。
+		//   3. 搜索节点预算 FOLLOW_RANGE × 16
+		// 原版村民是 48；放大到 128 是为了让市民能跨城步行通勤而不是靠传送
+		// 注意：节点预算在 PathNavigation 构造时读取一次，运行时改属性不会生效
 		return Mob.createMobAttributes()
 				.add(Attributes.MAX_HEALTH, 20.0D)
 				.add(Attributes.MOVEMENT_SPEED, 0.5D)

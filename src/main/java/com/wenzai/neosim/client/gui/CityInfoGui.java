@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Collectors;
 
-// 城市信息 GUI：全模组唯一入口是按 I 键（再按一次关闭）。
+// 城市信息 GUI：全模组唯一入口是按 I 键（再按一次关闭）
 // 四个页签：概览（一行一个数据、两列）/ 居民（NPC - 建筑）/ 建筑（4 个类型按钮）/ 配置（5 个分类按钮，宿主给 ConfigPanel）
 @OnlyIn(Dist.CLIENT)
 public class CityInfoGui extends Screen implements ConfigPanel.Host
@@ -176,7 +176,7 @@ public class CityInfoGui extends Screen implements ConfigPanel.Host
 
 	private void buildCloseButton()
 	{
-		// 配置页/转换页底部两行按钮占满左侧，关闭按钮贴右下角。
+		// 配置页/转换页底部两行按钮占满左侧，关闭按钮贴右下角
 		// 预留宽度由 ConfigPanel.CLOSE_RESERVE 统一给出：面板排版时已经把这块钱扣掉，两边永远不会叠
 		boolean config = tab == 3 || tab == 4;
 		int closeSizeW = config ? ConfigPanel.CLOSE_RESERVE - 12 : 100;

@@ -95,15 +95,17 @@ public class Manage
 		{
 			if (loadedNames.contains(name)) continue;
 			int home = NpcData.homeStatus(level, cityName, name);
+
 			// 档案缺失
 			if (home < 0) continue;
+
 			// 有档案且无家 → 流浪者
 			if (home == 0) return true;
 		}
 		return false;
 	}
 
-	// 城市是否有已加载的NPC实体（C1：索引 O(1)）
+	// 城市是否有已加载的NPC实体（索引 O(1)）
 	private static boolean hasLoadedNpc(ServerLevel level, String cityName)
 	{
 		return !NpcRegistry.byCity(cityName).isEmpty();
@@ -214,6 +216,7 @@ public class Manage
 		if (givenName != null) tag.putString(Entity.KEY_GIVEN_NAME, givenName);
 		String fullName = JsonUtil.getString(json, "name", null);
 		if (fullName != null) tag.putString(Entity.KEY_FULL_NAME, fullName);
+
 		// 命名风格：旧档无该字段时不写，由 Entity.getNameLocale() 按名字推断
 		NameLocale savedLocale = NameLocale.fromKey(JsonUtil.getString(json, "nameLocale", null));
 		if (savedLocale != null) npc.setNameLocale(savedLocale);
@@ -222,7 +225,7 @@ public class Manage
 		// 记录所属城市，用于死亡时删除文件
 		npc.setCityName(cityName);
 
-		// L2：恢复文件中的 UUID（spawnSingle 不新建随机 UUID，保证关系/临产等按 UUID 的逻辑跨重载稳定）
+		// 恢复文件中的 UUID（spawnSingle 不新建随机 UUID，保证关系/临产等按 UUID 的逻辑跨重载稳定）
 		String uuidStr = JsonUtil.getString(json, "uuid", null);
 		if (uuidStr != null && !uuidStr.isEmpty())
 		{
@@ -331,7 +334,8 @@ public class Manage
 	public static void despawnFarFromPlayers(ServerLevel level, String cityName)
 	{
 		List<? extends Player> players = level.players();
-		// C1：城市实体集合快照（避免遍历中实体被卸载导致并发修改）
+
+		// 城市实体集合快照（避免遍历中实体被卸载导致并发修改）
 		for (Entity npc : new java.util.ArrayList<>(NpcRegistry.byCity(cityName)))
 		{
 			// GUI冻结中：不卸载
@@ -361,6 +365,7 @@ public class Manage
 		for (String name : NpcData.listNpcNames(level, cityName))
 		{
 			if (loadedNames.contains(name)) continue;
+
 			// 轻量读取仅取 position，不完整解析
 			BlockPos pos = NpcData.readPosition(level, cityName, name);
 			if (pos == null) continue;
@@ -384,7 +389,8 @@ public class Manage
 	{
 		String name = npc.getNpcName();
 		String city = npc.getCityName();
-		// L2：卸载时清除临产目标缓存（防残留）
+
+		// 卸载时清除临产目标缓存（防残留）
 		com.wenzai.neosim.life.ReproductionSystem.clearBirthTarget(name);
 		npc.syncToJsonNow();
 		npc.discard();

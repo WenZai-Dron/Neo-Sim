@@ -21,6 +21,7 @@ public class SchematicData
 	@Nullable
 	private final String description;
 	private final BuildingType type;
+
 	// 蓝图是否含控制箱（构造时判定）：只有住宅类建筑会放控制箱
 	private final boolean controlBox;
 
@@ -87,7 +88,7 @@ public class SchematicData
 	// 住宅判定
 	// 自定义建筑没有目录可归类，含控制箱即视为住宅，无需玩家手动声明；
 	// 内置建筑一律以目录归类为准——老库里商业/工业蓝图同样带控制箱，
-	// 若让控制箱覆盖目录类型，它们会被误判成住宅。
+	// 若让控制箱覆盖目录类型，它们会被误判成住宅
 	public boolean isResidential()
 	{
 		return type == BuildingType.RESIDENTIAL
@@ -190,7 +191,7 @@ public class SchematicData
 	//   1) .litematic 里直接放下的 control_box 方块 → 在方块容器调色板里
 	//   2) .txt 的 '$' 字符，以及 .litematic 的 NeoSim_SpecialBlocks 元数据
 	//      → 解析成 SpecialMarker.CONTROL_BOX，不进方块容器（建造时才由标记回填方块）
-	// 只扫调色板会漏掉第 2 种，而内置住宅蓝图全是 .txt，故两种都查。
+	// 只扫调色板会漏掉第 2 种，而内置住宅蓝图全是 .txt，故两种都查
 	// 方块只看种类忽略朝向等状态；蓝图加载在注册表冻结之后，此处取方块是安全的
 	private static boolean containsControlBox(LightweightBlockContainer container,
 		@Nullable Map<BlockPos, SpecialMarker> markers)

@@ -17,13 +17,13 @@ import net.neoforged.fml.ModList;
 import org.slf4j.Logger;
 
 // Sable（子世界）物理适配器 —— 纯反射实现：本类不 import 任何 dev.ryanhcode.sable 类型，
-// 因此 Neo-Sim 的编译期与运行期都不依赖任何外部模组。
+// 因此 Neo-Sim 的编译期与运行期都不依赖任何外部模组
 // 仅在 Sable 已加载时，PhysicsAdapterRegistry 才会反射加载本类（类静态块注册自身）；
-// 未安装 Sable 时本类永远不被加载，所有反射句柄也不会解析。
+// 未安装 Sable 时本类永远不被加载，所有反射句柄也不会解析
 //
 // 当前仅保留与子世界无写交互的辅助能力（世界坐标投影、NPC 跟踪、子世界判定）；
 // 方块读写已通过 isBlockIoSupported() 停用——任何对子世界的访问都可能触发
-// Sable 卸载队列自旋（保存卡死），见 关于兼容Sable.md。Sable 修复后改回 true 即可恢复。
+// Sable 卸载队列自旋（保存卡死），见 关于兼容Sable.md。Sable 修复后改回 true 即可恢复
 public class SablePhysicsAdapter implements IPhysicsAdapter
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
@@ -200,7 +200,7 @@ public class SablePhysicsAdapter implements IPhysicsAdapter
 	}
 
 	// 把 NPC 登记进子世界跟踪：设置 plotPosition（局部坐标），EntityMixin.tick 会把它投影到
-	// 甲板的世界坐标并建立碰撞（随船体姿态站立）。
+	// 甲板的世界坐标并建立碰撞（随船体姿态站立）
 	@Override
 	public void attachNpc(ServerLevel level, Entity npc, BlockPos localPos)
 	{

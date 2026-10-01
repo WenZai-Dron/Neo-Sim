@@ -31,7 +31,7 @@ public class ConstructionEngine
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final List<ConstructionTask> tasks = new ArrayList<>();
 
-	// 最近创建的任务，供GUI读取（L4：volatile 跨线程可见 + 完工后置空防 GUI 残留引用）
+	// 最近创建的任务，供GUI读取（volatile 跨线程可见 + 完工后置空防 GUI 残留引用）
 	public static volatile ConstructionTask lastTask;
 
 	// 从预览状态创建建造任务
@@ -183,7 +183,7 @@ public class ConstructionEngine
 		return buildings;
 	}
 
-	// C9：缺料任务列表缓存（每 tick 由 DeliveryEngine 失效一次，多个快递盒共享，避免逐盒重建）
+	// 缺料任务列表缓存（每 tick 由 DeliveryEngine 失效一次，多个快递盒共享，避免逐盒重建）
 	private static java.util.List<ConstructionTask> waitingCache;
 
 	// 全部处于缺料等待中的建造任务（快递盒派单用）
@@ -304,7 +304,8 @@ public class ConstructionEngine
 				{
 					tasks.remove(task);
 				}
-				// L4：完工后置空 lastTask，防止 GUI 残留引用
+
+				// 完工后置空 lastTask，防止 GUI 残留引用
 				if (lastTask == task) lastTask = null;
 				saveAllTasks(level);
 				continue;
@@ -426,6 +427,7 @@ public class ConstructionEngine
 					{
 						tasks.add(task);
 					}
+
 					// 重启后重新注册强制加载区块
 					BuildingChunkLoader.registerForBuilding(building, level);
 					LOGGER.info("NeoSim-ConstructionEngine: restored task '{}' at {} (state {})",

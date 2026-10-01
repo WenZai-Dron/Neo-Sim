@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 // 重建盒任务持久化：每城市 RebuildBox.json
-// 记录绑定关系（控制箱 → 蓝图 → 落地几何）与游标/状态；重启后按记录恢复任务。
+// 记录绑定关系（控制箱 → 蓝图 → 落地几何）与游标/状态；重启后按记录恢复任务
 public class RebuildBoxPersistence
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
@@ -28,6 +28,7 @@ public class RebuildBoxPersistence
 	private static final int PROX_MARGIN = 512;
 
 	public record RebuildRecord(
+
 			// 重建盒位置
 			int bx, int by, int bz,
 

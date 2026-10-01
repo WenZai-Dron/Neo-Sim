@@ -6,9 +6,9 @@ import java.util.List;
 import net.neoforged.fml.ModList;
 import org.slf4j.Logger;
 
-// 物理适配器注册表：按模组 id 注册/加载适配器，支撑多物理模组共存。
+// 物理适配器注册表：按模组 id 注册/加载适配器，支撑多物理模组共存
 // 适配器类在自己的静态块里调用 register() 注册自身；本类 init() 仅反射加载
-// "已安装模组"的适配器类，未安装模组的适配器类永远不会被加载，保持零硬依赖。
+// "已安装模组"的适配器类，未安装模组的适配器类永远不会被加载，保持零硬依赖
 public final class PhysicsAdapterRegistry
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
@@ -22,12 +22,13 @@ public final class PhysicsAdapterRegistry
 	{
 	}
 
-	// 初始化（幂等）：按模组加载状态反射加载各适配器类，由 NeoSim 构造时调用。
+	// 初始化（幂等）：按模组加载状态反射加载各适配器类，由 NeoSim 构造时调用
 	public static synchronized void init()
 	{
 		if (initTried) return;
 		initTried = true;
 		tryLoad("sable", "com.wenzai.neosim.compat.sable.SablePhysicsAdapter");
+
 		// 未来模组在此追加（模组 id + 适配器全限定名）：
 		// tryLoad("simulated", "com.wenzai.neosim.compat.simulated.SimulatedPhysicsAdapter");
 	}

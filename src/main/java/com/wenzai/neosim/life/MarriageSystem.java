@@ -99,6 +99,7 @@ public class MarriageSystem
 		{
 			String oldWifeName = wife.getNpcName();
 			String surname = husband.getNpcSurname();
+
 			// 命名风格随夫（语序一致），再改姓
 			wife.setNameLocale(husband.getNameLocale());
 			wife.setNpcName(surname.isEmpty() ? wife.getNpcSurname() : surname, wife.getNpcGivenName());

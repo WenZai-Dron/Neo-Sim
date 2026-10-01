@@ -91,6 +91,7 @@ public class DeliveryBoxGui extends Screen implements HireListPanel.HostScreen
 		Minecraft mc = Minecraft.getInstance();
 		this.task = (mc != null && mc.hasSingleplayerServer())
 				? DeliveryEngine.findTask(boxPos) : null;
+
 		// 任务/记录变化 → worker 等级缓存失效
 		cachedWorkerKey = "";
 		cachedWorkerLevel = -1;
@@ -249,6 +250,7 @@ public class DeliveryBoxGui extends Screen implements HireListPanel.HostScreen
 		if (task != null) return (int) task.getJobLevel();
 		String worker = record != null && record.worker() != null ? record.worker() : "";
 		if (worker.isEmpty()) return 1;
+
 		// 同一 worker 的等级缓存（reload/refreshTask 时失效），避免每帧读 JSON
 		if (worker.equals(cachedWorkerKey) && cachedWorkerLevel >= 0) return cachedWorkerLevel;
 		try

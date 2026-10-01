@@ -6,10 +6,10 @@ import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 
-// 蓝图落地：位置与朝向的**唯一一条链**。
-// 顺序固定为：格式基础映射（SchematicFrame）-> 玩家镜像 -> 玩家旋转 -> 落点对齐。
+// 蓝图落地：位置与朝向的**唯一一条链**
+// 顺序固定为：格式基础映射（SchematicFrame）-> 玩家镜像 -> 玩家旋转 -> 落点对齐
 // 世界幽灵预览、实际建造、包围盒、区块加载窗口全都从这里取，
-// 这样「预览里看到的」和「建出来的」不可能再各走各的。
+// 这样「预览里看到的」和「建出来的」不可能再各走各的
 public final class BlueprintPlacement
 {
 	private final SchematicFrame frame;
@@ -17,6 +17,7 @@ public final class BlueprintPlacement
 	private final Direction facing;
 	private final Mirror mirror;
 	private final Rotation rotation;
+
 	// 落点对齐偏移：只有世界帧需要算（.txt 的四套映射天生就把区域推在模盒外侧，偏移恒为 0）
 	private final BlockPos landing;
 

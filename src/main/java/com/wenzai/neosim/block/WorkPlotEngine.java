@@ -380,6 +380,7 @@ public class WorkPlotEngine
 	{
 		if (rec.worker() == null || rec.worker().isEmpty()) return;
 		NeoSim.WORKER_MAP.remove(rec.boxPos());
+
 		// 全图按名查找：限半径会漏掉离家/远走的工人，导致其AI永不恢复
 		Entity npc = Entity.findByNpcName(level, rec.worker());
 		if (npc != null)

@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.Set;
 
 // 缺陷 C 结构性方案：服务端权威生成"无家 NPC"名单（替代客户端 loadHomelessNpcs 直读本地文件，
-// 同时解决多人下客户端读不到服务器文件、列表恒空的问题）。
+// 同时解决多人下客户端读不到服务器文件、列表恒空的问题）
 // 判定：以 ControlBox.json 全部记录的 residents[] 为唯一"有家"来源 + NPC 档案 home 字段交叉判定——
-// 在任一 ControlBox 居民列表中，或档案仍带 home（残留）者，均不算无家。
+// 在任一 ControlBox 居民列表中，或档案仍带 home（残留）者，均不算无家
 public final class HomelessListService
 {
 	private HomelessListService()

@@ -34,7 +34,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-// 重建任务：不需要 NPC，按蓝图把"应为方块却成了空气"的格子补回去。
+// 重建任务：不需要 NPC，按蓝图把"应为方块却成了空气"的格子补回去
 // - 与控制箱同一套落地链（BlueprintPlacement），保证与建造时位置/朝向一致
 // - 与建筑模盒同一套放置收尾（PlacementSupport）：依附朝向、连接性方块、双方块、双开门
 // - 两轮：先实心方块，后依附 / 连接性方块；每轮扫完还有被推迟的方块就回卷重试

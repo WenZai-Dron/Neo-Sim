@@ -10,9 +10,9 @@ import net.neoforged.api.distmarker.OnlyIn;
 
 import javax.annotation.Nullable;
 
-// 1×1 纯白纹理：投影"纯色层"用它替掉方块图集，于是只剩染色与透明度。
+// 1×1 纯白纹理：投影"纯色层"用它替掉方块图集，于是只剩染色与透明度
 // 这是零 shader 方案的关键——原版 position_tex_color 会给 贴图 × 顶点色 × ColorModulator，
-// 顶点色恒白、贴图换成白色，剩下可调的正好就是颜色与透明度。
+// 顶点色恒白、贴图换成白色，剩下可调的正好就是颜色与透明度
 @OnlyIn(Dist.CLIENT)
 public final class WhiteTexture
 {

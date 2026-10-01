@@ -101,7 +101,7 @@ public record SimData(byte mode, short population, int dayOfWeek, int day, doubl
 			}
 		}
 
-		// 城市数据内存缓存（键=解析后的文件路径，天然区分存档/城市）：
+		// 城市数据内存缓存（键=解析后的文件路径，天然区分存档/城市）
 		// 消除每方块/每单的"读盘+写盘+再读盘"，写入走脏标记 + 合并窗口
 		private static final java.util.Map<Path, CachedCity> CACHE = new java.util.HashMap<>();
 

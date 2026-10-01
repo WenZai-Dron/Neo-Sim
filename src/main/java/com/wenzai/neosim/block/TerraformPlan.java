@@ -128,6 +128,7 @@ public enum TerraformPlan
 						break;
 					}
 				}
+
 				// 底→顶，保证整列封死不回流
 				for (int i = column.size() - 1; i >= 0; i--)
 				{

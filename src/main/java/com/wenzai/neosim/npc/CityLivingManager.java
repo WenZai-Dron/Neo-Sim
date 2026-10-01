@@ -56,7 +56,7 @@ public class CityLivingManager
 			}
 		}
 
-		// 剩余空位分配给城市内无家NPC（C1：城市实体索引，免全服扫描）
+		// 剩余空位分配给城市内无家NPC（城市实体索引，免全服扫描）
 		if (free > 0)
 		{
 			for (Entity npc : new java.util.ArrayList<>(NpcRegistry.byCity(city)))
@@ -90,8 +90,8 @@ public class CityLivingManager
 
 	// 退房（NPC死亡等）：从记录居民列表移除，空位归还
 	// 不能只按"本城 + 当前姓名"找：房子可能是别的城市/玩家建的（记录在别的城市文件里），
-	// NPC 也可能中途改过名 —— 两者都会让退房静默失败，控制箱里一直挂着这个已死/已搬走的住户。
-	// 所以本城找不到时再扫全部城市，按姓名 或 与家的同一列(x,z) 兜底。
+	// NPC 也可能中途改过名 —— 两者都会让退房静默失败，控制箱里一直挂着这个已死/已搬走的住户
+	// 所以本城找不到时再扫全部城市，按姓名 或 与家的同一列(x,z) 兜底
 	public static void releaseHome(ServerLevel level, Entity npc)
 	{
 		String name = npc.getNpcName();
@@ -282,6 +282,7 @@ public class CityLivingManager
 			for (BlockPos p : rec.livingPoints())
 			{
 				long key = ControlBoxPersistence.columnKey(p.getX(), p.getZ());
+
 				// occupied.add 顺带把同一列重复的点跳过，避免把同一个位当成两个
 				if (!occupied.contains(key))
 				{

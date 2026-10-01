@@ -27,7 +27,7 @@ public class SchematicRegistry
 	private static final String OLD_BASE = "assets/neo_sim/buildings/old";
 	private static final String NEW_BASE = "assets/neo_sim/buildings/new";
 
-	// L22：体积预算——单文件超过 64MB 或总加载超过 256MB 直接跳过（防大 .litematic 把全部蓝图常驻内存吃爆）
+	// 体积预算——单文件超过 64MB 或总加载超过 256MB 直接跳过（防大 .litematic 把全部蓝图常驻内存吃爆）
 	private static final long MAX_FILE_BYTES = 64L * 1024L * 1024L;
 	private static final long MAX_TOTAL_BYTES = 256L * 1024L * 1024L;
 	private static long totalLoadedBytes = 0L;
@@ -81,6 +81,7 @@ public class SchematicRegistry
 				String dir = NEW_BASE + "/" + type.name().toLowerCase();
 				loadClasspathDir(dir, new LitematicaSchematicReader(), type);
 			}
+
 			// new/ 根目录下的文件默认归类为 OTHER
 			loadClasspathDir(NEW_BASE, new LitematicaSchematicReader(), BuildingType.OTHER);
 
@@ -170,7 +171,7 @@ public class SchematicRegistry
 
 			for (Path file : fileList)
 			{
-				// L22：体积预算——超限文件跳过，总加载超限则停止本目录
+				// 体积预算——超限文件跳过，总加载超限则停止本目录
 				try
 				{
 					long sz = Files.size(file);
@@ -260,7 +261,7 @@ public class SchematicRegistry
 
 		for (Path file : fileList)
 		{
-			// L22：体积预算——超限文件跳过，总加载超限则停止
+			// 体积预算——超限文件跳过，总加载超限则停止
 			try
 			{
 				long sz = Files.size(file);
@@ -572,5 +573,4 @@ public class SchematicRegistry
 		}
 		return dp[a.length()][b.length()];
 	}
-
 }

@@ -60,7 +60,7 @@ public class DeliveryTask
 	protected int workerMissingTicks;
 	protected int windowTimer;
 
-	// C9：派单扫描节流计数（每 20 tick 扫一次全城缺料工地）
+	// 派单扫描节流计数（每 20 tick 扫一次全城缺料工地）
 	protected int orderScanTicks;
 
 	// 上次跳单原因（GUI 显示）
@@ -69,6 +69,7 @@ public class DeliveryTask
 	// 当前订单（瞬态，不落盘）
 	// 认领键：工地控制箱坐标
 	protected BlockPos targetControl;
+
 	// 走路目标：模盒 ?: 控制箱
 	protected BlockPos targetSite;
 	protected Item carryItem;
@@ -328,6 +329,7 @@ public class DeliveryTask
 				{
 					worker.getNavigation().stop();
 					worker.clearMoveTarget();
+
 					// 有单立即取料出发，无单转 IDLE
 					takeOrderIfAny();
 				}
@@ -336,7 +338,7 @@ public class DeliveryTask
 		}
 	}
 
-	// 扫描全城缺料工地，取最近且未被认领的订单（C9：每 20 tick 节流）
+	// 扫描全城缺料工地，取最近且未被认领的订单（每 20 tick 节流）
 	private void takeOrderIfAny()
 	{
 		if (++orderScanTicks < WINDOW_REFRESH_TICKS) return;
@@ -449,6 +451,7 @@ public class DeliveryTask
 					InventoryManager.depositItems(chests, new ItemStack(carryItem, chunk));
 					remaining -= chunk;
 				}
+
 				// 按件扣款（非创造）
 				deductCredits(carryCount * Config.DELIVERY_CREDIT_PER_UNIT.get());
 				gainXp();

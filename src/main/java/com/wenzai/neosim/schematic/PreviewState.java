@@ -15,8 +15,9 @@ public class PreviewState
 
 	// 玩家面朝方向
 	private Direction facing;
-	private boolean isActive;
+	private boolean active;
 	private boolean needsRebuild = true;
+
 	// 落地链缓存：任何状态改动都会让它在 markNeedsRebuild() 里失效
 	private BlueprintPlacement placement;
 
@@ -81,12 +82,12 @@ public class PreviewState
 
 	public boolean isActive()
 	{
-		return isActive;
+		return active;
 	}
 
 	public void setActive(boolean v)
 	{
-		this.isActive = v;
+		this.active = v;
 	}
 
 	public boolean needsRebuild()

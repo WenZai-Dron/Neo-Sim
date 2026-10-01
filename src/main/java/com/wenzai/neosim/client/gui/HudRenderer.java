@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // HUD 的行内容与排版只在这里实现一次：HUD 与世界之间只有这一条绘制路径，
-// 免得出现"设置里改了位置、世界里的 HUD 没跟着动"的两处实现漂移。
+// 免得出现"设置里改了位置、世界里的 HUD 没跟着动"的两处实现漂移
 public final class HudRenderer
 {
 	private HudRenderer()

@@ -25,7 +25,7 @@ public class MarkerManager
 	// 定时对账计数器（每 40 tick 对账一次）
 	private static int reconcileCounter = 0;
 
-	// L11：活动矩形结果缓存 + 脏标记（标记增删/对账变化时失效，避免 getActiveRects 每调用 O(n⁴) 重算）
+	// 活动矩形结果缓存 + 脏标记（标记增删/对账变化时失效，避免 getActiveRects 每调用 O(n⁴) 重算）
 	private static List<MarkerRect> cachedRects;
 	private static boolean rectsDirty = true;
 
@@ -33,7 +33,7 @@ public class MarkerManager
 	{
 	}
 
-	// L11：标记集合变化 → 矩形缓存失效
+	// 标记集合变化 → 矩形缓存失效
 	private static void invalidateRects()
 	{
 		cachedRects = null;
@@ -152,6 +152,7 @@ public class MarkerManager
 		if (currentDim == null || !(level instanceof ServerLevel serverLevel)) return;
 		List<List<BlockPos>> rects = computeActiveRects(currentMarkers());
 		ServerToClientPayloads.MarkerSyncPayload payload = buildPayload(rects);
+
 		// 只发给当前维度内的玩家（切维度不串台）
 		for (ServerPlayer player : serverLevel.players())
 		{
@@ -175,6 +176,7 @@ public class MarkerManager
 	{
 		List<BlockPos> list = markersByDim.get(level.dimension());
 		if (list == null) return List.of();
+
 		// 入口轻量对账：服务端先剔除已加载区块内不再是标记棒的旧标记（持久化由 tick() 周期负责）
 		if (!level.isClientSide)
 		{
@@ -183,7 +185,8 @@ public class MarkerManager
 				invalidateRects();
 			}
 		}
-		// L11：缓存命中直接返回（标记未变化时避免每调用 O(n⁴) 枚举）
+
+		// 缓存命中直接返回（标记未变化时避免每调用 O(n⁴) 枚举）
 		if (!rectsDirty && cachedRects != null)
 		{
 			return cachedRects;

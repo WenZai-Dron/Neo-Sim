@@ -137,11 +137,14 @@ public class Genealogy
 				{
 					FamilyNode pn = readNode(level, city, p);
 					if (pn == null) continue;
+
 					// 祖辈
 					for (String gp : pn.parents()) queue.add(gp);
+
 					// 兄弟姐妹
 					for (String s : pn.children()) queue.add(s);
 				}
+
 				// 姻亲：配偶的父母
 				if (!node.partner().isEmpty())
 				{
@@ -152,6 +155,7 @@ public class Genealogy
 					}
 				}
 			}
+
 			// 非根节点：不扩展（子女的子女=孙辈、兄弟姐妹的子女=侄辈，均不收录）
 		}
 		return nodes;

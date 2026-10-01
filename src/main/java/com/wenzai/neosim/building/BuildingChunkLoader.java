@@ -67,6 +67,7 @@ public class BuildingChunkLoader
 				changed = true;
 			}
 		}
+
 		// 减：已注册但不在新窗口内的
 		Iterator<ChunkPos> it = building.getLoadedChunks().iterator();
 		while (it.hasNext())
@@ -107,6 +108,7 @@ public class BuildingChunkLoader
 				}
 			}
 		}
+
 		// 模盒所在区块始终保留（工人/交互点）
 		BlockPos con = building.getConstructorPos();
 		if (con != null)

@@ -28,8 +28,9 @@ public class ModSavedData
 
 	private Path dataFile;
 	private SimData data = SimData.DEFAULT;
-	// 历史字段：Run/City 向导不再由这两个标志门控（改为按"模式已选/已入城"需求状态判断，见 NeoSim.handlePlayerJoin）；
-	// 保留读写仅为兼容旧 data.json，不参与任何行为。
+
+	// 历史字段：Run/City 向导不再由这两个标志门控（改为按"模式已选/已入城"需求状态判断，见 NeoSim.handlePlayerJoin）
+	// 保留读写仅为兼容旧 data.json，不参与任何行为
 	private boolean runGuiSent = false;
 	private final Set<String> joinedPlayers = new HashSet<>();
 
@@ -333,6 +334,7 @@ public class ModSavedData
 		this.data = data.withDayOfWeek((data.dayOfWeek() + 1) % 7);
 
 		saveToFile();
+
 		// day 按在线城市推进（多人：各城市独立日期）
 		for (String city : CityManager.onlineCities(level))
 		{
@@ -356,7 +358,7 @@ public class ModSavedData
 		return INSTANCE;
 	}
 
-	// L3：服务器停止时置空单例（释放 ServerLevel 引用，防关档后钉住旧世界）
+	// 服务器停止时置空单例（释放 ServerLevel 引用，防关档后钉住旧世界）
 	public static void resetInstance()
 	{
 		INSTANCE = null;

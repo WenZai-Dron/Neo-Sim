@@ -20,9 +20,9 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-// 「界面」页（城市信息 GUI → 配置 → 界面）：HUD 与世界投影的个人外观设置。
-// 一人一份文件 NeoSim/Json/ui/<玩家名>.json；控件直接改内存里的 UiSettings，按「保存」才落盘。
-// 布局：子标签（HUD 外观 / HUD 内容 / 投影预览）→ 设置行（名称 + 控件 + 值）→ 底部保存 / 重载 / 重置。
+// 「界面」页（城市信息 GUI → 配置 → 界面）：HUD 与世界投影的个人外观设置
+// 一人一份文件 NeoSim/Json/ui/<玩家名>.json；控件直接改内存里的 UiSettings，按「保存」才落盘
+// 布局：子标签（HUD 外观 / HUD 内容 / 投影预览）→ 设置行（名称 + 控件 + 值）→ 底部保存 / 重载 / 重置
 public class UiPanel
 {
 	private static final String P = "gui.neosim.ui.";
@@ -302,6 +302,7 @@ public class UiPanel
 			UiSettings.Field field = hud.fields.get(index);
 			int posY = top + line * rowSizeH;
 			int posX = EDGE + (index % 2) * (cellSizeW + 12);
+
 			// lambda 里要用下标：循环变量本身不是 effectively final，先接一个局部量
 			int fieldIndex = index;
 
@@ -370,7 +371,7 @@ public class UiPanel
 	}
 
 	// 底部：保存 / 重载 / 重置
-	// 三个都只作用于「界面」这一份个人设置文件（NeoSim/Json/ui/<玩家名>.json），不碰内容表、不碰城市数据。
+	// 三个都只作用于「界面」这一份个人设置文件（NeoSim/Json/ui/<玩家名>.json），不碰内容表、不碰城市数据
 	// 排布交给 ConfigPanel.layoutActions：它按可用宽度整体收窄，并已经扣掉右下角关闭按钮的预留区
 	private void buildActionRow(ConfigPanel.Host host)
 	{
@@ -443,6 +444,7 @@ public class UiPanel
 		for (ItemStack stack : SAMPLE_BLOCKS)
 		{
 			gfx.renderItem(stack, posX, posY);
+
 			// 与真实渲染同序：先纯色层，再贴图层（这里是近似示意，不是逐像素复刻）
 			if (flat > 0) gfx.fill(posX, posY, posX + 16, posY + 16, (flat << 24) | tint);
 			if (texture > 0) gfx.fill(posX, posY, posX + 16, posY + 16, (texture << 24) | tint);
@@ -544,7 +546,7 @@ public class UiPanel
 		return false;
 	}
 
-	// 按钮文案：平时是「重置」，点过一次变「确认重置？」。
+	// 按钮文案：平时是「重置」，点过一次变「确认重置？」
 	// 注意用的是 reset.page（按钮短文案），不是 resetPage（重置完成后的提示句）
 	private String confirmKey(String action)
 	{
@@ -599,11 +601,12 @@ public class UiPanel
 		};
 	}
 
-	// 排版：顶边固定，行高 = 可用高度 ÷ 本页行数，夹在上下限之间。
+	// 排版：顶边固定，行高 = 可用高度 ÷ 本页行数，夹在上下限之间
 	// 底部操作行在 height - 46，这里留 6px 余量——所以设置行永远不会压到保存 / 关闭那排按钮上
 	private void computeLayout()
 	{
 		int bottom = host.height() - ACTION_Y_OFFSET - 6;
+
 		// 子标签行是 y=86、高 16（占到 102），顶边至少留 4px 才不会顶上去
 		rowTop = host.height() < 380 ? 106 : 110;
 		rowSizeH = Math.max(ROW_H_MIN, Math.min(ROW_H_MAX, (bottom - rowTop) / Math.max(1, rowsOnPage())));
@@ -689,8 +692,8 @@ public class UiPanel
 		return (field.enabled ? "\u2714 " : "\u2718 ") + UiSettings.fieldName(field.key);
 	}
 
-	// 通用滑块：归一化后交给原版 AbstractSliderButton，标签与写回由调用方给。
-	// 滑动过程中只改内存（不重建控件），否则正在拖的那个滑块会被换掉。
+	// 通用滑块：归一化后交给原版 AbstractSliderButton，标签与写回由调用方给
+	// 滑动过程中只改内存（不重建控件），否则正在拖的那个滑块会被换掉
 	private static class Slider extends AbstractSliderButton
 	{
 		private final double min;
