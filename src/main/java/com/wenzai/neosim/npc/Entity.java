@@ -523,7 +523,7 @@ public class Entity extends PathfinderMob
 	// 休息期间不工作（赴工/干活全停）、也不许被兜底传送（宁可站着走回去，不要凭空拽）
 	public boolean isRestingNow()
 	{
-		return isRestToday() || level().getDayTime() % 24000L >= 12000L;
+		return isRestToday() || com.wenzai.neosim.Config.isRestTime(level().getDayTime());
 	}
 
 	// 同居/婚姻对象名（等待Phase 3婚姻填充）

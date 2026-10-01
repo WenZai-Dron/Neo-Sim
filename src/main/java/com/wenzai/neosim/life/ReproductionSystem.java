@@ -95,7 +95,7 @@ public class ReproductionSystem
 	// 夜晚每分钟：符合条件者发起
 	public static void onMinuteNight(ServerLevel level, String city)
 	{
-		if (level.getDayTime() % 24000 < 12000) return;
+		if (!com.wenzai.neosim.Config.isRestTime(level.getDayTime())) return;
 
 		for (Entity npc : loadedNpcs(level, city))
 		{
@@ -116,7 +116,7 @@ public class ReproductionSystem
 	// 每秒：推进造人进度（白天重置），临产到达分娩点后分娩
 	public static void onSecondTick(ServerLevel level, String city)
 	{
-		boolean night = level.getDayTime() % 24000 >= 12000;
+		boolean night = com.wenzai.neosim.Config.isRestTime(level.getDayTime());
 
 		for (Entity npc : loadedNpcs(level, city))
 		{

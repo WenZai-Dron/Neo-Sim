@@ -603,6 +603,10 @@ public class LangZhCn extends LanguageProvider
 		add("config.neosim.lifePregnancyChance.tooltip","怀孕概率（1/7）");
 		add("config.neosim.lifeRestChance","居家休息概率");
 		add("config.neosim.lifeRestChance.tooltip","有家无业市民白天在家休息、不外出社交的概率");
+		add("config.neosim.restStartHour","休息开始（游戏内小时）");
+		add("config.neosim.restStartHour.tooltip","市民/工人开始休息的时刻，0-23 时，支持跨午夜（默认 18 点）");
+		add("config.neosim.restEndHour","休息结束（游戏内小时）");
+		add("config.neosim.restEndHour.tooltip","市民/工人结束休息的时刻，0-23 时（默认次日 6 点）");
 		add("config.neosim.lifePregnancyMaxAge","受孕上限年龄");
 		add("config.neosim.lifePregnancyMaxAge.tooltip","女性超过该年龄后不再参与受孕");
 		add("config.neosim.lifePregnancyStartStage","受孕初始孕期进度");

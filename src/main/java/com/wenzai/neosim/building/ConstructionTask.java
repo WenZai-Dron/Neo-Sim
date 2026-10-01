@@ -1438,7 +1438,7 @@ public class ConstructionTask
 	// 是否夜晚
 	private boolean isNightTime()
 	{
-		return level.getDayTime() % 24000 >= 12000;
+		return com.wenzai.neosim.Config.isRestTime(level.getDayTime());
 	}
 
 	// 下班：回生活点

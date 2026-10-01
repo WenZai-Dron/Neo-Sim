@@ -153,7 +153,7 @@ public class NpcGoals
 		@Override
 		protected boolean stateActive()
 		{
-			return npc.level().getDayTime() % 24000 >= 12000;
+			return com.wenzai.neosim.Config.isRestTime(npc.level().getDayTime());
 		}
 	}
 
@@ -169,7 +169,8 @@ public class NpcGoals
 		@Override
 		protected boolean stateActive()
 		{
-			return npc.level().getDayTime() % 24000 < 12000 && npc.isRestToday() && !npc.hasJob();
+			return !com.wenzai.neosim.Config.isRestTime(npc.level().getDayTime())
+					&& npc.isRestToday() && !npc.hasJob();
 		}
 	}
 

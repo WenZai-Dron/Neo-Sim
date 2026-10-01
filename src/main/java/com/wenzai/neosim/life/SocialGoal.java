@@ -240,6 +240,6 @@ public class SocialGoal extends Goal
 
 	private boolean isNight()
 	{
-		return npc.level().getDayTime() % 24000 >= 12000;
+		return com.wenzai.neosim.Config.isRestTime(npc.level().getDayTime());
 	}
 }

@@ -98,6 +98,14 @@ public class Config
 		LIFE_REST_CHANCE = BUILDER
 				.translation("config.neosim.lifeRestChance")
 				.defineInRange("restChance", 0.25, 0.0, 1.0);
+
+		// 休息时段（游戏内时钟小时 0-23，支持跨午夜）。默认 18:00~06:00，与旧版 12000~24000 等价
+		REST_START_HOUR = BUILDER
+				.translation("config.neosim.restStartHour")
+				.defineInRange("startHour", 18, 0, 23);
+		REST_END_HOUR = BUILDER
+				.translation("config.neosim.restEndHour")
+				.defineInRange("endHour", 6, 0, 23);
 		BUILDER.pop();
 
 		// 生育与分娩
@@ -387,6 +395,11 @@ public class Config
 	// 有家无业市民白天居家休息概率
 	public static final ModConfigSpec.DoubleValue LIFE_REST_CHANCE;
 
+	// 休息时段：开始/结束小时（0-23）
+	public static final ModConfigSpec.IntValue REST_START_HOUR;
+
+	public static final ModConfigSpec.IntValue REST_END_HOUR;
+
 	// 生育：孕期天数
 	public static final ModConfigSpec.IntValue LIFE_PREGNANCY_DAYS;
 
@@ -541,6 +554,22 @@ public class Config
 	}
 
 	static final ModConfigSpec SPEC = BUILDER.build();
+
+	// 游戏内时钟小时(0-23) -> 一天内 tick。MC 里 tick 0 = 06:00，故 hour 0 = 00:00 = tick 18000
+	private static int hourToTick(int hour)
+	{
+		return Math.floorMod(hour * 1000 - 6000, 24000);
+	}
+
+	// 是否处于配置的休息时段（start==end 视为不休息；支持跨午夜）
+	public static boolean isRestTime(long dayTime)
+	{
+		int t = (int) Math.floorMod(dayTime, 24000L);
+		int start = hourToTick(REST_START_HOUR.get());
+		int end = hourToTick(REST_END_HOUR.get());
+		if (start == end) return false;
+		return start < end ? (t >= start && t < end) : (t >= start || t < end);
+	}
 
 	// 运行时校验配置值，确保所有值在合法范围内（调用在服务端启动/客户端加入世界后）
 	public static void validate()

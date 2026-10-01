@@ -594,6 +594,10 @@ public class LangEnUs extends LanguageProvider
 		add("config.neosim.lifePregnancyChance.tooltip","Pregnancy Chance (1/7)");
 		add("config.neosim.lifeRestChance","Rest at Home Chance");
 		add("config.neosim.lifeRestChance.tooltip","Chance for jobless residents with a home to rest at home instead of socializing during the day");
+		add("config.neosim.restStartHour","Rest start (in-game hour)");
+		add("config.neosim.restStartHour.tooltip","Hour (0-23) when citizens/workers go to rest; may cross midnight (default 18:00)");
+		add("config.neosim.restEndHour","Rest end (in-game hour)");
+		add("config.neosim.restEndHour.tooltip","Hour (0-23) when rest ends (default 06:00 next day)");
 		add("config.neosim.lifePregnancyMaxAge","Pregnancy Max Age");
 		add("config.neosim.lifePregnancyMaxAge.tooltip","Maximum age at which a female resident can become pregnant");
 		add("config.neosim.lifePregnancyStartStage","Pregnancy Start Stage");
