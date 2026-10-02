@@ -12,6 +12,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
@@ -238,13 +239,15 @@ public class MineTask extends PlotTask
 		LOGGER.info("NeoSim-MineTask: plot depleted, miner fired — work box at {}", boxPos());
 	}
 
-	// 可挖：非空气/水/岩浆/基岩
+	// 可挖：非空气 / 非水岩浆本体 / 非基岩
+	// 注意：只拦"流体本体"（LiquidBlock）。含水/水下的固体方块照样挖 ——
+	// 它们只是 blockstate 带流体，拦掉会让矿盒被水卡住（流体不该阻碍施工）
 	private static boolean isMinable(BlockState bs)
 	{
 		if (bs.isAir()) return false;
 		Block b = bs.getBlock();
 		if (b == Blocks.BEDROCK) return false;
-		if (!bs.getFluidState().isEmpty()) return false;
+		if (b instanceof LiquidBlock) return false;
 		return true;
 	}
 

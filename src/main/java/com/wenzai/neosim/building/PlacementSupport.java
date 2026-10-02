@@ -10,8 +10,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.BushBlock;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.SnowLayerBlock;
 import net.minecraft.world.level.block.VineBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -96,6 +98,20 @@ public final class PlacementSupport
 
 		// ANY / AUTO / NONE：不做朝向与支撑修正
 		return state;
+	}
+
+	// 建造时"视为空气"的方块：植被 / 雪层 / 带流体的格子（水、岩浆、含水方块）。
+	// 建造前的冲突检测（PreviewAdjustGui 的开始按钮）与建造中的阻挡判定共用这一份 ——
+	// 两边口径必须一致，否则会出现"能点开始、建的时候被草/雪/水卡住反复挖"。
+	// 想再放宽（藤蔓、整块雪、火…）只改这里一处，两边同时生效。
+	public static boolean isNonBlocking(BlockState state)
+	{
+		if (state.isAir()) return true;
+
+		Block block = state.getBlock();
+		return block instanceof BushBlock
+				|| block instanceof SnowLayerBlock
+				|| !state.getFluidState().isEmpty();
 	}
 
 	// 连接性方块：判定交给可编辑的 AttachedBlockTable（墙/栅栏/铁栏杆/玻璃板及其模组子类）

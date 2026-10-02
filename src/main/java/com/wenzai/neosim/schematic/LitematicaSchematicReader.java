@@ -228,10 +228,11 @@ public class LitematicaSchematicReader implements ISchematicReader
 
 						BlockState state = palette.getBlockState(paletteId);
 
-						// 负数尺寸：数据从远端开始存储，坐标从Position+Size+1算起
-						int wx = offsetX + (sizeXSigned < 0 ? sizeXSigned + 1 + x : x);
-						int wy = offsetY + (sizeYSigned < 0 ? sizeYSigned + 1 + y : y);
-						int wz = offsetZ + (sizeZSigned < 0 ? sizeZSigned + 1 + z : z);
+						// 负数尺寸：数据从远端开始存储，坐标从 Position+Size+1 算起
+						// 方块 / 方块实体 / 实体三处必须共用同一个换算（regionToWorld），不能再各写一份
+						int wx = regionToWorld(x, offsetX, sizeXSigned);
+						int wy = regionToWorld(y, offsetY, sizeYSigned);
+						int wz = regionToWorld(z, offsetZ, sizeZSigned);
 
 						// 生活点方块约定：该格标记为 LIVING_POINT，不写入容器（保持空气）
 						if (state.getBlock() == ModBlocks.LIVING_POINT.get())
@@ -253,9 +254,13 @@ public class LitematicaSchematicReader implements ISchematicReader
 				for (int i = 0; i < teList.size(); i++)
 				{
 					CompoundTag te = teList.getCompound(i);
-					int tx = te.getInt("x") + offsetX;
-					int ty = te.getInt("y") + offsetY;
-					int tz = te.getInt("z") + offsetZ;
+
+					// 键统一成容器局部坐标（与上面的方块写入、SpecialMarker 一致），
+					// 方块实体存的是区域局部坐标，必须和方块走同一份负数尺寸换算；
+					// 各写一份就会让 NBT 键整体平移、装到别的格子上（告示牌文字、箱子内容都会错位）
+					int tx = regionToWorld(te.getInt("x"), offsetX, sizeXSigned) - globalMinX;
+					int ty = regionToWorld(te.getInt("y"), offsetY, sizeYSigned) - globalMinY;
+					int tz = regionToWorld(te.getInt("z"), offsetZ, sizeZSigned) - globalMinZ;
 					allTileEntities.put(new BlockPos(tx, ty, tz), te);
 				}
 			}
@@ -268,9 +273,9 @@ public class LitematicaSchematicReader implements ISchematicReader
 				{
 					CompoundTag ent = entList.getCompound(i);
 					ListTag posList = ent.getList("Pos", Tag.TAG_DOUBLE);
-					double ex = posList.getDouble(0) + offsetX;
-					double ey = posList.getDouble(1) + offsetY;
-					double ez = posList.getDouble(2) + offsetZ;
+					double ex = regionToWorld(posList.getDouble(0), offsetX, sizeXSigned);
+					double ey = regionToWorld(posList.getDouble(1), offsetY, sizeYSigned);
+					double ez = regionToWorld(posList.getDouble(2), offsetZ, sizeZSigned);
 					ent.put("Pos", newPosList(ex, ey, ez));
 					allEntities.add(new SchematicData.SchematicEntity(BlockPos.containing(ex, ey, ez), ent));
 				}
@@ -317,6 +322,18 @@ public class LitematicaSchematicReader implements ISchematicReader
 						type, x, y, z);
 			}
 		}
+	}
+
+	// 区域局部坐标 -> 世界坐标：负数尺寸的区域，数据是从 Position+Size+1 那一端开始存的。
+	// 方块、方块实体、实体三处必须共用这一份，各写一份就会出现键整体平移
+	private static int regionToWorld(int local, int offset, int signedSize)
+	{
+		return offset + (signedSize < 0 ? signedSize + 1 + local : local);
+	}
+
+	private static double regionToWorld(double local, int offset, int signedSize)
+	{
+		return offset + (signedSize < 0 ? signedSize + 1 + local : local);
 	}
 
 	// palette解析

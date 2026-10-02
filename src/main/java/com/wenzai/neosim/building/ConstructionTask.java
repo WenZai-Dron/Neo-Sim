@@ -14,11 +14,13 @@ import com.wenzai.neosim.storage.FileCreater;
 import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
@@ -460,7 +462,10 @@ public class ConstructionTask
 			}
 
 			// 阻挡方块：启动挖掘（延迟后清除 + 扣等级进度），本 tick 结束
-			if (!current.isAir())
+			// 例外：植被 / 雪层 / 带流体的格子（水、岩浆、含水方块）不挖，直接盖掉 ——
+			// 与"开始建造"按钮的冲突检测用同一份判定（PlacementSupport.isNonBlocking），
+			// 否则会出现"能点开始、建的时候被草/雪/水卡住反复挖"。vanilla setBlock 本来就会替换掉它们
+			if (!PlacementSupport.isNonBlocking(current))
 			{
 				startDig(worldPos, currentMode() != 2);
 				return;
@@ -519,6 +524,10 @@ public class ConstructionTask
 
 			// 特殊方块放置后生效
 			activatePlacedSpecial(toPlace, worldPos);
+
+			// 方块实体数据（告示牌文字、箱子内容、蜂巢…）：蓝图里带的话装回去，
+			// 否则建出来的告示牌是空白的。键就是蓝图局部坐标（与容器同一坐标系）
+			applyTileEntityData(width, layer, depth, worldPos, toPlace);
 
 			// 双方块补齐：门补另一半并配对双开门；床按容器相邻床格补另一半
 			if (toPlace.getBlock() instanceof DoorBlock)
@@ -671,6 +680,41 @@ public class ConstructionTask
 	}
 
 	// 启动挖掘：记录待挖位置，计时从抬手动画开始
+	// 把蓝图里的方块实体数据装回刚放下的方块（告示牌文字、箱子内容、蜂巢蜜蜂…）
+	private void applyTileEntityData(int bx, int by, int bz, BlockPos worldPos, BlockState placed)
+	{
+		if (!placed.hasBlockEntity()) return;
+
+		Map<BlockPos, CompoundTag> tileEntities = schematic.getTileEntities();
+		if (tileEntities == null) return;
+
+		CompoundTag stored = tileEntities.get(new BlockPos(bx, by, bz));
+		if (stored == null) return;
+
+		BlockEntity be = level.getBlockEntity(worldPos);
+		if (be == null) return;
+
+		CompoundTag tag = stored.copy();
+
+		// 坐标改成实际落点
+		tag.putInt("x", worldPos.getX());
+		tag.putInt("y", worldPos.getY());
+		tag.putInt("z", worldPos.getZ());
+
+		try
+		{
+			be.loadWithComponents(tag, level.registryAccess());
+			be.setChanged();
+
+			// 让客户端拿到新的方块实体数据（告示牌文字不然只存在服务端）
+			level.sendBlockUpdated(worldPos, placed, placed, Block.UPDATE_ALL);
+		}
+		catch (Throwable t)
+		{
+			LOGGER.warn("NeoSim-ConstructionTask: failed to load block entity data at {} — {}", worldPos, t.toString());
+		}
+	}
+
 	private void startDig(BlockPos pos, boolean drop)
 	{
 		pendingDigPos = pos;

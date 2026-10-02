@@ -52,7 +52,10 @@ public enum SchematicFrame
 	{
 		if (state == null) return null;
 		if (this == SUKRAFT) return state;
-		return CoordTransform.transformState(state, BLUEPRINT_VIEW);
+
+		// 位置用 simukraftPos（旋转 + 镜像的映射），状态就用与之严格配对的原版 rotate/mirror：
+		// 手改 HORIZONTAL_FACING 会漏掉告示牌的 ROTATION（非朝向属性）和楼梯/门的附属属性
+		return CoordTransform.transformStateByFrame(state, BLUEPRINT_VIEW);
 	}
 
 	// 按格式取算法；蓝图缺失时退回 .txt 口径（保守，和改动前行为一致）

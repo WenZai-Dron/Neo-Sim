@@ -1,6 +1,7 @@
 package com.wenzai.neosim.client.preview;
 
 import com.wenzai.neosim.schematic.LightweightBlockContainer;
+import net.minecraft.client.renderer.BiomeColors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
@@ -16,9 +17,13 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ColorResolver;
+import net.minecraft.world.level.FoliageColor;
+import net.minecraft.world.level.GrassColor;
 import net.minecraft.world.level.LevelAccessor;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.block.Block;
@@ -43,8 +48,10 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.minecraft.world.ticks.LevelTickAccess;
 import net.minecraft.world.ticks.TickPriority;
+import net.neoforged.neoforge.client.model.data.ModelData;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -65,7 +72,17 @@ public final class BlueprintLevelView implements LevelAccessor
 	@Nullable
 	private final BlockPos frameOrigin;
 	@Nullable
-	private final BlockGetter outsideWorld;
+	private final BlockAndTintGetter outsideWorld;
+
+	// 预览自己造的方块实体（帧内坐标 → BE）：BE 渲染与 ModelData 都从这里取
+	@Nullable
+	private Map<BlockPos, BlockEntity> blockEntities;
+
+	// 渲染视图专用：帧外一律当空气。面剔除（Block.shouldRenderFace）与流体只看蓝图自己的邻居。
+	// 不能拿真实世界参与剔除——落点周围本来就有地形，尤其低于地表的那几层，
+	// 真实方块的邻居会把幽灵的面整片剔掉，看起来就是"低于地面/低于玩家的方块透明了"。
+	// 连通性判定（PreviewFrame 自己那份视图）与染色/光照不走这个开关。
+	private boolean outsideIsAir;
 
 	public BlueprintLevelView(LightweightBlockContainer container)
 	{
@@ -73,7 +90,7 @@ public final class BlueprintLevelView implements LevelAccessor
 	}
 
 	public BlueprintLevelView(LightweightBlockContainer container, @Nullable BlockPos frameOrigin,
-							  @Nullable BlockGetter outsideWorld)
+							  @Nullable BlockAndTintGetter outsideWorld)
 	{
 		this.container = container;
 		this.sizeX = container.getSizeX();
@@ -81,6 +98,11 @@ public final class BlueprintLevelView implements LevelAccessor
 		this.sizeZ = container.getSizeZ();
 		this.frameOrigin = frameOrigin;
 		this.outsideWorld = outsideWorld;
+	}
+
+	public void setOutsideIsAir(boolean outsideIsAir)
+	{
+		this.outsideIsAir = outsideIsAir;
 	}
 
 	// ---- 方块与流体：唯一的真实数据源，蓝图内是空气的格子与帧外都交给真实世界（没有真实世界就是空气） ----
@@ -96,7 +118,7 @@ public final class BlueprintLevelView implements LevelAccessor
 		{
 			inside = container.get(x, y, z);
 		}
-		if (!inside.isAir() || outsideWorld == null || frameOrigin == null)
+		if (!inside.isAir() || outsideWorld == null || frameOrigin == null || outsideIsAir)
 		{
 			return inside;
 		}
@@ -111,17 +133,37 @@ public final class BlueprintLevelView implements LevelAccessor
 		return getBlockState(pos).getFluidState();
 	}
 
+	// 预览自己造的方块实体：位置就是帧内坐标，BER 读到的 getBlockPos/getBlockState 与蓝图一致
+	public void setBlockEntities(@Nullable Map<BlockPos, BlockEntity> blockEntities)
+	{
+		this.blockEntities = blockEntities;
+	}
+
 	@Nullable
 	@Override
 	public BlockEntity getBlockEntity(BlockPos pos)
 	{
-		return null;
+		return blockEntities == null ? null : blockEntities.get(pos);
 	}
 
 	@Override
+	@SuppressWarnings("unchecked")
 	public <T extends BlockEntity> Optional<T> getBlockEntity(BlockPos pos, BlockEntityType<T> blockEntityType)
 	{
+		BlockEntity be = getBlockEntity(pos);
+		if (be != null && be.getType() == blockEntityType)
+		{
+			return Optional.of((T) be);
+		}
 		return Optional.empty();
+	}
+
+	// ModelData：NeoForge 的 BlockGetter 扩展默认给 EMPTY，这里把方块实体自己那份带上
+	@Override
+	public ModelData getModelData(BlockPos pos)
+	{
+		BlockEntity be = getBlockEntity(pos);
+		return be == null ? ModelData.EMPTY : be.getModelData();
 	}
 
 	// 高度只描述蓝图容器自身，isOutsideBuildHeight 才不会把蓝图内的格子判到世界之外
@@ -240,9 +282,45 @@ public final class BlueprintLevelView implements LevelAccessor
 		return null;
 	}
 
+	// 光照：BlockAndTintGetter 的默认实现会走 getLightEngine()（预览没有光照引擎，返回 null → NPE）。
+	// 预览不需要真实光照：AO 与顶点光照贴图统一按满亮算，否则 renderBatched 第一步就会炸。
+	@Override
+	public int getBrightness(LightLayer lightLayer, BlockPos pos)
+	{
+		return 15;
+	}
+
+	@Override
+	public int getRawBrightness(BlockPos pos, int amount)
+	{
+		return 15;
+	}
+
+	// 生物群系染色：把帧内坐标映射回真实世界坐标，问有色方块要颜色（草/树叶跟着建设地点的群系走）。
+	// 没有真实世界（GUI 缩略图）或取不到时返回 -1，交给 BlockColors 的缺省处理。
 	@Override
 	public int getBlockTint(BlockPos pos, ColorResolver colorResolver)
 	{
+		if (outsideWorld != null && frameOrigin != null)
+		{
+			try
+			{
+				return outsideWorld.getBlockTint(frameOrigin.offset(pos), colorResolver);
+			}
+			catch (Throwable ignored)
+			{
+				// 区块未加载等异常：染色失败不该拖垮整个预览重建
+			}
+		}
+
+		// 没有真实世界（GUI 缩略图）：给原版默认色。
+		// 不能直接 -1 —— 方块模型（ModelBlockRenderer）会拿这个 level 去问群系色，
+		// 返回 -1 会让草/树叶在缩略图里变成纯白
+		if (colorResolver == BiomeColors.GRASS_COLOR_RESOLVER) return GrassColor.getDefaultColor();
+		if (colorResolver == BiomeColors.FOLIAGE_COLOR_RESOLVER) return FoliageColor.getDefaultColor();
+
+		// 原版默认水体色 0x3F76E4（液体渲染器问的是 WATER_COLOR_RESOLVER）
+		if (colorResolver == BiomeColors.WATER_COLOR_RESOLVER) return 0x3F76E4;
 		return -1;
 	}
 

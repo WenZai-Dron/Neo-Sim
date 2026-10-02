@@ -1,5 +1,6 @@
 package com.wenzai.neosim.client.gui;
 
+import com.wenzai.neosim.building.PlacementSupport;
 import com.wenzai.neosim.client.preview.FreeCamera;
 import com.wenzai.neosim.client.preview.SchematicPreviewManager;
 import com.wenzai.neosim.schematic.*;
@@ -125,11 +126,8 @@ public class PreviewAdjustGui extends Screen
 					BlockPos worldPos = state.blueprintToWorld(x, y, z);
 					BlockState worldBlock = mc.level.getBlockState(worldPos);
 
-					// 植被/雪层/水视为空气，不阻碍放置
-					if (!worldBlock.isAir()
-							&& !(worldBlock.getBlock() instanceof BushBlock)
-							&& !(worldBlock.getBlock() instanceof SnowLayerBlock)
-							&& worldBlock.getBlock() != Blocks.WATER)
+					// 植被/雪层/流体视为空气，不阻碍放置（与建造中的阻挡判定同一份规则，见 PlacementSupport.isNonBlocking）
+					if (!PlacementSupport.isNonBlocking(worldBlock))
 					{
 						hasCollision = true;
 						break outer;

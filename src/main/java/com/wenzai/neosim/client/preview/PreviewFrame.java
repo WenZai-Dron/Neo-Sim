@@ -3,7 +3,7 @@ package com.wenzai.neosim.client.preview;
 import com.wenzai.neosim.building.PlacementSupport;
 import com.wenzai.neosim.schematic.LightweightBlockContainer;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.block.state.BlockState;
 
 import javax.annotation.Nullable;
@@ -42,7 +42,7 @@ public final class PreviewFrame
 	// 世界幽灵预览：真实世界参与取邻居——实际建造跳过蓝图空气格、也不清场，
 	// 蓝图边缘的栅栏会连到旁边的既有方块，预览得算同一份邻居才对得上
 	public static Framed build(LightweightBlockContainer source, PosMapper posMapper, StateMapper stateMapper,
-							   @Nullable BlockGetter outsideWorld)
+							   @Nullable BlockAndTintGetter outsideWorld)
 	{
 		int sx = source.getSizeX();
 		int sy = source.getSizeY();
