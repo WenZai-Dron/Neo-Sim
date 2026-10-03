@@ -56,9 +56,9 @@ public class Renderer extends HumanoidMobRenderer<Entity, Model<Entity>>
 
 	public Renderer(EntityRendererProvider.Context context)
 	{
-		super(context, new Model<>(context.bakeLayer(LAYER)), 0.5F);
+		super(context, new Model<>(context.bakeLayer(LAYER), false), 0.5F);
 		this.wideModel = this.model;
-		this.slimModel = new Model<>(context.bakeLayer(SLIM_LAYER));
+		this.slimModel = new Model<>(context.bakeLayer(SLIM_LAYER), true);
 	}
 
 	@Override

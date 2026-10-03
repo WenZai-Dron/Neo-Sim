@@ -160,6 +160,14 @@ public final class ModBlockRegistry
 		if (block == null) return null;
 		if (!isModded(block)) return null;
 		ensureLoaded();
+		return cachedReason(block);
+	}
+
+	// 按方块类缓存判定结果：reload 扫描期间也走这条，所以这里不能带 ensureLoaded
+	// （扫描时 loaded 还是 false，再进来一次就是 reload → reason → reload 的无限递归）
+	@Nullable
+	private static String cachedReason(Block block)
+	{
 		Class<?> type = block.getClass();
 		IdentityHashMap<Class<?>, String> cache = CLASS_REASON_CACHE;
 		if (cache.containsKey(type)) return cache.get(type);
@@ -274,7 +282,7 @@ public final class ModBlockRegistry
 			if (!isModdedNamespace(ns)) continue;
 			modded++;
 			namespaces.add(ns);
-			String why = reason(block);
+			String why = cachedReason(block);
 			if (why == null) continue;
 			dependent++;
 			if (isExcluded(block)) excludedDeferred++;

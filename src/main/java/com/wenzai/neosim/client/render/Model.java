@@ -2,10 +2,10 @@ package com.wenzai.neosim.client.render;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.npc.Entity;
-import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.model.PlayerModel;
 import net.minecraft.client.model.geom.ModelPart;
-import net.minecraft.client.model.geom.PartPose;
-import net.minecraft.client.model.geom.builders.*;
+import net.minecraft.client.model.geom.builders.CubeDeformation;
+import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
@@ -18,7 +18,9 @@ import java.util.Map;
 
 import javax.imageio.ImageIO;
 
-public class Model<T extends Entity> extends HumanoidModel<T>
+// NPC 皮肤按玩家模型渲染：外层（帽子 / 外套 / 袖子 / 裤腿）与 1.8 皮肤的分区（左臂 32,48、左腿 16,48）
+// 都由 PlayerModel 提供，同一张皮肤穿在 NPC 身上和穿在玩家身上长得一样
+public class Model<T extends Entity> extends PlayerModel<T>
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final Map<String, Boolean> CACHE = new HashMap<>();
@@ -27,9 +29,9 @@ public class Model<T extends Entity> extends HumanoidModel<T>
 	private static final int ARM_Y_START = 52;
 	private static final int ARM_Y_END = 63;
 
-	public Model(ModelPart root)
+	public Model(ModelPart root, boolean slim)
 	{
-		super(root);
+		super(root, slim);
 	}
 
 	// 抬手
@@ -54,32 +56,21 @@ public class Model<T extends Entity> extends HumanoidModel<T>
 
 		// 抬手时轻微外展
 		this.rightArm.zRot = 0.06F * eased;
+
+		// 父类同步袖子发生在这条手臂被改写之前，改写完要再同步一次，否则外层袖子留在原地
+		this.rightSleeve.copyFrom(this.rightArm);
 	}
 
 	// 宽臂模型
 	public static LayerDefinition createBodyLayer()
 	{
-		MeshDefinition meshDefinition = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
-		return LayerDefinition.create(meshDefinition, 64, 64);
+		return LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, false), 64, 64);
 	}
 
 	// 细臂模型
 	public static LayerDefinition createSlimBodyLayer()
 	{
-		MeshDefinition meshDefinition = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
-		PartDefinition root = meshDefinition.getRoot();
-
-		root.addOrReplaceChild("right_arm",
-				CubeListBuilder.create().texOffs(40, 16)
-						.addBox(-2.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, CubeDeformation.NONE),
-				PartPose.offset(-5.0F, 2.0F, 0.0F));
-
-		root.addOrReplaceChild("left_arm",
-				CubeListBuilder.create().texOffs(40, 16).mirror()
-						.addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F, CubeDeformation.NONE),
-				PartPose.offset(5.0F, 2.0F, 0.0F));
-
-		return LayerDefinition.create(meshDefinition, 64, 64);
+		return LayerDefinition.create(PlayerModel.createMesh(CubeDeformation.NONE, true), 64, 64);
 	}
 
 	public static boolean isSlim(String skinPath)
