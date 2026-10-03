@@ -27,7 +27,7 @@ For the algorithmic work behind it, see [算法改进](算法改进.md) (Chinese
 ### Automated Production
 
 - **Workboxes** do the work for you: farming, mining, delivery, and land clearing
-- **Automatic mod block / crop compatibility**: the registry of installed mods is scanned, so mod crops automatically feed into the farming box and are written to `NeoSim/Json/compat/crops.json`; dependent blocks (torches, ladders, hanging blocks, and mod blocks that override `canSurvive` / `getStateForPlacement`) are placed in the second round - one click adds a block to the attached-block list, while `modded_blocks.json` tunes mod blocks per block or per namespace
+- **Automatic mod block / crop compatibility**: the registry of installed mods is scanned, so mod crops automatically feed into the farming box
 
 ### NPC
 
