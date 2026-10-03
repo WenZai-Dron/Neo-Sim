@@ -495,6 +495,9 @@ public class NeoSim
 		// 预热模组作物注册表（懒加载扫描放启动时，避免首个农业盒放置时卡顿）
 		com.wenzai.neosim.compat.crops.CropRegistry.all();
 
+		// 模组依赖性方块扫描：启动时定一次「哪些方块来自已装模组」，建造时按方块 id 直接查
+		com.wenzai.neosim.compat.modded.ModBlockRegistry.ensureLoaded();
+
 		// 加载内容表（NeoSim/Json/）：首次运行落盘模板，扫描出的模组作物写回 crops.json
 		com.wenzai.neosim.json.ContentReloader.reloadAll();
 

@@ -22,6 +22,11 @@ import java.util.concurrent.CompletableFuture;
 
 public class Command
 {
+	// 工具类：只有静态成员，禁止实例化
+	private Command()
+	{
+	}
+
 	@SubscribeEvent
 	public static void register(RegisterCommandsEvent event)
 	{

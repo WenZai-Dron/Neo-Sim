@@ -82,6 +82,9 @@ public class NeoSimClient
 		// 预热模组作物注册表（客户端）：GUI 模组作物栏依赖检测结果
 		com.wenzai.neosim.compat.crops.CropRegistry.all();
 
+		// 模组依赖性方块表（客户端）：配置页状态行与预览轮次提示依赖这次扫描
+		com.wenzai.neosim.compat.modded.ModBlockRegistry.ensureLoaded();
+
 		// 界面个人设置：首启落盘模板，之后由内容表热重载统一刷新
 		com.wenzai.neosim.client.ui.UiSettings.load();
 

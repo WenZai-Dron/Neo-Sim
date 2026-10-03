@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_comment": "依附性方块表：决定方块在第几轮放置、按哪种支撑修正朝向。规则后写覆盖先写，外部文件（NeoSim/Json/compat/attached_blocks.json）覆盖本内置文件。attach 取值：wall 贴墙 / ground 地面 / ceiling 悬挂 / any 只延后 / none 不是依附方块 / auto 交给 canSurvive 兜底。",
+  "_comment": "依附性方块表：决定方块在第几轮放置、按哪种支撑修正朝向。规则后写覆盖先写，外部文件（NeoSim/Json/compat/attached_blocks.json）覆盖本内置文件。attach 取值：wall 贴墙 / ground 地面 / ceiling 悬挂 / any 只延后 / none 不是依附方块 / auto 交给 canSurvive 兜底。流体（水 / 岩浆及模组液体）由内置类型规则 LiquidBlock 排在第二轮：等第一轮把池底 / 池壁围好后再落水，不会在建造途中先漫开；要改回第一轮就在外部文件写 { 「id」: 「minecraft:water」, 「attach」: 「none」 }。",
   "rules": [
     { "id": "minecraft:*_hanging_sign", "attach": "ceiling", "note": "挂式告示牌：上方需支撑" },
     { "id": "minecraft:*_wall_hanging_sign", "attach": "wall", "facing": ["facing"], "note": "墙挂式告示牌：贴墙" },

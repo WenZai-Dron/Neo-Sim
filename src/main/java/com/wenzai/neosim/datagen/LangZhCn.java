@@ -164,6 +164,7 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.config.file.crops","模组作物表");
 		add("gui.neosim.config.status.attached","已加载 外部 %s 条 · 内置 %s 条 · 依附方块 %s 个");
 		add("gui.neosim.config.status.crops","已检测模组作物 %s 种 · 生效 %s 种 · 外部规则 %s 条 · 内置规则 %s 条");
+		add("gui.neosim.config.status.modded","模组方块 %s 个（%s 个模组）· 其中依赖性 %s 个排第二轮 · 已排除 %s 个");
 		add("gui.neosim.config.detail.detected","自动检测（模组扫描）");
 		add("gui.neosim.config.detail.detectedRule","自动检测（模组扫描） · 外部规则 #%s");
 		add("gui.neosim.config.crop.water","需水");
@@ -175,7 +176,7 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.config.unexclude","取消排除");
 		add("gui.neosim.config.rescan","重新扫描");
 		add("gui.neosim.config.rescanned","已重新扫描：检测到 %s 种模组作物");
-		add("gui.neosim.config.fileComment.attached","依附性方块表：外部覆盖内置。attach 取值 wall 贴墙 / ground 地面 / ceiling 悬挂 / any 只延后 / none 不是依附方块 / auto 交给 canSurvive 兜底。");
+		add("gui.neosim.config.fileComment.attached","依附方块表：外部覆盖内置。attach 取值 wall 贴墙 / ground 地面 / ceiling 悬挂 / any 只延后 / none 不是依附性方块 / auto 交给 canSurvive 兜底。");
 		add("gui.neosim.config.fileComment.crops","模组作物表覆盖规则：mature 成熟目标 / needsWater 需水 / excluded 排除 / enabled 停用。detected 段由模组自动扫描写入。");
 
 		// 界面（个人外观设置：HUD / 投影）

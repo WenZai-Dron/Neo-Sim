@@ -136,6 +136,7 @@ public class LangEnUs extends LanguageProvider
 		add("gui.neosim.config.file.crops","Mod crops");
 		add("gui.neosim.config.status.attached","external %s - builtin %s - attached blocks %s");
 		add("gui.neosim.config.status.crops","detected %s - effective %s - external rules %s - builtin rules %s");
+		add("gui.neosim.config.status.modded","mod blocks %s across %s mod(s) - %s dependent (round 2) - %s excluded");
 		add("gui.neosim.config.detail.detected","auto-detected (registry scan)");
 		add("gui.neosim.config.detail.detectedRule","auto-detected (registry scan) - external rule #%s");
 		add("gui.neosim.config.crop.water","needs water");
@@ -147,7 +148,7 @@ public class LangEnUs extends LanguageProvider
 		add("gui.neosim.config.unexclude","Unexclude");
 		add("gui.neosim.config.rescan","Rescan");
 		add("gui.neosim.config.rescanned","Rescanned: %s mod crop(s) detected");
-		add("gui.neosim.config.fileComment.attached","Attached block table: external overrides builtin. attach: wall / ground / ceiling / any / none / auto.");
+		add("gui.neosim.config.fileComment.attached","Attached block table: external overrides builtin. attach: wall / ground / ceiling / any (second round only) / none (not an attached block) / auto.");
 		add("gui.neosim.config.fileComment.crops","Mod crop overrides: mature / needsWater / excluded / enabled. The detected section is written automatically by the mod.");
 
 		// UI (per-player appearance: HUD / projection)

@@ -28,6 +28,11 @@ import java.util.stream.Stream;
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class DeliveryEngine
 {
+	// 工具类：只有静态成员，禁止实例化
+	private DeliveryEngine()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final List<DeliveryTask> tasks = new ArrayList<>();
 	private static boolean restoredFromDisk;

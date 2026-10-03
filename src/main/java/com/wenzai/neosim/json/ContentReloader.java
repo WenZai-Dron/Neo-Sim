@@ -27,6 +27,8 @@ public final class ContentReloader
 
 	public static void reloadAll()
 	{
+		// 模组依赖性方块表先扫：AttachedBlockTable 的每块判定要问它"这个方块是不是模组的"
+		com.wenzai.neosim.compat.modded.ModBlockRegistry.reload();
 		com.wenzai.neosim.compat.attached.AttachedBlockTable.reload();
 		com.wenzai.neosim.compat.crops.CropRegistry.reload();
 		com.wenzai.neosim.schematic.MaterialCalculator.invalidateClassification();

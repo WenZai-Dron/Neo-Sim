@@ -1,9 +1,6 @@
 package com.wenzai.neosim.compat.sable;
 
 import com.mojang.logging.LogUtils;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
@@ -15,6 +12,10 @@ import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.fml.ModList;
 import org.slf4j.Logger;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 // Sable（子世界）物理适配器 —— 纯反射实现：本类不 import 任何 dev.ryanhcode.sable 类型，
 // 因此 Neo-Sim 的编译期与运行期都不依赖任何外部模组

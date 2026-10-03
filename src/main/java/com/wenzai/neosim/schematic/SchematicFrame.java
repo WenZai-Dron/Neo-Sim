@@ -32,7 +32,7 @@ public enum SchematicFrame
 	private static final boolean LITEMATIC_FOLLOW_FACING = true;
 
 
-	// ---- GUI 缩略图算法（只影响蓝图库里的那张小图，不影响世界预览与实际放置）----
+	// ---- GUI 缩略图算法（只影响蓝图库里的那张小图，不影响世界幽灵预览与实际放置）----
 	// .txt 的数据本来就存在「作者帧」里（作者上传时那一帧），缩略图照原样画才对；
 	// .litematic 的数据是照世界坐标导出的，照原样画会和 .txt 蓝图库差 90° + 镜像，
 	// 所以缩略图先把它转进 .txt 那套蓝图帧（四套映射本身就是"转 N 次 + 镜像"）：

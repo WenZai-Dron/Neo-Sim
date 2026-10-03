@@ -9,6 +9,11 @@ import java.util.Map;
 
 public class Config
 {
+	// 工具类：只有静态成员，禁止实例化
+	private Config()
+	{
+	}
+
 	private static final ModConfigSpec.Builder BUILDER = new ModConfigSpec.Builder();
 
 	// 通用

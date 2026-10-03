@@ -18,6 +18,11 @@ import java.util.concurrent.CompletableFuture;
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class Data
 {
+	// 工具类：只有静态成员，禁止实例化
+	private Data()
+	{
+	}
+
 	@SubscribeEvent
 	public static void gatherData(GatherDataEvent event)
 	{

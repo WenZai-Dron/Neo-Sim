@@ -1,0 +1,5 @@
+{
+  "version": 1,
+  "_comment": "模组依赖性方块表：先判方块是不是模组带来的（命名空间非 minecraft / neo_sim），再判它是不是依赖性的（canSurvive / getStateForPlacement 被自定义声明，且不是台阶 / 楼梯 / 墙 / 树叶这类原版建材父类）——只有依赖性方块才排第二轮建造。规则把方块放回第一轮：exclude 缺省为 true。匹配键四选一：id（支持 * 与 ?）/ namespace / tag / regex。外部文件 NeoSim/Json/compat/modded_blocks.json 覆盖本内置文件，规则后写覆盖先写；扫描统计写在 _state/loaded-compat-modded_blocks.json。",
+  "rules": []
+}

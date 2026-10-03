@@ -19,6 +19,11 @@ import org.slf4j.Logger;
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class BreakHandler
 {
+	// 工具类：只有静态成员，禁止实例化
+	private BreakHandler()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	@SubscribeEvent

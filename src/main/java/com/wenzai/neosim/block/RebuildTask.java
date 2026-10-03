@@ -37,7 +37,7 @@ import javax.annotation.Nullable;
 // 重建任务：不需要 NPC，按蓝图把"应为方块却成了空气"的格子补回去
 // - 与控制箱同一套落地链（BlueprintPlacement），保证与建造时位置/朝向一致
 // - 与建筑模盒同一套放置收尾（PlacementSupport）：依附朝向、连接性方块、双方块、双开门
-// - 两轮：先实心方块，后依附 / 连接性方块；每轮扫完还有被推迟的方块就回卷重试
+// - 两轮：先实心方块，后依附 / 连接性方块与流体（水 / 岩浆）；每轮扫完还有被推迟的方块就回卷重试
 // - 材料从重建盒相邻箱子取；创造模式（mode 2）完全不耗材
 public class RebuildTask
 {
@@ -49,7 +49,7 @@ public class RebuildTask
 	// 旧记录（缺落地几何）定向探测的采样格数上限；蓝图体积超过它时按 stride 抽样
 	private static final int PROBE_SAMPLE_CELLS = 8000;
 
-	// 依附表兜底：一轮扫完仍有被推迟的方块（支撑 / 连接还没就位）时的回卷重试上限
+	// 依附方块表兜底：一轮扫完仍有被推迟的方块（支撑 / 连接还没就位）时的回卷重试上限
 	private static final int MAX_RETRY_ROUNDS = 4;
 
 	public enum State
@@ -89,7 +89,7 @@ public class RebuildTask
 	private BlueprintPlacement placement;
 	private int sx, sy, sz, totalVolume;
 
-	// 扫描游标：phase 0 = 实心轮，phase 1 = 依附 / 连接性方块轮
+	// 扫描游标：phase 0 = 实心轮，phase 1 = 依附 / 连接性方块与流体轮
 	private int cursor;
 	private int phase;
 
@@ -218,7 +218,7 @@ public class RebuildTask
 					continue;
 				}
 
-				// 第一轮（实心）扫完：进入第二轮（依附 / 连接性方块）
+				// 第一轮（实心）扫完：进入第二轮（依附 / 连接性方块与流体）
 				if (phase == 0)
 				{
 					phase = 1;
@@ -262,7 +262,7 @@ public class RebuildTask
 				if (desired.isAir()) continue;
 			}
 
-			// 两轮：先实心，后依附 / 连接性方块
+			// 两轮：先实心，后依附 / 连接性方块与流体
 			if (MaterialCalculator.isAttachedBlock(desired) != (phase == 1)) continue;
 
 			BlockPos world = placement.pos(width, layer, depth);

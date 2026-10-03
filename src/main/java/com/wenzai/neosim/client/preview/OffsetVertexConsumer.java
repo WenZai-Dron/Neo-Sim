@@ -4,7 +4,7 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 
 // 顶点平移装饰器：给某个 VertexConsumer 的每个顶点加一个固定偏移。
 // 用途：原版 LiquidBlockRenderer 是用 (pos & 15) 当局部坐标写顶点的（区块 0..15 的老约定），
-// 而预览的模型空间是「帧内坐标 - origin」（世界幽灵）或「以建筑中心为原点」（GUI 缩略图）。
+// 而预览的模型空间是「帧内坐标 - origin」（世界幽灵预览）或「以建筑中心为原点」（GUI 缩略图）。
 // pos 本身不能改 —— 它同时还要喂给 level 做邻居高度/流向/染色查询，
 // 所以只能在输出端把「模型空间位置 - (pos & 15)」补回去，否则流体整片错位（>16 还会按 16 回绕）。
 public final class OffsetVertexConsumer implements VertexConsumer

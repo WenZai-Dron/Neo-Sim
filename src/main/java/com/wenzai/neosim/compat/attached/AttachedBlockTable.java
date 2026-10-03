@@ -18,7 +18,7 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-// 依附性方块表：
+// 依附方块表：
 //   ① 内置类型规则（instanceof 注册）
 //   ② 数据规则（jar 内置 JSON + NeoSim/Json/compat/attached_blocks.json 外部覆盖）
 // 合并结果按方块注册 id 缓存成字节数组，重载时整体重建
@@ -91,6 +91,19 @@ public final class AttachedBlockTable
 	public static boolean isAttached(BlockState state)
 	{
 		return phase(state) == 2;
+	}
+
+	// 流体方块（水 / 岩浆及其模组子类）：同属第二轮，但语义上不是「依附」
+	// —— 先让第一轮把所有实心方块（含水池内壁 / 池底）放完，水再落进已经围好的容器里，
+	// 不会在建造过程中先漫开、也不会被后放的实心方块反复顶掉重算流体刻。
+	public static boolean isFluid(@Nullable Block block)
+	{
+		return block instanceof LiquidBlock;
+	}
+
+	public static boolean isFluid(BlockState state)
+	{
+		return isFluid(state.getBlock());
 	}
 
 	// 连接性方块（放置时按实际相邻方块重算连接）
@@ -258,8 +271,17 @@ public final class AttachedBlockTable
 			}
 		}
 
+		// 模组依赖性方块：命名空间非原版、非本模组的方块默认排第二轮（见 ModBlockRegistry）。
+		// 优先级最低——只填空档：类型规则、内置/外部 JSON 规则命中时都以它们为准；
+		// 玩家在 modded_blocks.json 里写了 exclude 的方块由 isDeferredBlock 直接放回第一轮。
 		AttachMode mode = dataMode != null ? dataMode : (typeMode != null ? typeMode : AttachMode.AUTO);
 		int phase = dataPhase > 0 ? dataPhase : mode.phase();
+		if (dataMode == null && typeMode == null
+				&& com.wenzai.neosim.compat.modded.ModBlockRegistry.isDeferredBlock(block))
+		{
+			mode = AttachMode.ANY;
+			phase = 2;
+		}
 		return new Decision(mode, phase, dataConnective || typeConnective);
 	}
 
@@ -314,6 +336,11 @@ public final class AttachedBlockTable
 	private static List<TypeRule> buildTypeRules()
 	{
 		List<TypeRule> rules = new ArrayList<>();
+
+		// 流体：水 / 岩浆及模组液体（LiquidBlock 子类）排在第二轮，只延后、不修正朝向、不做支撑修正。
+		// 蓝图的池底 / 池壁属于第一轮实心方块，先把容器围好，水最后落进去才不会先漫开。
+		// 玩家若确实要「水在第一轮就放」，在外部文件里写 { "id": "minecraft:water", "attach": "none" } 覆盖即可。
+		rules.add(new TypeRule("LiquidBlock", b -> b instanceof LiquidBlock, AttachMode.ANY, false));
 
 		// 贴墙类（需要水平支撑 + FACING 修正）
 		rules.add(new TypeRule("WallTorchBlock", b -> b instanceof WallTorchBlock, AttachMode.WALL, false));

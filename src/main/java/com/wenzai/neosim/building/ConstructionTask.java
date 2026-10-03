@@ -77,7 +77,7 @@ public class ConstructionTask
 	// 两轮建造
 	private boolean phaseTwo;
 
-	// 依附表兜底：第二轮扫完后仍有被推迟的方块时回卷重试的上限
+	// 依附方块表兜底：第二轮扫完后仍有被推迟的方块时回卷重试的上限
 	private static final int MAX_RETRY_ROUNDS = 4;
 
 	// 当前轮回卷次数、本轮被推迟的方块数、本轮是否已放置过方块（判断"还有进展"）
@@ -396,6 +396,8 @@ public class ConstructionTask
 				continue;
 			}
 
+			// 两轮：第一轮只放实心方块；第二轮放依附性方块与流体（水 / 岩浆）。
+			// 流体排在第二轮是为了让池底 / 池壁先围好，水最后落进容器里，不在建造过程中先漫开。
 			if (MaterialCalculator.isAttachedBlock(desired) != phaseTwo)
 			{
 				resumeIndex++;
@@ -605,7 +607,7 @@ public class ConstructionTask
 			retryRound = 0;
 			deferredThisRound = 0;
 			placedThisRound = false;
-			LOGGER.info("NeoSim-ConstructionTask: phase 1 done, building attached blocks — {}",
+			LOGGER.info("NeoSim-ConstructionTask: phase 1 done, building attached blocks / fluids — {}",
 					building.getSchematicName());
 		}
 

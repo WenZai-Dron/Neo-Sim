@@ -32,6 +32,11 @@ import javax.annotation.Nullable;
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class RebuildBoxEngine
 {
+	// 工具类：只有静态成员，禁止实例化
+	private RebuildBoxEngine()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final List<RebuildTask> tasks = new ArrayList<>();
 	private static boolean restoredFromDisk;

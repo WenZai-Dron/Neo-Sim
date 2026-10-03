@@ -12,6 +12,11 @@ import org.lwjgl.glfw.GLFW;
 @EventBusSubscriber(modid = NeoSim.MOD_ID, value = Dist.CLIENT)
 public class PreviewInputHandler
 {
+	// 工具类：只有静态成员，禁止实例化
+	private PreviewInputHandler()
+	{
+	}
+
 	@SubscribeEvent
 	public static void onKey(InputEvent.Key event)
 	{

@@ -25,6 +25,11 @@ import java.util.List;
 @EventBusSubscriber(modid = NeoSim.MOD_ID, value = Dist.CLIENT)
 public class MarkerBeamRenderer
 {
+	// 工具类：只有静态成员，禁止实例化
+	private MarkerBeamRenderer()
+	{
+	}
+
 	private static ResourceKey<Level> cachedDim = null;
 	private static List<List<BlockPos>> cachedRects = List.of();
 

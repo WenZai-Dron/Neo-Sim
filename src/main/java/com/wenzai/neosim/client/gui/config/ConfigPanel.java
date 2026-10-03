@@ -92,7 +92,7 @@ public class ConfigPanel
 
 	// 各分类计划中的文件（未开放分类的占位提示）
 	private static final String[][] CATEGORY_FILES = {
-			{ "attached_blocks.json", "crops.json" },
+			{ "attached_blocks.json", "crops.json", "modded_blocks.json" },
 			{ "materials.json", "rules.json" },
 			{ "mine_filter.json", "farm_crops.json" },
 			{ "block_id_mapping.json" },
@@ -496,6 +496,15 @@ public class ConfigPanel
 	{
 		String errors = JsonContent.readErrors();
 		String status = kind == TableKind.ATTACHED ? attachedStatus() : cropStatus();
+
+		// 模组依赖性方块判定结果：依附方块表页脚常驻（同一轮建造口径，和依附方块一起看）
+		if (kind == TableKind.ATTACHED)
+		{
+			com.wenzai.neosim.compat.modded.ModBlockRegistry.Stats modStats =
+					com.wenzai.neosim.compat.modded.ModBlockRegistry.stats();
+			status = status + "  ·  " + Component.translatable(P + "status.modded", modStats.moddedBlocks(),
+					modStats.dependentBlocks(), modStats.namespaces(), modStats.excludedDeferred()).getString();
+		}
 		if (!errors.isEmpty()) status = status + "  ·  " + Component.translatable(P + "errorHint").getString();
 		gfx.drawCenteredString(Minecraft.getInstance().font, status, screenWidth / 2, STATUS_Y,
 				errors.isEmpty() ? 0xAAFFFF : 0xFFFF5555);
@@ -516,7 +525,7 @@ public class ConfigPanel
 				stats.externalRules(), stats.builtinRules()).getString();
 	}
 
-	// 列表上方一行：页码 / 未保存 / 操作结果；依附表筛选按钮占了右上角，这行文字在它左侧截断
+	// 列表上方一行：页码 / 未保存 / 操作结果；依附方块表筛选按钮占了右上角，这行文字在它左侧截断
 	private void renderInfoLine(GuiGraphics gfx, int screenWidth)
 	{
 		Font font = Minecraft.getInstance().font;
@@ -993,7 +1002,7 @@ public class ConfigPanel
 		return screenWidth - screenWidth / DETAIL_DIV - EDGE - 12;
 	}
 
-	// 依附表筛选按钮宽度 / 左边界（贴列表顶右上角；作物表没有这个按钮）
+	// 依附方块表筛选按钮宽度 / 左边界（贴列表顶右上角；作物表没有这个按钮）
 	private static int filterWidth(int screenWidth)
 	{
 		return Math.max(66, Math.min(100, rightLimit(screenWidth) / 5));

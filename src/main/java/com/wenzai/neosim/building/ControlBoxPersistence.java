@@ -21,6 +21,11 @@ import javax.annotation.Nullable;
 // 控制箱记录JSON持久化：按城市存储已放置控制箱的信息
 public class ControlBoxPersistence
 {
+	// 工具类：只有静态成员，禁止实例化
+	private ControlBoxPersistence()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 

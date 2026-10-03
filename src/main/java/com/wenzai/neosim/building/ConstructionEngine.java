@@ -28,6 +28,11 @@ import java.util.stream.Stream;
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class ConstructionEngine
 {
+	// 工具类：只有静态成员，禁止实例化
+	private ConstructionEngine()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final List<ConstructionTask> tasks = new ArrayList<>();
 

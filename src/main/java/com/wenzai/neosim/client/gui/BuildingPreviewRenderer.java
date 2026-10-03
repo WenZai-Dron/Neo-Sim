@@ -59,7 +59,7 @@ import javax.annotation.Nullable;
 // 与世界幽灵预览同一条管线：按 RenderType 分层 —— 流体走原版液体渲染器（水/岩浆是水面而不是灰块）、
 // 玻璃/彩色玻璃走 translucent 层（真半透明）、镂空方块走 cutout（alpha 裁剪）；
 // 箱子/告示牌/床这类方块实体在缩略图里烘焙一次（静态，不做动画）。
-// 差别只在坐标系：缩略图画的是「蓝图帧」，世界幽灵画的是「落地帧」。
+// 差别只在坐标系：缩略图画的是「蓝图帧」，世界幽灵预览画的是「落地帧」。
 public final class BuildingPreviewRenderer
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

@@ -30,6 +30,11 @@ import javax.annotation.Nullable;
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class TerraformEngine
 {
+	// 工具类：只有静态成员，禁止实例化
+	private TerraformEngine()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final List<TerraformTask> tasks = new ArrayList<>();
 	private static boolean restoredFromDisk;

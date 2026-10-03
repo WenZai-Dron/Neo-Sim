@@ -1,10 +1,11 @@
 package com.wenzai.neosim.compat.sable;
 
-import javax.annotation.Nullable;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.state.BlockState;
+
+import javax.annotation.Nullable;
 
 // 外部模组兼容适配接口：只依赖 Minecraft 类型，Neo-Sim 引擎只认识这个接口
 // 每个需要兼容的外部模组（Sable / Create Simulated 等）提供一个实现，在类静态块中

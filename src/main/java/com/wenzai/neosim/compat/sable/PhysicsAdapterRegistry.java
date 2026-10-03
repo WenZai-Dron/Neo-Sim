@@ -1,10 +1,11 @@
 package com.wenzai.neosim.compat.sable;
 
 import com.mojang.logging.LogUtils;
-import java.util.ArrayList;
-import java.util.List;
 import net.neoforged.fml.ModList;
 import org.slf4j.Logger;
+
+import java.util.ArrayList;
+import java.util.List;
 
 // 物理适配器注册表：按模组 id 注册/加载适配器，支撑多物理模组共存
 // 适配器类在自己的静态块里调用 register() 注册自身；本类 init() 仅反射加载

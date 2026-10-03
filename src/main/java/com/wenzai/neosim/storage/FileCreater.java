@@ -24,6 +24,11 @@ import java.util.Set;
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class FileCreater
 {
+	// 工具类：只有静态成员，禁止实例化
+	private FileCreater()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	// player.json 成员缓存（城市→玩家集合按文件路径+mtime 键控）

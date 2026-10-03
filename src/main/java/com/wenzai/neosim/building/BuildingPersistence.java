@@ -21,6 +21,11 @@ import java.util.UUID;
 
 public class BuildingPersistence
 {
+	// 工具类：只有静态成员，禁止实例化
+	private BuildingPersistence()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	// 新格式：player.json 同目录下的 BuildingConstructor.json（按城市）

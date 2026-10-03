@@ -10,6 +10,11 @@ import java.util.*;
 // 统计蓝图所需的全部方块数量
 public class MaterialCalculator
 {
+	// 工具类：只有静态成员，禁止实例化
+	private MaterialCalculator()
+	{
+	}
+
 	// Block → [0]=普通模式耗材, [1]=困难模式免费 静态 IdentityHashMap 缓存（首次判定后查表，消灭每格 contains/字符串分配）
 	private static final IdentityHashMap<Block, boolean[]> CLASS_CACHE = new IdentityHashMap<>();
 

@@ -12,6 +12,11 @@ import java.util.function.Supplier;
 
 public class CreativeModeTabs
 {
+	// 工具类：只有静态成员，禁止实例化
+	private CreativeModeTabs()
+	{
+	}
+
 	public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
 			DeferredRegister.create(Registries.CREATIVE_MODE_TAB, NeoSim.MOD_ID);
 

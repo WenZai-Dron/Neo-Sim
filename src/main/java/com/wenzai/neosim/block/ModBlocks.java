@@ -14,6 +14,11 @@ import java.util.function.Supplier;
 
 public class ModBlocks
 {
+	// 工具类：只有静态成员，禁止实例化
+	private ModBlocks()
+	{
+	}
+
 	public static final DeferredRegister.Blocks BLOCKS =
 			DeferredRegister.createBlocks(NeoSim.MOD_ID);
 
