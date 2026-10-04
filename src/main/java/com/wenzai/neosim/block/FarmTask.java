@@ -141,9 +141,6 @@ public class FarmTask extends PlotTask
 	// 畜牧侧待恢复状态：切去田间前记录（WAITING_FEED 等），切回时恢复，null=无
 	private PlotState livestockPending;
 
-	// 缺种子时的等待时长：等3秒还补不上就跳过该格
-	private static final long SEED_WAIT_MS = 3000L;
-
 	// 空轮歇息节流：整轮无动作后，10 tick（0.5 秒）才重扫一次田间（避免无谓的整田扫描）
 	private static final int IDLE_RESCAN_INTERVAL = 10;
 
@@ -565,22 +562,17 @@ public class FarmTask extends PlotTask
 	@Override
 	protected Item handItem()
 	{
-		// 手持随当前轮次：畜牧轮（RAISE/等饲料）拿小麦（喂食形象）；田间轮林业开启拿铁斧（砍树），否则铁锄（种植）
+		// 手持随当前轮次：畜牧轮（RAISE/等饲料）拿小麦（喂食形象）；田间轮林业开启拿斧（砍树），否则拿锄（种植）
+		// 工具材质随农夫等级：1-2 木、3-4 石、5-6 铁、7-8 金、9-10 钻石
 		if (state == PlotState.RAISE || state == PlotState.WAITING_FEED) return Items.WHEAT;
-		if (isForestryMode()) return Items.IRON_AXE;
-		return Items.IRON_HOE;
+		if (isForestryMode()) return Entity.JobTools.axe((int) jobLevel);
+		return Entity.JobTools.hoe((int) jobLevel);
 	}
 
 	@Override
-	protected byte jobLevelOf(Entity npc)
+	protected Entity.JobKind jobKind()
 	{
-		return npc.getJobFarmer();
-	}
-
-	@Override
-	protected void setNpcJobLevel(Entity npc, int lvl)
-	{
-		npc.setJobFarmer((byte) lvl);
+		return Entity.JobKind.FARMER;
 	}
 
 	@Override

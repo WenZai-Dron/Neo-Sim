@@ -35,7 +35,8 @@ public class ReproductionSystem
 	private static final double BIRTH_REACH_RANGE = 9.0D;
 
 	// 职业等级上限
-	private static final int JOB_MAX_LEVEL = 10;
+	// 职业等级上限：与职业成长共用同一个来源（Entity.MAX_JOB_LEVEL）
+	private static final int JOB_MAX_LEVEL = (int) com.wenzai.neosim.npc.Entity.MAX_JOB_LEVEL;
 
 	// 临产目标缓存，分娩后清除（按 NPC 名字 key——名字稳定、防 UUID 丢失/跨存档残留；死亡时由 Entity.die 清除）
 	private static final Map<String, BlockPos> BIRTH_TARGETS = new HashMap<>();
@@ -280,10 +281,11 @@ public class ReproductionSystem
 
 		// 职业等级继承：floor(父/2)+floor(母/2)，各职业独立，下限1上限10
 		int[] jobs = inheritJobs(level, city, mother, fatherName);
-		baby.setJobArchitect((byte) jobs[0]);
-		baby.setJobFarmer((byte) jobs[1]);
-		baby.setJobMiner((byte) jobs[2]);
-		baby.setJobCourier((byte) jobs[3]);
+		Entity.JobKind[] kinds = Entity.JobKind.values();
+		for (int i = 0; i < kinds.length; i++)
+		{
+			baby.setJobLevel(kinds[i], jobs[i]);
+		}
 
 		// 出生在分娩点
 		baby.moveTo(birthPos.getX() + 0.5D, birthPos.getY() + 1.0D, birthPos.getZ() + 0.5D, 0.0F, 0.0F);

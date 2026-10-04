@@ -1,19 +1,15 @@
 package com.wenzai.neosim.block;
 
-import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-import org.slf4j.Logger;
 
 import java.util.*;
 
 public class DeliveryChunkLoader
 {
-	private static final Logger LOGGER = LogUtils.getLogger();
-
 	private static final TicketType<ChunkPos> DELIVERY_TICKET =
 			TicketType.create("neo_sim:delivery", Comparator.comparingLong(ChunkPos::toLong));
 

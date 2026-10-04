@@ -224,6 +224,16 @@ public class LangEnUs extends LanguageProvider
 		add("gui.neosim.DeliveryBox.state.walking","Delivering");
 		add("gui.neosim.DeliveryBox.state.depositing","Depositing");
 		add("gui.neosim.DeliveryBox.state.returning","Returning");
+		add("gui.neosim.DeliveryBox.station","Station materials");
+		add("gui.neosim.DeliveryBox.station.title","Station Materials");
+		add("gui.neosim.DeliveryBox.station.header","Read %s chests · %s kinds");
+		add("gui.neosim.DeliveryBox.station.scanning","Reading…");
+		add("gui.neosim.DeliveryBox.station.timeout","Read timed out — click Refresh again");
+		add("gui.neosim.DeliveryBox.station.empty","No items in the chests");
+		add("gui.neosim.DeliveryBox.station.page","Page %s/%s");
+		add("gui.neosim.DeliveryBox.station.refresh","Refresh");
+		add("gui.neosim.DeliveryBox.prev","Prev");
+		add("gui.neosim.DeliveryBox.next","Next");
 
 		add("config.neosim.deliveryCreditPerUnit","Credit per item delivered");
 		add("config.neosim.deliveryChunkRadius","Courier chunk window radius");

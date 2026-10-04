@@ -33,7 +33,6 @@ public class UiPanel
 	private static final int TAB_H = 16;
 	private static final int CTRL_X = EDGE + 92;
 	private static final int ACTION_Y_OFFSET = 46;
-	private static final int ACTION_H = 16;
 
 	// 三个子标签：HUD 外观 / HUD 内容 / 投影预览
 	private static final int PAGE_APPEARANCE = 0;

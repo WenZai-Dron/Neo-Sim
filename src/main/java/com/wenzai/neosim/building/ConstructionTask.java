@@ -13,7 +13,6 @@ import com.wenzai.neosim.schematic.*;
 import com.wenzai.neosim.storage.FileCreater;
 import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,9 +36,6 @@ public class ConstructionTask
 
 	private static final int BASE_DELAY = 2000;
 
-	// 建造者等级上限
-	private static final float MAX_LEVEL = 10.0f;
-
 	// 挖掘阻挡方块的等级进度惩罚（等价 10 个方块的建造经验：每块 0.001/等级）
 	private static final float DIG_PENALTY = 0.01f;
 
@@ -48,7 +44,6 @@ public class ConstructionTask
 
 	// 等待材料时3秒检查一次
 	private static final int WAITING_CHECK_DELAY = 3000;
-	private static final int SEARCH_RADIUS = 5;
 
 	// C6b：建造跳过循环每 tick 扫描上限（大段空气/标记区不得单 tick 连续扫描数万格）
 	private static final int MAX_SCAN_PER_TICK = 64;
@@ -65,7 +60,6 @@ public class ConstructionTask
 
 	private BuildingInstance.BuildState currentState = BuildingInstance.BuildState.IDLE;
 	private int resumeIndex;
-	private long lastTickTime;
 	private float builderLevel = 1.0f;
 	private int buildDelay = BASE_DELAY;
 
@@ -552,25 +546,8 @@ public class ConstructionTask
 			resumeIndex++;
 			building.setBuildProgress(resumeIndex);
 
-			// 技能成长与信用点扣除
-			int b4 = (int) Math.floor(builderLevel);
-			if (builderLevel < MAX_LEVEL)
-			{
-				builderLevel += 0.001f / b4;
-			}
-			int aft = (int) Math.floor(builderLevel);
-			if (aft > b4)
-			{
-				resolveBuilderNpc();
-				if (builderNpc != null)
-				{
-					builderNpc.setJobArchitect((byte) Math.min(aft, (int) MAX_LEVEL));
-
-					// 升级写盘走合并窗口（脏标记 + 周期 flush）
-					builderNpc.syncToJson();
-				}
-			}
-
+			// 技能成长与信用点扣除：每放一块 = 1 个经验单位（跨级写盘走合并窗口）
+			builderLevel = Entity.addJobXp(builderNpc, Entity.JobKind.ARCHITECT, builderLevel, 1);
 			updateBuildSpeed(builderLevel);
 
 			// 一次tick只放一个实心方块
@@ -722,6 +699,17 @@ public class ConstructionTask
 		pendingDigPos = pos;
 		pendingDigDrop = drop;
 		animStartTime = System.currentTimeMillis();
+
+		// 挖掘期间手持"对应工具"：按被挖方块的正确工具选类型（镐/斧/锹/锄），材质随建筑师等级
+		// （放置方块时仍显示要放的方块，不受这里影响）
+		resolveBuilderNpc();
+		if (builderNpc != null)
+		{
+			BlockState digState = PhysicsWorld.getBlockState(level, pos);
+			builderNpc.setItemInHand(net.minecraft.world.InteractionHand.MAIN_HAND,
+					new net.minecraft.world.item.ItemStack(
+							Entity.JobTools.forBlock((int) builderLevel, digState)));
+		}
 	}
 
 	// 挖掘 tick：计时 + 抬手动画，到时执行清除 + 等级惩罚
@@ -777,7 +765,7 @@ public class ConstructionTask
 			resolveBuilderNpc();
 			if (builderNpc != null)
 			{
-				builderNpc.setJobArchitect((byte) Math.max(1, after));
+				builderNpc.setJobLevel(Entity.JobKind.ARCHITECT, after);
 				builderNpc.syncToJson();
 			}
 		}

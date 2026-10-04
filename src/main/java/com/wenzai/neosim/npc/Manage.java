@@ -392,6 +392,10 @@ public class Manage
 
 		// 卸载时清除临产目标缓存（防残留）
 		com.wenzai.neosim.life.ReproductionSystem.clearBirthTarget(name);
+
+		// 实体即将 discard（NBT 不保留）：在途物品先归还岗位旁箱子（岗位区块由快递盒任务保持加载）
+		npc.returnCarriage();
+
 		npc.syncToJsonNow();
 		npc.discard();
 		NeoSim.LOGGER.info("NeoSim-despawnNpc: Unloaded {} (city={})", name, city);

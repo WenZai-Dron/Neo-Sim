@@ -30,7 +30,6 @@ public class TerraformTask
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	private static final int BASE_DELAY = 2000;
-	private static final float MAX_LEVEL = 10.0f;
 	private static final int RAISE_ANIM_MS = 400;
 	private static final int LOWER_ANIM_MS = 400;
 
@@ -634,7 +633,9 @@ public class TerraformTask
 		resolveWorkerNpc();
 		if (worker != null)
 		{
-			worker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.IRON_SHOVEL));
+			// 材质随建筑师等级：1-2 木、3-4 石、5-6 铁、7-8 金、9-10 钻石
+			worker.setItemInHand(InteractionHand.MAIN_HAND,
+					new ItemStack(Entity.JobTools.shovel((int) jobLevel)));
 		}
 	}
 
@@ -667,23 +668,14 @@ public class TerraformTask
 		com.wenzai.neosim.storage.ModSavedData.get(level).syncCityToClients(level, cityName);
 	}
 
-	// 建筑师技能成长（写入 job.architect）
+	// 建筑师技能成长：一次改动 = 1 个经验单位；跨级换工具材质（1-2 木 … 9-10 钻石）
 	protected void gainXp()
 	{
-		int b4 = (int) Math.floor(jobLevel);
-		if (jobLevel < MAX_LEVEL)
+		int before = (int) Math.floor(jobLevel);
+		jobLevel = Entity.addJobXp(worker, Entity.JobKind.ARCHITECT, jobLevel, 1);
+		if ((int) Math.floor(jobLevel) > before)
 		{
-			jobLevel += 0.001f / Math.max(1, b4);
-		}
-		int aft = (int) Math.floor(jobLevel);
-		if (aft > b4)
-		{
-			resolveWorkerNpc();
-			if (worker != null)
-			{
-				worker.setJobArchitect((byte) Math.min(aft, (int) MAX_LEVEL));
-				worker.syncToJson();
-			}
+			setHandTool();
 		}
 		updateSpeed(jobLevel);
 	}

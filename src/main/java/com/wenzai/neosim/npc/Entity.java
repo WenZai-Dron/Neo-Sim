@@ -7,12 +7,14 @@ import com.wenzai.neosim.block.BuildingConstructor;
 import com.wenzai.neosim.block.DeliveryBox;
 import com.wenzai.neosim.block.FarmingBox;
 import com.wenzai.neosim.block.MiningBox;
+import com.wenzai.neosim.building.InventoryManager;
 import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.life.SocialGoal;
 import com.wenzai.neosim.storage.ModSavedData;
 import com.wenzai.neosim.storage.NpcData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -22,19 +24,28 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.ContainerHelper;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.portal.DimensionTransition;
 import net.neoforged.bus.api.IEventBus;
@@ -340,6 +351,273 @@ public class Entity extends PathfinderMob
 	public void setJobCourier(byte value)
 	{
 		getPersistentData().putByte(KEY_JOB_COURIER, value);
+	}
+
+	// 职业等级上限（四个职业共用；级内小数进度不落盘）
+	public static final float MAX_JOB_LEVEL = 10.0f;
+
+	// 四个职业：读/写等级、加经验都按这个键走，避免每个任务各写一份分支
+	public enum JobKind
+	{
+		ARCHITECT, FARMER, MINER, COURIER
+	}
+
+	// 读某职业等级（缺省 1）
+	public byte getJobLevel(JobKind kind)
+	{
+		return switch (kind)
+		{
+			case ARCHITECT -> getJobArchitect();
+			case FARMER -> getJobFarmer();
+			case MINER -> getJobMiner();
+			case COURIER -> getJobCourier();
+		};
+	}
+
+	// 写某职业等级（下限 1、上限 10；落盘交给调用方的 syncToJson 合并窗口）
+	public void setJobLevel(JobKind kind, int level)
+	{
+		byte v = (byte) Math.max(1, Math.min((int) MAX_JOB_LEVEL, level));
+		switch (kind)
+		{
+			case ARCHITECT -> setJobArchitect(v);
+			case FARMER -> setJobFarmer(v);
+			case MINER -> setJobMiner(v);
+			case COURIER -> setJobCourier(v);
+		}
+	}
+
+	// 职业等级成长：每 1 个经验单位 +0.001/当前等级，封顶 10；跨级时写回档案并落盘
+	// 返回新的浮动等级；npc 为空只算不写（工人未加载时进度仍在本任务的字段里累积）
+	public static float addJobXp(@Nullable Entity npc, JobKind kind, float level, float units)
+	{
+		if (units <= 0.0f || level >= MAX_JOB_LEVEL) return level;
+
+		int tier = Math.max(1, (int) Math.floor(level));
+		float next = Math.min(MAX_JOB_LEVEL, level + 0.001f * units / tier);
+		if (npc != null && (int) Math.floor(next) > tier)
+		{
+			npc.setJobLevel(kind, (int) Math.floor(next));
+			npc.syncToJson();
+		}
+		return next;
+	}
+
+	// ===== 职业工具：NPC 工作时手持的工具按职业等级换材质 =====
+	// 1-2 木、3-4 石、5-6 铁、7-8 金、9-10 钻石（两两一档，共 5 档）
+	public static final class JobTools
+	{
+		private JobTools()
+		{
+		}
+
+		// 等级(1-10) -> 材质档位(1-5)
+		public static int tier(int level)
+		{
+			return Math.max(1, Math.min(5, (level + 1) / 2));
+		}
+
+		// 矿工：镐
+		public static Item pickaxe(int level)
+		{
+			return switch (tier(level))
+			{
+				case 1 -> Items.WOODEN_PICKAXE;
+				case 2 -> Items.STONE_PICKAXE;
+				case 3 -> Items.IRON_PICKAXE;
+				case 4 -> Items.GOLDEN_PICKAXE;
+				default -> Items.DIAMOND_PICKAXE;
+			};
+		}
+
+		// 农夫（林业）：斧
+		public static Item axe(int level)
+		{
+			return switch (tier(level))
+			{
+				case 1 -> Items.WOODEN_AXE;
+				case 2 -> Items.STONE_AXE;
+				case 3 -> Items.IRON_AXE;
+				case 4 -> Items.GOLDEN_AXE;
+				default -> Items.DIAMOND_AXE;
+			};
+		}
+
+		// 农夫（田间）：锄
+		public static Item hoe(int level)
+		{
+			return switch (tier(level))
+			{
+				case 1 -> Items.WOODEN_HOE;
+				case 2 -> Items.STONE_HOE;
+				case 3 -> Items.IRON_HOE;
+				case 4 -> Items.GOLDEN_HOE;
+				default -> Items.DIAMOND_HOE;
+			};
+		}
+
+		// 建筑师（整地）：锹
+		public static Item shovel(int level)
+		{
+			return switch (tier(level))
+			{
+				case 1 -> Items.WOODEN_SHOVEL;
+				case 2 -> Items.STONE_SHOVEL;
+				case 3 -> Items.IRON_SHOVEL;
+				case 4 -> Items.GOLDEN_SHOVEL;
+				default -> Items.DIAMOND_SHOVEL;
+			};
+		}
+
+		// 按"被挖方块的正确工具"选类型：斧 / 锹 / 锄，其余（石头、矿物、未标注方块）一律镐
+		// 材质仍按等级取，与上面几个方法同一张分档表
+		public static Item forBlock(int level, BlockState state)
+		{
+			if (state.is(BlockTags.MINEABLE_WITH_AXE)) return axe(level);
+			if (state.is(BlockTags.MINEABLE_WITH_SHOVEL)) return shovel(level);
+			if (state.is(BlockTags.MINEABLE_WITH_HOE)) return hoe(level);
+			return pickaxe(level);
+		}
+	}
+
+	// ===== 在途物品栏（搬运）：目前只有快递员使用，格数由快递员等级决定 =====
+	// 只有"受雇于快递盒 + 非休息时间"才视为有物品栏；其余情况一律为空
+	public static final int MAX_CARRIAGE_SLOTS = 5;
+
+	// 每格 64 件
+	public static final int CARRIAGE_SLOT_SIZE = 64;
+
+	private final NonNullList<ItemStack> carriage =
+			NonNullList.withSize(MAX_CARRIAGE_SLOTS, ItemStack.EMPTY);
+
+	// 快递员等级 -> 格数：1-2级1格、3-4级2格、5-6级3格、7-8级4格、9-10级5格
+	public static int courierSlots(int courierLevel)
+	{
+		return Math.max(1, Math.min(MAX_CARRIAGE_SLOTS, (courierLevel + 1) / 2));
+	}
+
+	// 当前可用格数：非工作（未受雇 / 休息 / 非快递岗位）为 0
+	public int carriageSlots()
+	{
+		return isCourierOnDuty() ? courierSlots(getJobCourier()) : 0;
+	}
+
+	// 是否正在快递岗位上工作
+	public boolean isCourierOnDuty()
+	{
+		if (!hasJob() || isRestingNow()) return false;
+		BlockPos site = getAssignedSite();
+		if (site == null || !level().isLoaded(site)) return false;
+		return level().getBlockState(site).getBlock() instanceof DeliveryBox;
+	}
+
+	// 装入物品栏，返回实际装入件数（受可用格数限制）
+	public int loadCarriage(ItemStack stack, int slots)
+	{
+		if (stack.isEmpty() || slots <= 0) return 0;
+		int capacity = Math.min(slots, MAX_CARRIAGE_SLOTS) * CARRIAGE_SLOT_SIZE;
+		int remaining = Math.min(capacity, stack.getCount());
+		int loaded = remaining;
+		for (int i = 0; i < carriage.size() && remaining > 0; i++)
+		{
+			if (!carriage.get(i).isEmpty()) continue;
+			int put = Math.min(CARRIAGE_SLOT_SIZE, remaining);
+			carriage.set(i, stack.copyWithCount(put));
+			remaining -= put;
+		}
+		return loaded - remaining;
+	}
+
+	// 物品栏内容（第一格到最后，可能含空堆叠）
+	public List<ItemStack> getCarriage()
+	{
+		return carriage;
+	}
+
+	public boolean isCarriageEmpty()
+	{
+		for (ItemStack s : carriage)
+		{
+			if (!s.isEmpty()) return false;
+		}
+		return true;
+	}
+
+	// 手持显示用：第一件非空物品
+	public ItemStack getCarriageDisplay()
+	{
+		for (ItemStack s : carriage)
+		{
+			if (!s.isEmpty()) return s;
+		}
+		return ItemStack.EMPTY;
+	}
+
+	public int getCarriageItemCount()
+	{
+		int n = 0;
+		for (ItemStack s : carriage)
+		{
+			n += s.getCount();
+		}
+		return n;
+	}
+
+	public void clearCarriage()
+	{
+		for (int i = 0; i < carriage.size(); i++)
+		{
+			carriage.set(i, ItemStack.EMPTY);
+		}
+	}
+
+	// 归还到岗位旁的箱子：放不下的直接作废 —— 任何情况下都不掉落物品
+	public void returnCarriage()
+	{
+		if (isCarriageEmpty()) return;
+		if (!(level() instanceof ServerLevel serverLevel))
+		{
+			clearCarriage();
+			return;
+		}
+
+		BlockPos site = getAssignedSite();
+		List<ChestBlockEntity> chests = site != null
+				? InventoryManager.findChainedChests(serverLevel, site) : List.of();
+		for (int i = 0; i < carriage.size(); i++)
+		{
+			ItemStack stack = carriage.get(i);
+			if (stack.isEmpty()) continue;
+			int room = InventoryManager.spaceFor(chests, stack);
+			if (room > 0)
+			{
+				InventoryManager.depositItems(chests, stack.copyWithCount(Math.min(room, stack.getCount())));
+			}
+			carriage.set(i, ItemStack.EMPTY);
+		}
+	}
+
+	// ===== 移动速度：曲线 A（每级 +4%），且只作用于快递员工作时 =====
+	private static final ResourceLocation COURIER_SPEED_ID =
+			ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "courier_work_speed");
+
+	private static final double SPEED_BONUS_PER_LEVEL = 0.04D;
+
+	// 按"是否在快递岗位工作"刷新速度加成；transient 不落盘，重启后由等级重算
+	public void refreshWalkSpeed()
+	{
+		AttributeInstance instance = getAttribute(Attributes.MOVEMENT_SPEED);
+		if (instance == null) return;
+
+		double bonus = isCourierOnDuty()
+				? SPEED_BONUS_PER_LEVEL * (Math.max(1, getJobCourier()) - 1) : 0.0D;
+		if (bonus <= 0.0D)
+		{
+			instance.removeModifier(COURIER_SPEED_ID);
+			return;
+		}
+		instance.addOrUpdateTransientModifier(new AttributeModifier(
+				COURIER_SPEED_ID, bonus, AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
 	}
 
 	private static final String KEY_CITY_NAME = "nsnpc_cityName";
@@ -921,6 +1199,12 @@ public class Entity extends PathfinderMob
 			// 休息时间自动解除工地待命：NPC 可以自由走动（回家/在家附近溜达）
 			if (stayPut && isRestingNow()) stayPut = false;
 
+			// 移动速度加成按"是否在快递岗位工作"刷新（白天上班 / 夜里下班切换）
+			if (tickCount % 20 == 0)
+			{
+				refreshWalkSpeed();
+			}
+
 			if (tickCount % 100 == 0)
 			{
 				// 自愈检查：站点方块已不存在时解除工作状态（见 selfHealStaleSite）
@@ -981,6 +1265,20 @@ public class Entity extends PathfinderMob
 		}
 	}
 
+	// ===== 掉落：NPC 永不掉落物品（手持工具、在途货物都不掉） =====
+	// 手持/装备掉落全部走 Mob.dropCustomDeathLoot，而它被 shouldDropLoot() 与 doMobLoot 门控
+	@Override
+	protected boolean shouldDropLoot()
+	{
+		return false;
+	}
+
+	@Override
+	protected void dropCustomDeathLoot(ServerLevel level, DamageSource damageSource, boolean recentlyHit)
+	{
+		// 空实现：双保险
+	}
+
 	// 死亡时删除文件并同步人口
 	@Override
 	public void die(DamageSource source)
@@ -1025,6 +1323,9 @@ public class Entity extends PathfinderMob
 		{
 			CityLivingManager.releaseHome(serverLevel, this);
 		}
+
+		// 死亡：在途物品归还岗位旁箱子（放不下的作废），绝不掉落到地上
+		returnCarriage();
 		super.die(source);
 	}
 
@@ -1065,6 +1366,9 @@ public class Entity extends PathfinderMob
 	{
 		super.readAdditionalSaveData(tag);
 
+		// 恢复在途物品栏（配送途中重启/区块重载不丢件）
+		ContainerHelper.loadAllItems(tag, carriage, level().registryAccess());
+
 		// 恢复皮肤
 		if (tag.contains(KEY_SKIN))
 		{
@@ -1098,6 +1402,12 @@ public class Entity extends PathfinderMob
 	{
 		super.addAdditionalSaveData(tag);
 		tag.putString(KEY_SKIN, getSkin());
+
+		// 在途物品栏：非空才写，避免给所有市民存档塞空列表
+		if (!isCarriageEmpty())
+		{
+			ContainerHelper.saveAllItems(tag, carriage, level().registryAccess());
+		}
 	}
 
 	// 右键打开GUI
@@ -1172,6 +1482,9 @@ public class Entity extends PathfinderMob
 		// 交给 MoveToSiteGoal 的兜底逻辑，那里会先确认确实无路可走才传送
 		this.moveToSiteGoal.setTarget(site);
 		this.currentMoveTarget = site;
+
+		// 赴工：按新岗位刷新移动速度加成（曲线只作用于快递员工作时）
+		refreshWalkSpeed();
 	}
 
 	// 设置寻路目标；目标不变时不重复设置
@@ -1218,6 +1531,9 @@ public class Entity extends PathfinderMob
 	// 解雇NPC，恢复AI
 	public void releaseFromSite()
 	{
+		// 解雇即无岗位：在途物品先归还到岗位旁箱子（不掉落）
+		returnCarriage();
+
 		this.stayPut = false;
 		getPersistentData().remove(KEY_ASSIGNED_SITE_X);
 		getPersistentData().remove(KEY_ASSIGNED_SITE_Y);
@@ -1232,6 +1548,9 @@ public class Entity extends PathfinderMob
 		this.goalSelector.getAvailableGoals().stream().toList()
 				.forEach(w -> goalSelector.removeGoal(w.getGoal()));
 		this.registerGoals();
+
+		// 岗位已解除：撤销快递工作速度加成
+		refreshWalkSpeed();
 	}
 
 	// 当前工作站点；无工作时返回null（字段缓存，assignToSite/releaseFromSite 时失效）

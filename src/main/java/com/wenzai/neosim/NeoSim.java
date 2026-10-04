@@ -456,6 +456,18 @@ public class NeoSim
 				ServerToClientPayloads.MissingScanResponsePayload::handle
 		);
 
+		// 快递站材料（快递盒 + 相连箱链）
+		registrar.playToServer(
+				ClientToServerPayloads.StationItemsRequestPayload.TYPE,
+				ClientToServerPayloads.StationItemsRequestPayload.STREAM_CODEC,
+				ClientToServerPayloads.StationItemsRequestPayload::handle
+		);
+		registrar.playToClient(
+				ServerToClientPayloads.StationItemsResponsePayload.TYPE,
+				ServerToClientPayloads.StationItemsResponsePayload.STREAM_CODEC,
+				ServerToClientPayloads.StationItemsResponsePayload::handle
+		);
+
 		// 无家 NPC 名单（缺陷 C 结构性）
 		registrar.playToServer(
 				ClientToServerPayloads.HomelessListRequestPayload.TYPE,

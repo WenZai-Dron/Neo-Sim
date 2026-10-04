@@ -1,18 +1,14 @@
 package com.wenzai.neosim.block;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-import org.slf4j.Logger;
 
 import java.util.*;
 
 public class TerraformChunkLoader
 {
-	private static final Logger LOGGER = LogUtils.getLogger();
-
 	private static final TicketType<ChunkPos> TERRAFORM_TICKET =
 			TicketType.create("neo_sim:terraform", Comparator.comparingLong(ChunkPos::toLong));
 

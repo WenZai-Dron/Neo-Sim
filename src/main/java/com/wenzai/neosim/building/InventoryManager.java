@@ -1,6 +1,7 @@
 package com.wenzai.neosim.building;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
@@ -20,7 +21,9 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -47,6 +50,46 @@ public class InventoryManager
 			if (!isReadableChest(be)) continue;
 			chests.add((ChestBlockEntity) be);
 			addDoubleChestPartner(level, pos, chests, seen);
+		}
+		return chests;
+	}
+
+	// 箱链扫描上限：防止整城箱子连成一堵墙时扫描爆炸（64 箱 × 27 格 = 1728 格容量）
+	public static final int MAX_CHAIN_CHESTS = 64;
+
+	// 相连箱链：从中心 6 邻面出发，沿「箱子—箱子相邻」关系向外扩散（模盒 → 箱 → 箱 → …）
+	// 整条链上的箱子都可读写；传播只经过可读箱子——陷阱箱既不纳入，也不作为链的中继
+	// 顺序即 BFS 层序：直接相邻的箱子优先，链式远端的箱子靠后
+	public static List<ChestBlockEntity> findChainedChests(ServerLevel level, BlockPos center)
+	{
+		Set<BlockPos> seen = new HashSet<>();
+		Deque<BlockPos> queue = new ArrayDeque<>();
+		List<ChestBlockEntity> chests = new ArrayList<>();
+
+		for (Direction d : Direction.values())
+		{
+			BlockPos pos = center.relative(d);
+			if (seen.add(pos)) queue.add(pos);
+		}
+
+		while (!queue.isEmpty() && chests.size() < MAX_CHAIN_CHESTS)
+		{
+			BlockPos pos = queue.poll();
+
+			// 只读已加载区块：链路跨到未加载区块时停在边界，不因扫箱子触发区块加载
+			if (!level.isLoaded(pos)) continue;
+
+			BlockEntity be = level.getBlockEntity(pos);
+			if (!isReadableChest(be)) continue;
+
+			chests.add((ChestBlockEntity) be);
+
+			// 只从已纳入的箱子继续扩散（双人箱的另一半是相邻方块，自然会被纳入）
+			for (Direction d : Direction.values())
+			{
+				BlockPos next = pos.relative(d);
+				if (seen.add(next)) queue.add(next);
+			}
 		}
 		return chests;
 	}
@@ -199,6 +242,27 @@ public class InventoryManager
 		{
 			return List.of();
 		}
+	}
+
+	// 该物品在箱子里还能放下多少件（同种堆叠余量 + 空格），用于"存入不落地"的场景
+	public static int spaceFor(List<ChestBlockEntity> chests, ItemStack stack)
+	{
+		if (stack.isEmpty()) return 0;
+		int max = stack.getMaxStackSize();
+		int space = 0;
+		for (ChestBlockEntity chest : chests)
+		{
+			for (int i = 0; i < chest.getContainerSize(); i++)
+			{
+				ItemStack existing = chest.getItem(i);
+				if (existing.isEmpty()) space += max;
+				else if (ItemStack.isSameItemSameComponents(existing, stack))
+				{
+					space += Math.max(0, existing.getMaxStackSize() - existing.getCount());
+				}
+			}
+		}
+		return space;
 	}
 
 	// 是否有空间存入该物品

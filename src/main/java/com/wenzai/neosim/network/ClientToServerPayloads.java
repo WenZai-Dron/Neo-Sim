@@ -932,6 +932,49 @@ public class ClientToServerPayloads
 		}
 	}
 
+	// 请求快递站材料清单（C→S；快递盒 + 相连箱链）
+	public record StationItemsRequestPayload(BlockPos boxPos) implements CustomPacketPayload
+	{
+		public static final Type<StationItemsRequestPayload> TYPE =
+				new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "station_items_request"));
+
+		public static final StreamCodec<ByteBuf, StationItemsRequestPayload> STREAM_CODEC =
+				StreamCodec.composite(
+						BlockPos.STREAM_CODEC, StationItemsRequestPayload::boxPos,
+						StationItemsRequestPayload::new);
+
+		public static void handle(StationItemsRequestPayload payload, IPayloadContext context)
+		{
+			context.enqueueWork(() ->
+			{
+				if (!(context.player() instanceof ServerPlayer player)) return;
+
+				// 必须是快递盒：这个面板只对快递盒开放
+				ServerLevel serverLevel = player.serverLevel();
+				if (!(serverLevel.getBlockState(payload.boxPos()).getBlock() instanceof DeliveryBox)) return;
+
+				// 250ms 只挡连点；客户端另有 1s 冷却，正常点击不会被丢
+				if (!JsonUtil.check(player.getUUID(), "station_items", 250)) return;
+
+				com.wenzai.neosim.block.DeliveryEngine.StationScan result =
+						com.wenzai.neosim.block.DeliveryEngine.scanStation(serverLevel, payload.boxPos());
+				PacketDistributor.sendToPlayer(player,
+						new ServerToClientPayloads.StationItemsResponsePayload(
+								payload.boxPos(), result.chestCount(), result.entries()));
+			}).exceptionally(e ->
+			{
+				NeoSim.LOGGER.error("NeoSim-StationItemsRequest: Fail", e);
+				return null;
+			});
+		}
+
+		@Override
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
+	}
+
 	// 客户端上报界面语言（C→S；仅用于新建 NPC 选择姓名池，不改变已有 NPC）
 	public record ClientLocalePayload(String language) implements CustomPacketPayload
 	{

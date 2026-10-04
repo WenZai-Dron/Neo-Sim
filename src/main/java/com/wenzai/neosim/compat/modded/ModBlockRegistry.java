@@ -207,9 +207,9 @@ public final class ModBlockRegistry
 	{
 		for (Class<?> t = type; t != null && t != Object.class; t = t.getSuperclass())
 		{
-			boolean modClass = isModClass(t);
 			// 走到原版建材父类（台阶 / 楼梯 / 树叶 …）就收工：它们声明的 canSurvive / getStateForPlacement
 			// 是「形态 / 朝向」性质，不需要邻居支撑，模组扩展它们做建材不该被拖进第二轮
+			boolean modClass = isModClass(t);
 			if (!modClass && NOT_DEPENDENT_PARENTS.contains(t.getName())) return null;
 			if (declares(t, "canSurvive", net.minecraft.world.level.LevelReader.class, net.minecraft.core.BlockPos.class))
 			{

@@ -51,6 +51,16 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.DeliveryBox.state.walking","配送中");
 		add("gui.neosim.DeliveryBox.state.depositing","投料中");
 		add("gui.neosim.DeliveryBox.state.returning","返回站点");
+		add("gui.neosim.DeliveryBox.station","快递站材料");
+		add("gui.neosim.DeliveryBox.station.title","快递站材料");
+		add("gui.neosim.DeliveryBox.station.header","已读取 %s 个箱子 · %s 种材料");
+		add("gui.neosim.DeliveryBox.station.scanning","读取中…");
+		add("gui.neosim.DeliveryBox.station.timeout","读取超时，请再点一次刷新");
+		add("gui.neosim.DeliveryBox.station.empty","箱子里没有物品");
+		add("gui.neosim.DeliveryBox.station.page","第 %s/%s 页");
+		add("gui.neosim.DeliveryBox.station.refresh","刷新");
+		add("gui.neosim.DeliveryBox.prev","上一页");
+		add("gui.neosim.DeliveryBox.next","下一页");
 
 
 		// 城市信息 GUI（I 键唯一入口）

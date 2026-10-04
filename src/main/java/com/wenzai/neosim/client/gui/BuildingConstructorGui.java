@@ -1525,11 +1525,6 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		}
 	}
 
-	private void onBuildIt()
-	{
-		onClose();
-	}
-
 	private Button addButton(int id, int posX, int posY, int sizeW, int sizeH, Component label, Button.OnPress action)
 	{
 		Button btn = Button.builder(label, action != null ? action : b -> { })

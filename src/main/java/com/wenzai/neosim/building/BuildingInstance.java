@@ -1,7 +1,6 @@
 package com.wenzai.neosim.building;
 
 import com.wenzai.neosim.schematic.BlueprintPlacement;
-import com.wenzai.neosim.schematic.CoordTransform;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicFrame;
 import net.minecraft.core.BlockPos;

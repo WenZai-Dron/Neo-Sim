@@ -498,6 +498,52 @@ public class ServerToClientPayloads
 		}
 	}
 
+	// 快递站材料清单响应（S→C）
+	public record StationItemsResponsePayload(net.minecraft.core.BlockPos boxPos, int chestCount,
+			List<StationEntry> entries) implements CustomPacketPayload
+	{
+		public record StationEntry(net.minecraft.world.item.Item item, int count) {}
+
+		public static final StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, StationEntry> ENTRY_CODEC =
+				StreamCodec.composite(
+						ByteBufCodecs.registry(Registries.ITEM), StationEntry::item,
+						ByteBufCodecs.VAR_INT, StationEntry::count,
+						StationEntry::new);
+
+		public static final Type<StationItemsResponsePayload> TYPE =
+				new Type<>(ResourceLocation.fromNamespaceAndPath(NeoSim.MOD_ID, "station_items_response"));
+
+		public static final StreamCodec<net.minecraft.network.RegistryFriendlyByteBuf, StationItemsResponsePayload> STREAM_CODEC =
+				StreamCodec.composite(
+						net.minecraft.core.BlockPos.STREAM_CODEC, StationItemsResponsePayload::boxPos,
+						ByteBufCodecs.VAR_INT, StationItemsResponsePayload::chestCount,
+						ByteBufCodecs.collection(ArrayList::new, ENTRY_CODEC),
+						StationItemsResponsePayload::entries,
+						StationItemsResponsePayload::new);
+
+		public static void handle(StationItemsResponsePayload payload, IPayloadContext context)
+		{
+			context.enqueueWork(() ->
+			{
+				net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+				if (mc.screen instanceof com.wenzai.neosim.client.gui.DeliveryBoxGui gui)
+				{
+					gui.applyStationItems(payload.chestCount(), payload.entries());
+				}
+			}).exceptionally(e ->
+			{
+				NeoSim.LOGGER.error("NeoSim-StationItemsResponse: Fail", e);
+				return null;
+			});
+		}
+
+		@Override
+		public @NotNull Type<? extends CustomPacketPayload> type()
+		{
+			return TYPE;
+		}
+	}
+
 	// 无家 NPC 名单响应（S→C）
 	public record HomelessListResponsePayload(List<String> names) implements CustomPacketPayload
 	{

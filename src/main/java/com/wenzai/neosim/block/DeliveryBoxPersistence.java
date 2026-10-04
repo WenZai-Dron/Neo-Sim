@@ -59,17 +59,6 @@ public class DeliveryBoxPersistence
 		return "DeliveryBox.json";
 	}
 
-	// 城市目录
-	private static Path getCityDir(ServerLevel level, String cityName)
-	{
-		Path base = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
-		boolean dedicated = level.getServer().isDedicatedServer();
-		String saveName = dedicated ? null : level.getServer().getWorldData().getLevelName();
-		return (saveName == null || saveName.isEmpty())
-				? base.resolve(cityName)
-				: base.resolve(saveName).resolve(cityName);
-	}
-
 	// 记录文件路径
 	public static Path getCityPath(@Nullable String saveName, String cityName)
 	{

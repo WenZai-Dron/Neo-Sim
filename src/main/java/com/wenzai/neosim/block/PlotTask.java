@@ -22,7 +22,6 @@ public abstract class PlotTask
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	protected static final int BASE_DELAY = 2000;
-	protected static final float MAX_LEVEL = 10.0f;
 
 	// 抬手动画时长
 	private static final int RAISE_ANIM_MS = 400;
@@ -128,7 +127,7 @@ public abstract class PlotTask
 			npc.assignToSite(boxPos());
 			setState(PlotState.WORKER_ASSIGNED);
 			worker = npc;
-			jobLevel = Math.max(1.0F, jobLevelOf(npc));
+			jobLevel = Math.max(1.0F, (float) npc.getJobLevel(jobKind()));
 			updateSpeed(jobLevel);
 			updateRecord();
 			LOGGER.info("NeoSim-PlotTask: hired '{}' for work box at {}", name, boxPos());
@@ -287,11 +286,8 @@ public abstract class PlotTask
 	// 工作时手持工具
 	protected abstract Item handItem();
 
-	// 从NPC读取本职业等级
-	protected abstract byte jobLevelOf(Entity npc);
-
-	// 升级写回NPC职业等级
-	protected abstract void setNpcJobLevel(Entity npc, int lvl);
+	// 本任务对应的职业（等级读/写/成长统一走 Entity.JobKind）
+	protected abstract Entity.JobKind jobKind();
 
 	// 通用辅助
 	protected void setState(PlotState s)
@@ -451,7 +447,7 @@ public abstract class PlotTask
 		worker = Entity.findByNpcName(level, name);
 		if (worker != null)
 		{
-			float lvl = Math.max(1.0F, (float) jobLevelOf(worker));
+			float lvl = Math.max(1.0F, (float) worker.getJobLevel(jobKind()));
 			if (lvl != jobLevel)
 			{
 				updateSpeed(lvl);
@@ -568,23 +564,22 @@ public abstract class PlotTask
 		com.wenzai.neosim.storage.ModSavedData.get(level).syncCityToClients(level, cityName);
 	}
 
-	// 技能成长
+	// 技能成长：一次动作 = 1 个经验单位
 	protected void gainXp()
 	{
-		int b4 = (int) Math.floor(jobLevel);
-		if (jobLevel < MAX_LEVEL)
+		gainXp(1);
+	}
+
+	// 技能成长：跨级写回档案（Entity.addJobXp），并在跨级时换成新档位的工具
+	protected void gainXp(int units)
+	{
+		if (units <= 0) return;
+
+		int before = (int) Math.floor(jobLevel);
+		jobLevel = Entity.addJobXp(worker, jobKind(), jobLevel, units);
+		if ((int) Math.floor(jobLevel) > before)
 		{
-			jobLevel += 0.001f / Math.max(1, b4);
-		}
-		int aft = (int) Math.floor(jobLevel);
-		if (aft > b4)
-		{
-			resolveWorkerNpc();
-			if (worker != null)
-			{
-				setNpcJobLevel(worker, Math.min(aft, (int) MAX_LEVEL));
-				worker.syncToJson();
-			}
+			setHandTool();
 		}
 		updateSpeed(jobLevel);
 	}

@@ -4,11 +4,16 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.building.ConstructionEngine;
 import com.wenzai.neosim.building.ConstructionTask;
+import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.network.ServerToClientPayloads.StationItemsResponsePayload.StationEntry;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.storage.FileCreater;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.loading.FMLPaths;
@@ -21,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -32,6 +38,9 @@ public class DeliveryEngine
 	private DeliveryEngine()
 	{
 	}
+
+	// 快递站材料扫描结果（快递盒 GUI「快递站材料」页）：读到的箱子数 + 去重聚合后的材料
+	public record StationScan(int chestCount, List<StationEntry> entries) {}
 
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final List<DeliveryTask> tasks = new ArrayList<>();
@@ -298,6 +307,38 @@ public class DeliveryEngine
 			npc.releaseFromSite();
 			npc.setBuildAnim(0.0F);
 		}
+	}
+
+	public static StationScan scanStation(ServerLevel level, BlockPos boxPos)
+	{
+		List<ChestBlockEntity> chests = InventoryManager.findChainedChests(level, boxPos);
+
+		// 同一物品合并计数（与 countItems/缺料扫描一致：按物品类型，不区分组件）
+		Map<Item, Integer> counts = new LinkedHashMap<>();
+		for (ChestBlockEntity chest : chests)
+		{
+			for (int i = 0; i < chest.getContainerSize(); i++)
+			{
+				ItemStack stack = chest.getItem(i);
+				if (stack.isEmpty()) continue;
+				counts.merge(stack.getItem(), stack.getCount(), Integer::sum);
+			}
+		}
+
+		List<StationEntry> entries = new ArrayList<>();
+		for (Map.Entry<Item, Integer> e : counts.entrySet())
+		{
+			entries.add(new StationEntry(e.getKey(), e.getValue()));
+		}
+		// 多的在前；同数量按名字排序，保证显示稳定
+		entries.sort((a, b) ->
+		{
+			int byCount = Integer.compare(b.count(), a.count());
+			if (byCount != 0) return byCount;
+			return a.item().getDescription().getString()
+					.compareTo(b.item().getDescription().getString());
+		});
+		return new StationScan(chests.size(), entries);
 	}
 
 	// 盒子放置者所属城市（放置者未入城返回空）

@@ -1,7 +1,6 @@
 package com.wenzai.neosim.building;
 
 import com.google.gson.JsonObject;
-import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.network.ServerToClientPayloads.HireListResponsePayload.HireEntry;
 import com.wenzai.neosim.npc.Entity;
@@ -9,7 +8,6 @@ import com.wenzai.neosim.npc.NpcRegistry;
 import com.wenzai.neosim.storage.NpcData;
 import com.wenzai.neosim.util.JsonUtil;
 import net.minecraft.server.level.ServerLevel;
-import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -19,7 +17,6 @@ import java.util.Set;
 // 服务端收集"可雇佣市民"清单（替代客户端直接读本地档案；联机/单机统一走此服务）
 public final class HireListService
 {
-	private static final Logger LOGGER = LogUtils.getLogger();
 	private static final int MAX_ENTRIES = 200;
 
 	private HireListService()

@@ -90,19 +90,14 @@ public class MineTask extends PlotTask
 	@Override
 	protected Item handItem()
 	{
-		return Items.IRON_PICKAXE;
+		// 材质随矿工等级：1-2 木、3-4 石、5-6 铁、7-8 金、9-10 钻石
+		return Entity.JobTools.pickaxe((int) jobLevel);
 	}
 
 	@Override
-	protected byte jobLevelOf(Entity npc)
+	protected Entity.JobKind jobKind()
 	{
-		return npc.getJobMiner();
-	}
-
-	@Override
-	protected void setNpcJobLevel(Entity npc, int lvl)
-	{
-		npc.setJobMiner((byte) lvl);
+		return Entity.JobKind.MINER;
 	}
 
 	@Override

@@ -30,8 +30,10 @@ public class DeliveryTask
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
 
-	private static final float MAX_LEVEL = 10.0f;
 	private static final int WINDOW_REFRESH_TICKS = 20;
+
+	// 快递员经验：每投料 1 个物品 = 1 经验单位（不提供配置项）
+	private static final int XP_PER_ITEM = 1;
 
 	public enum DeliveryState
 	{
@@ -89,6 +91,13 @@ public class DeliveryTask
 		{
 			NeoSim.WORKER_MAP.put(boxPos(), record.worker());
 			DeliveryChunkLoader.registerBox(level, boxPos());
+
+			// 等级从 NPC 读回：否则重启后 jobLevel 从 1 起算，会把高等级快递员反向写低
+			Entity npc = Entity.findByNpcName(level, record.worker());
+			if (npc != null)
+			{
+				jobLevel = Math.max(1.0F, (float) npc.getJobCourier());
+			}
 		}
 	}
 
@@ -189,7 +198,13 @@ public class DeliveryTask
 	{
 		this.paused = p;
 		record = record.withPaused(p);
-		if (p) clearHand();
+		if (p)
+		{
+			// 暂停即下班：在途物品退回站点、订单释放（非工作不留物品栏）
+			if (worker != null) worker.returnCarriage();
+			releaseOrder();
+			clearHand();
+		}
 		updateRecord();
 	}
 
@@ -310,6 +325,11 @@ public class DeliveryTask
 					depositStartMs = System.currentTimeMillis();
 					setState(DeliveryState.DEPOSITING);
 				}
+				else if (worker.getNavigation().isDone())
+				{
+					// 实体被卸载重生成后寻路目标会丢：这里补下达，避免订单永久卡在认领状态
+					worker.setMoveTarget(targetSite);
+				}
 			}
 			case DEPOSITING ->
 			{
@@ -391,8 +411,17 @@ public class DeliveryTask
 			return;
 		}
 
-		// 站点库存与剩余缺口取较小值：当下需要多少就拿多少
-		List<ChestBlockEntity> stationChests = InventoryManager.findNearbyChests(level, boxPos());
+		// 单趟运力 = 快递员等级格数 × 64（非快递工作状态没有物品栏 → 不接单）
+		int slots = worker.carriageSlots();
+		if (slots <= 0)
+		{
+			setState(DeliveryState.IDLE);
+			return;
+		}
+
+		// 站点库存、工地缺口、单趟运力三者取最小
+		// 站点库存：读取与快递盒相连的整条箱链
+		List<ChestBlockEntity> stationChests = InventoryManager.findChainedChests(level, boxPos());
 		int stock = InventoryManager.countItems(stationChests, item);
 		if (stock <= 0)
 		{
@@ -401,7 +430,7 @@ public class DeliveryTask
 			return;
 		}
 		int need = Math.max(1, best.getMissingCount(item));
-		int batch = Math.min(stock, need);
+		int batch = Math.min(Math.min(stock, need), slots * Entity.CARRIAGE_SLOT_SIZE);
 
 		DeliveryEngine.claim(bestControl, boxPos());
 		int taken = InventoryManager.extractItem(stationChests, item, batch);
@@ -412,57 +441,82 @@ public class DeliveryTask
 			return;
 		}
 
+		// 装进快递员物品栏；格数不足的差额塞回站点箱子（batch 已按运力裁剪，这里只是保险）
+		int loaded = worker.loadCarriage(new ItemStack(item, taken), slots);
+		if (loaded < taken)
+		{
+			InventoryManager.depositItems(stationChests, new ItemStack(item, taken - loaded));
+		}
+		if (loaded <= 0)
+		{
+			DeliveryEngine.releaseClaim(bestControl, boxPos());
+			setState(DeliveryState.IDLE);
+			return;
+		}
+
 		targetControl = bestControl;
 		targetSite = best.getBuilding().getConstructorPos() != null
 				? best.getBuilding().getConstructorPos() : bestControl;
 		carryItem = item;
-		carryCount = taken;
+		carryCount = loaded;
 		lastSkipReason = Component.empty();
 
-		// 手持形象：超一组只拿前 64 个（投料按实际数量）
-		worker.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(item, Math.min(taken, 64)));
+		// 手持形象：显示物品栏第一格
+		worker.setItemInHand(InteractionHand.MAIN_HAND, worker.getCarriageDisplay());
 
 		// 城市公告：XXX 正前往 XXX 运送 XX 个 XXX
 		Component buildingName = BlueprintName.component(best.getBuilding().getSchematicName());
 		LifeSystem.announce(level, cityName,
 				LifeSystem.tpl(Config.ANNOUNCE_DELIVERY_DISPATCH,
-						worker.getNpcName(), buildingName, taken,
+						worker.getNpcName(), buildingName, loaded,
 						item.getDescription()));
 
 		worker.setMoveTarget(targetSite);
 		setState(DeliveryState.WALKING_TO_SITE);
 		LOGGER.info("NeoSim-DeliveryTask: '{}' delivering {}x{} to {} (city {})",
-				worker.getNpcName(), taken, item.getDescription().getString(),
+				worker.getNpcName(), loaded, item.getDescription().getString(),
 				buildingName, cityName);
 	}
 
-	// 投料完成：入箱 → 扣款 → 经验 → 释放认领 → 回站点
+	// 投料完成：物品栏入箱 → 按件扣款 → 按件给经验 → 释放认领 → 回站点
 	private void performDeposit()
 	{
-		if (carryItem != null && carryCount > 0)
+		int delivered = 0;
+		if (worker != null && !worker.isCarriageEmpty())
 		{
 			List<ChestBlockEntity> chests = siteChests(targetControl, targetSite);
 			if (!chests.isEmpty())
 			{
-				int remaining = carryCount;
-				while (remaining > 0)
+				for (ItemStack stack : worker.getCarriage())
 				{
-					int chunk = Math.min(64, remaining);
-					InventoryManager.depositItems(chests, new ItemStack(carryItem, chunk));
-					remaining -= chunk;
+					if (stack.isEmpty()) continue;
+					InventoryManager.depositItems(chests, stack.copy());
+					delivered += stack.getCount();
 				}
-
-				// 按件扣款（非创造）
-				deductCredits(carryCount * Config.DELIVERY_CREDIT_PER_UNIT.get());
-				gainXp();
+				worker.clearCarriage();
+			}
+			else
+			{
+				// 工地旁没有箱子：原路退回站点，不掉落
+				worker.returnCarriage();
 			}
 		}
+
+		if (delivered > 0)
+		{
+			// 按件扣款（非创造）+ 每投料 1 个物品 = 1 经验单位
+			deductCredits(delivered * Config.DELIVERY_CREDIT_PER_UNIT.get());
+			gainXp(delivered * XP_PER_ITEM);
+		}
+
+		if (worker != null) worker.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
 		releaseOrder();
 		setState(DeliveryState.RETURNING);
 		worker.setMoveTarget(boxPos());
 	}
 
 	// 工地旁的箱子：控制箱 6 邻面 ∪ 模盒 6 邻面（去重）
+	// 注意：这里刻意不用箱链——工地侧是建筑控制箱/模盒，非快递盒方块，按规则只能读紧邻 6 面的箱子
 	private List<ChestBlockEntity> siteChests(BlockPos control, BlockPos constructor)
 	{
 		List<ChestBlockEntity> chests = new ArrayList<>(InventoryManager.findNearbyChests(level, control));
@@ -479,13 +533,14 @@ public class DeliveryTask
 		return chests;
 	}
 
-	// 释放当前订单（认领 + 字段清零）
+	// 释放当前订单（认领 + 字段清零）；在途物品原路退回站点，不掉落
 	private void releaseOrder()
 	{
 		if (targetControl != null)
 		{
 			DeliveryEngine.releaseClaim(targetControl, boxPos());
 		}
+		if (worker != null) worker.returnCarriage();
 		targetControl = null;
 		targetSite = null;
 		carryItem = null;
@@ -569,11 +624,11 @@ public class DeliveryTask
 		if (name == null || name.isEmpty()) return;
 
 		worker = Entity.findByNpcName(level, name);
-	}
-
-	private boolean workerExistsInLevel(String name)
-	{
-		return Entity.findByNpcName(level, name) != null;
+		if (worker != null)
+		{
+			// 重新解析工人时同步等级（与农业盒/矿业盒同款，避免用旧等级继续作业）
+			jobLevel = Math.max(1.0F, (float) worker.getJobCourier());
+		}
 	}
 
 	private void tryRestoreWorker()
@@ -645,23 +700,15 @@ public class DeliveryTask
 		ModSavedData.get(level).syncCityToClients(level, cityName);
 	}
 
-	// 快递员技能成长（等级越高投料越快，配送经验跨级写 job.courier）
-	protected void gainXp()
+	// 快递员技能成长：每投料 1 件 = 1 个经验单位；跨级时刷新工作速度加成（曲线 A 只作用于快递员工作时）
+	protected void gainXp(int units)
 	{
-		int b4 = (int) Math.floor(jobLevel);
-		if (jobLevel < MAX_LEVEL)
+		if (units <= 0) return;
+		int before = (int) Math.floor(jobLevel);
+		jobLevel = Entity.addJobXp(worker, Entity.JobKind.COURIER, jobLevel, units);
+		if ((int) Math.floor(jobLevel) > before && worker != null)
 		{
-			jobLevel += 0.001f / Math.max(1, b4);
-		}
-		int aft = (int) Math.floor(jobLevel);
-		if (aft > b4)
-		{
-			resolveWorkerNpc();
-			if (worker != null)
-			{
-				worker.setJobCourier((byte) Math.min(aft, (int) MAX_LEVEL));
-				worker.syncToJson();
-			}
+			worker.refreshWalkSpeed();
 		}
 	}
 }

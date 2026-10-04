@@ -1,11 +1,9 @@
 package com.wenzai.neosim.building;
 
-import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-import org.slf4j.Logger;
 
 import java.util.Comparator;
 import java.util.HashSet;
@@ -15,8 +13,6 @@ import java.util.Set;
 // 区块加载（按当前建造层 ±1 的窗口随进度滚动，整栋常驻改为小窗口）
 public class BuildingChunkLoader
 {
-	private static final Logger LOGGER = LogUtils.getLogger();
-
 	private static final TicketType<ChunkPos> BUILDING_TICKET =
 			TicketType.create("neo_sim:building", Comparator.comparingLong(ChunkPos::toLong));
 
