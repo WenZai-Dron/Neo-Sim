@@ -1,8 +1,8 @@
 package com.wenzai.neosim.client.gui;
 
-import com.wenzai.neosim.building.ControlBoxPersistence;
-import com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord;
-import com.wenzai.neosim.building.ControlBoxPersistence.Resident;
+import com.wenzai.neosim.block.ControlBoxPersistence;
+import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
+import com.wenzai.neosim.block.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.client.BuildingNameLocalizer;
 import com.wenzai.neosim.client.ClientDataHolder;
 import com.wenzai.neosim.network.ClientToServerPayloads;

@@ -7,6 +7,11 @@ import net.minecraft.world.phys.Vec3;
 // 开启创造飞行，退出时传送回原位
 public class FreeCamera
 {
+	// 工具类：只有静态成员，禁止实例化
+	private FreeCamera()
+	{
+	}
+
 	private static Vec3 savedPos;
 	private static float savedYaw, savedPitch;
 	private static boolean wasFlying, wasMayFly, wasInvulnerable;

@@ -3,7 +3,6 @@ package com.wenzai.neosim.network;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.*;
 import com.wenzai.neosim.building.ConstructionEngine;
-import com.wenzai.neosim.building.ControlBoxPersistence;
 import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.npc.CityLivingManager;
 import com.wenzai.neosim.npc.Entity;

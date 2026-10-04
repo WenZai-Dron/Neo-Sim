@@ -38,6 +38,8 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.*;
+import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -46,7 +48,9 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.level.portal.DimensionTransition;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -603,14 +607,24 @@ public class Entity extends PathfinderMob
 
 	private static final double SPEED_BONUS_PER_LEVEL = 0.04D;
 
-	// 按"是否在快递岗位工作"刷新速度加成；transient 不落盘，重启后由等级重算
+	// 已写进属性的速度加成值；-1 表示还没算过（首次必定写一次）
+	private double appliedSpeedBonus = -1.0D;
+
+	// 当前应生效的快递速度加成：不在岗（未受雇 / 休息 / 非快递岗位）或 1 级时为 0
+	private double walkSpeedBonus()
+	{
+		if (!isCourierOnDuty()) return 0.0D;
+		return SPEED_BONUS_PER_LEVEL * (Math.max(1, getJobCourier()) - 1);
+	}
+
+	// 把速度加成写进属性；transient 不落盘，重启后由等级重算
 	public void refreshWalkSpeed()
 	{
 		AttributeInstance instance = getAttribute(Attributes.MOVEMENT_SPEED);
 		if (instance == null) return;
 
-		double bonus = isCourierOnDuty()
-				? SPEED_BONUS_PER_LEVEL * (Math.max(1, getJobCourier()) - 1) : 0.0D;
+		double bonus = walkSpeedBonus();
+		appliedSpeedBonus = bonus;
 		if (bonus <= 0.0D)
 		{
 			instance.removeModifier(COURIER_SPEED_ID);
@@ -685,7 +699,7 @@ public class Entity extends PathfinderMob
 	private NpcGoals.MoveToSiteGoal moveToSiteGoal;
 
 	// 安全AI：逃离敌对生物（顺带躲玩家）；最高优先级
-	private AvoidEntityGoal<LivingEntity> fleeHostileGoal;
+	private NpcGoals.AvoidGoal fleeHostileGoal;
 
 	// 工地待料：原地待命（只停住，不停安全AI）；休息时间由调用方解除
 	private boolean stayPut;
@@ -1199,8 +1213,8 @@ public class Entity extends PathfinderMob
 			// 休息时间自动解除工地待命：NPC 可以自由走动（回家/在家附近溜达）
 			if (stayPut && isRestingNow()) stayPut = false;
 
-			// 移动速度加成按"是否在快递岗位工作"刷新（白天上班 / 夜里下班切换）
-			if (tickCount % 20 == 0)
+			// 移动速度加成按"是否在快递岗位工作"刷新；算出来没变就不动属性（白天上班 / 夜里下班切换）
+			if (tickCount % 20 == 0 && walkSpeedBonus() != appliedSpeedBonus)
 			{
 				refreshWalkSpeed();
 			}
@@ -1421,6 +1435,36 @@ public class Entity extends PathfinderMob
 		return InteractionResult.PASS;
 	}
 
+	// 寻路导航换成节点预算受限的版本（见 Navigation）
+	@Override
+	protected PathNavigation createNavigation(Level level)
+	{
+		return new Navigation(this, level);
+	}
+
+	// 市民寻路导航：把 A* 节点预算从 FOLLOW_RANGE 里摘出来
+	// 原版 PathNavigation 构造时用 FOLLOW_RANGE × 16 当节点预算，本模组 FOLLOW_RANGE = 128 → 2048 节点
+	// 而 FOLLOW_RANGE 的另一个用途（PathFinder 的 maxRange：单条路径能走多远）要保持 128
+	// 取 768 = 原版村民同级：复杂地形仍找得到路，走不到时的最坏搜索成本降到 3/8
+	static final class Navigation extends GroundPathNavigation
+	{
+		private static final int NODE_BUDGET = 768;
+
+		Navigation(Mob mob, Level level)
+		{
+			super(mob, level);
+		}
+
+		// 传进来的 vanillaBudget 就是 FOLLOW_RANGE × 16，这里丢掉不用
+		@Override
+		protected PathFinder createPathFinder(int vanillaBudget)
+		{
+			this.nodeEvaluator = new WalkNodeEvaluator();
+			this.nodeEvaluator.setCanPassDoors(true);
+			return new PathFinder(this.nodeEvaluator, NODE_BUDGET);
+		}
+	}
+
 	// 行为
 	@Override
 	protected void registerGoals()
@@ -1428,8 +1472,8 @@ public class Entity extends PathfinderMob
 		this.goalSelector.addGoal(0, new FloatGoal(this));
 
 		// 安全AI放最高级（0）：敌对生物一律逃；玩家也逃，但工地待料时只躲怪不躲玩家（防乱走）
-		// 合并为一个 AvoidEntityGoal，一次 8 格扫描按 predicate 分流，代替两个独立目标
-		this.fleeHostileGoal = new AvoidEntityGoal<>(this, LivingEntity.class,
+		// 一次 8 格扫描按 predicate 分流；查询本身按 NpcGoals.AvoidGoal 节流
+		this.fleeHostileGoal = new NpcGoals.AvoidGoal(this, LivingEntity.class,
 				e -> e.getType().getCategory() == MobCategory.MONSTER
 						|| (e instanceof Player && !isPlayerAvoidBlocked()),
 				8.0F, 0.6D, 0.8D, e -> true);

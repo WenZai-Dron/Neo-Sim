@@ -1,7 +1,8 @@
 package com.wenzai.neosim.building;
 
-import com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord;
-import com.wenzai.neosim.building.ControlBoxPersistence.Resident;
+import com.wenzai.neosim.block.ControlBoxPersistence;
+import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
+import com.wenzai.neosim.block.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.storage.NpcData;
 import net.minecraft.server.level.ServerLevel;
 

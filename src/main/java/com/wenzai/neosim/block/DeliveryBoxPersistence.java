@@ -17,6 +17,11 @@ import javax.annotation.Nullable;
 
 public class DeliveryBoxPersistence
 {
+	// 工具类：只有静态成员，禁止实例化
+	private DeliveryBoxPersistence()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	// 记录：盒子 + 雇佣 + 暂停 + 状态

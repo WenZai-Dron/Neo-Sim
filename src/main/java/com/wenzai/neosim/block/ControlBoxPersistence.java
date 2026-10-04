@@ -1,4 +1,4 @@
-package com.wenzai.neosim.building;
+package com.wenzai.neosim.block;
 
 import com.google.gson.*;
 import com.mojang.logging.LogUtils;

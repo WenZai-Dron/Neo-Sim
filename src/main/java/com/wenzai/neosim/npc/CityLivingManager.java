@@ -2,11 +2,11 @@ package com.wenzai.neosim.npc;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
+import com.wenzai.neosim.block.ControlBoxPersistence;
+import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
+import com.wenzai.neosim.block.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.building.BuildingInstance;
 import com.wenzai.neosim.building.ConstructionTask;
-import com.wenzai.neosim.building.ControlBoxPersistence;
-import com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord;
-import com.wenzai.neosim.building.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.storage.FileCreater;
 import com.wenzai.neosim.util.BlueprintName;

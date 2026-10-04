@@ -19,6 +19,11 @@ import javax.annotation.Nullable;
 
 public class WorkBoxPersistence
 {
+	// 工具类：只有静态成员，禁止实例化
+	private WorkBoxPersistence()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	private static final int PROX_MARGIN = 256;

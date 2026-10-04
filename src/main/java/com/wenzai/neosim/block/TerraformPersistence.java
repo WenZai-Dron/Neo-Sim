@@ -18,6 +18,11 @@ import javax.annotation.Nullable;
 // 整地任务持久化：每城市 Terraform.json
 public class TerraformPersistence
 {
+	// 工具类：只有静态成员，禁止实例化
+	private TerraformPersistence()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	private static final int PROX_MARGIN = 256;

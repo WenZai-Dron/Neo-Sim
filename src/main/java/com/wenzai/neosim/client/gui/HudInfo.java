@@ -53,6 +53,12 @@ public final class HudInfo
 		};
 	}
 
+	// 金额文本：三位分节 + 两位小数（HUD 与城市信息页共用，保证两处显示永远一致）
+	public static String amount(double value)
+	{
+		return String.format("%,.2f", value);
+	}
+
 	// 单个 HUD 字段的文本（键见 UiSettings.FIELD_KEYS）：HUD 的取值都从这里出
 	@Nullable
 	public static String field(Minecraft mc, String key)
@@ -66,8 +72,7 @@ public final class HudInfo
 			case "weekday" -> weekday(data.getDayOfWeek());
 			case "day" -> Component.translatable(HUD + "day", data.getDay()).getString();
 			case "population" -> Component.translatable(HUD + "population").getString() + ": " + data.getPopulation();
-			case "credit" -> Component.translatable(HUD + "credit").getString() + ": "
-					+ String.format("%.2f", data.getCredit());
+			case "credit" -> Component.translatable(HUD + "credit").getString() + ": " + amount(data.getCredit());
 			case "mode" -> modeName(data.getMode());
 			default -> null;
 		};

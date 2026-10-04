@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
 
@@ -18,13 +19,25 @@ public class SocialGoal extends Goal
 	// 凑在一起每 12 tick 结算一次关系
 	private static final int MEDDLE_TICKS = 12;
 
-	// 每 20 tick 重新寻路（目标会移动）
-	private static final int REPATH_INTERVAL = 20;
+	// 目标持续移动时的兜底重算间隔（2 秒）
+	private static final int REPATH_INTERVAL = 40;
+
+	// 目标位置变化超过 2 格才值得重算（对方也在移动，逐秒重算纯浪费）
+	private static final double TARGET_MOVE_SQR = 4.0D;
+
+	// 单向接近：每 30 秒翻转一次谁主动靠近，走不动就下一轮换人
+	private static final long APPROACH_FLIP_TICKS = 600L;
+
+	// 锚点等待上限：对方 10 秒没能更近就放弃本次社交，别一直占着 MOVE 站着不动
+	private static final int ANCHOR_WAIT_TICKS = 200;
 
 	private final Entity npc;
 	private Entity target;
 	private int stuckTicks;
 	private int repathTicks;
+	private Vec3 pathTarget;
+	private int anchorWaitTicks;
+	private double anchorLastDistSqr = Double.MAX_VALUE;
 
 	// 目标搜索缓存（每 SEARCH_INTERVAL tick 重搜；搭档失效/走远提前失效）
 	private static final int SEARCH_INTERVAL = 60;
@@ -80,6 +93,9 @@ public class SocialGoal extends Goal
 	public void start()
 	{
 		stuckTicks = 0;
+		pathTarget = null;
+		anchorWaitTicks = 0;
+		anchorLastDistSqr = Double.MAX_VALUE;
 
 		// 相位错开——以 (tickCount + id) % REPATH_INTERVAL 起步，避免全体 NPC 同一 tick 重算寻路
 		repathTicks = Math.floorMod(npc.tickCount + npc.getId(), REPATH_INTERVAL);
@@ -122,12 +138,35 @@ public class SocialGoal extends Goal
 			return;
 		}
 
-		// 尚未到达：沿路径走向对方，周期性重新寻路
+		// 只让一方主动靠近：名字字典序小者当锚点原地等，另一方走过去
+		// 每 30 秒翻转一次方向（用同一个游戏时钟判定，两侧结论必然一致），走不动就下一轮换人
+		if (iAmAnchor(target))
+		{
+			npc.getNavigation().stop();
+
+			// 对方在靠近就重置计时；10 秒没能更近就放弃本次社交，别一直占着 MOVE 站着不动
+			if (distSqr < anchorLastDistSqr - 1.0D)
+			{
+				anchorLastDistSqr = distSqr;
+				anchorWaitTicks = 0;
+			}
+			else if (++anchorWaitTicks > ANCHOR_WAIT_TICKS)
+			{
+				clearHangout();
+				target = null;
+			}
+			return;
+		}
+
+		// 尚未到达：沿路径走向对方，目标挪窝或走完当前路径才重算
 		PathNavigation nav = npc.getNavigation();
-		if (nav.isDone() || ++repathTicks >= REPATH_INTERVAL)
+		BlockPos pos = target.blockPosition();
+		Vec3 pos3 = new Vec3(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D);
+		boolean moved = pathTarget == null || pathTarget.distanceToSqr(pos3) > TARGET_MOVE_SQR;
+		if (nav.isDone() || (moved && ++repathTicks >= REPATH_INTERVAL))
 		{
 			repathTicks = 0;
-			BlockPos pos = target.blockPosition();
+			pathTarget = pos3;
 			Path path = nav.createPath(pos, 0);
 			if (path == null || !nav.moveTo(path, 0.5D))
 			{
@@ -157,6 +196,17 @@ public class SocialGoal extends Goal
 		clearHangout();
 		target = null;
 		npc.getNavigation().stop();
+	}
+
+	// 谁主动靠近：名字字典序小者（翻转期反过来）。两侧用同一个游戏时钟判定，结论必然一致
+	// 同名异常情况当作双方都主动靠近，退化成互相走近
+	private boolean iAmAnchor(Entity other)
+	{
+		int nameOrder = npc.getNpcName().compareTo(other.getNpcName());
+		if (nameOrder == 0) return false;
+
+		boolean flip = (npc.level().getGameTime() / APPROACH_FLIP_TICKS) % 2L == 1L;
+		return (nameOrder < 0) != flip;
 	}
 
 	// 找对象（结果缓存 + 城市索引，免每 tick AABB 查询与全服扫描）

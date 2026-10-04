@@ -128,8 +128,8 @@ public class BreakHandler
 		// 删除控制箱记录：已放置的控制箱方块保留，右键不可交互；居民失去家
 		if (task != null)
 		{
-			com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord removed =
-					com.wenzai.neosim.building.ControlBoxPersistence.removeAt(
+			ControlBoxPersistence.ControlBoxRecord removed =
+					ControlBoxPersistence.removeAt(
 							level, task.getBuilding().getControlBoxPos());
 			if (removed != null)
 			{
@@ -141,8 +141,8 @@ public class BreakHandler
 	// 控制箱被破坏：删除对应记录；居民失去家
 	private static void handleControlBoxBreak(ServerLevel level, BlockPos pos)
 	{
-		com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord removed =
-				com.wenzai.neosim.building.ControlBoxPersistence.removeAt(level, pos);
+		ControlBoxPersistence.ControlBoxRecord removed =
+				ControlBoxPersistence.removeAt(level, pos);
 		if (removed != null)
 		{
 			com.wenzai.neosim.npc.CityLivingManager.evictResidents(level, removed);

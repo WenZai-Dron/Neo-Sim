@@ -65,6 +65,11 @@ import javax.annotation.Nullable;
 @EventBusSubscriber(modid = NeoSim.MOD_ID, value = Dist.CLIENT)
 public class GhostBlockRenderer
 {
+	// 工具类：只有静态成员，禁止实例化
+	private GhostBlockRenderer()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 	private static BlockPos lastLoggedOrigin = null;
 

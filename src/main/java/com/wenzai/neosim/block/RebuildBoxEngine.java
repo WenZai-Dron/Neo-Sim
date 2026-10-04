@@ -3,7 +3,6 @@ package com.wenzai.neosim.block;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
-import com.wenzai.neosim.building.ControlBoxPersistence;
 import com.wenzai.neosim.schematic.SchematicRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;

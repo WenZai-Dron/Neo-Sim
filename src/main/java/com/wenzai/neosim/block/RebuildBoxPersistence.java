@@ -22,6 +22,11 @@ import javax.annotation.Nullable;
 // 记录绑定关系（控制箱 → 蓝图 → 落地几何）与游标/状态；重启后按记录恢复任务
 public class RebuildBoxPersistence
 {
+	// 工具类：只有静态成员，禁止实例化
+	private RebuildBoxPersistence()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	// 记录与绑定的控制箱坐标相距上限：超出视为篡改数据（防止强制加载远端区块）

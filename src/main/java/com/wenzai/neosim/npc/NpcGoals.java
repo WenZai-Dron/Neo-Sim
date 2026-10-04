@@ -1,7 +1,10 @@
 package com.wenzai.neosim.npc;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.AvoidEntityGoal;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.DefaultRandomPos;
@@ -9,6 +12,7 @@ import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.EnumSet;
+import java.util.function.Predicate;
 
 public class NpcGoals
 {
@@ -181,11 +185,14 @@ public class NpcGoals
 		// 两次闲逛之间的停顿（3~10 秒）
 		private static final int PAUSE_MIN = 60;
 		private static final int PAUSE_MAX = 200;
-		private static final int MAX_ATTEMPTS = 12;
+
+		// 选点尝试上限；每 tick 只试 1 次，把单 tick 的探点尖峰摊到多个 tick
+		private static final int MAX_ATTEMPTS = 6;
 
 		private final Entity npc;
 		private final double speed;
 		private int pauseTicks;
+		private int strollAttempts;
 		private boolean strolling;
 		private boolean returning;
 
@@ -201,6 +208,7 @@ public class NpcGoals
 		{
 			this.strolling = false;
 			this.returning = false;
+			this.strollAttempts = 0;
 			this.pauseTicks = PAUSE_MIN + npc.getRandom().nextInt(PAUSE_MAX - PAUSE_MIN);
 		}
 
@@ -238,27 +246,30 @@ public class NpcGoals
 				return;
 			}
 
-			if (!startStroll(home))
+			if (strollAttempts >= MAX_ATTEMPTS)
 			{
+				strollAttempts = 0;
 				pauseTicks = PAUSE_MIN;
 				return;
 			}
+			strollAttempts++;
+
+			// 本 tick 没挑到点：下一 tick 再试一次，不重置停顿
+			if (!startStroll(home)) return;
+			strollAttempts = 0;
 			strolling = true;
 		}
 
 		// 在生活点半径内挑一个能站的点：原版 getPos 负责地形合法性，这里再筛回生活点半径内
+		// 每次只试一次，由 tick 逐 tick 重试（单 tick 连试十几次会在夜里堆出尖峰）
 		private boolean startStroll(BlockPos home)
 		{
 			PathNavigation nav = npc.getNavigation();
-			for (int attempt = 0; attempt < MAX_ATTEMPTS; attempt++)
-			{
-				Vec3 pos = DefaultRandomPos.getPos(npc, (int) HOME_RADIUS, 3);
-				if (pos == null) continue;
-				if (Math.abs(pos.x - (home.getX() + 0.5D)) > HOME_RADIUS) continue;
-				if (Math.abs(pos.z - (home.getZ() + 0.5D)) > HOME_RADIUS) continue;
-				if (nav.moveTo(pos.x, pos.y, pos.z, speed)) return true;
-			}
-			return false;
+			Vec3 pos = DefaultRandomPos.getPos(npc, (int) HOME_RADIUS, 3);
+			if (pos == null) return false;
+			if (Math.abs(pos.x - (home.getX() + 0.5D)) > HOME_RADIUS) return false;
+			if (Math.abs(pos.z - (home.getZ() + 0.5D)) > HOME_RADIUS) return false;
+			return nav.moveTo(pos.x, pos.y, pos.z, speed);
 		}
 
 		private void walkBack(BlockPos home)
@@ -276,8 +287,14 @@ public class NpcGoals
 	// 原来是"导航停下3秒就传送"，于是明明有路可绕的NPC也会被凭空拽到目标点
 	static final class StuckEscape
 	{
-		// 每秒重下一次寻路指令
-		private static final int REPATH_INTERVAL = 20;
+		// 重下寻路指令的基础间隔（1 秒）；失败后逐次翻倍退避
+		private static final int REPATH_BASE = 20;
+
+		// 退避上限（10 秒）：走不到的 NPC 不必每秒重算
+		private static final int REPATH_MAX = 200;
+
+		// 已确认无路时本次搜索只用 35% 节点预算（注定大概率再失败，别烧满）
+		private static final float NO_PATH_BUDGET_SCALE = 0.35F;
 
 		// 连续确认无路可走 3 次才兜底传送
 		private static final int NO_PATH_STRIKES = 3;
@@ -286,6 +303,7 @@ public class NpcGoals
 		private final double speed;
 		private int ticks;
 		private int noPathStrikes;
+		private int repathInterval = REPATH_BASE;
 
 		StuckEscape(Entity npc, double speed)
 		{
@@ -297,6 +315,7 @@ public class NpcGoals
 		{
 			ticks = 0;
 			noPathStrikes = 0;
+			repathInterval = REPATH_BASE;
 		}
 
 		// 未到达目标时逐 tick 调用
@@ -325,17 +344,24 @@ public class NpcGoals
 				return true;
 			}
 
-			if (++ticks < REPATH_INTERVAL) return false;
+			if (++ticks < repathInterval) return false;
 			ticks = 0;
 
-			// 还能走 → 继续走，不传送
-			if (walkTo(walkPos))
+			// 已确认无路时压低本次搜索预算：不可达目标的搜索最贵，且大概率还会再失败
+			nav.setMaxVisitedNodesMultiplier(noPathStrikes > 0 ? NO_PATH_BUDGET_SCALE : 1.0F);
+			boolean reached = walkTo(walkPos);
+			nav.resetMaxVisitedNodesMultiplier();
+
+			// 还能走 → 继续走，不传送，退避复位
+			if (reached)
 			{
 				noPathStrikes = 0;
+				repathInterval = REPATH_BASE;
 				return false;
 			}
 
-			// 确实无路可走：连续确认若干次才兜底传送
+			// 确实无路可走：退避加倍，连续确认若干次才兜底传送
+			repathInterval = Math.min(REPATH_MAX, repathInterval * 2);
 			if (++noPathStrikes < NO_PATH_STRIKES) return false;
 
 			teleport(basePos);
@@ -453,6 +479,32 @@ public class NpcGoals
 		public void stop()
 		{
 			npc.getNavigation().stop();
+		}
+	}
+
+	// 逃怪目标：没在逃跑时每 5 tick 才真查一次 8 格 AABB
+	// 原版 canUse 每次都要做一次实体范围查询 + getNearestEntity，而 GoalSelector 每 2 tick 就会问一次
+	// canContinueToUse 父类判的是「路径走完没有」，不经 canUse，所以逃跑过程不会被这个节流打断
+	static final class AvoidGoal extends AvoidEntityGoal<LivingEntity>
+	{
+		private static final int CHECK_INTERVAL = 5;
+
+		private int lastCheckTick = Integer.MIN_VALUE;
+
+		AvoidGoal(PathfinderMob mob, Class<LivingEntity> avoidClass, Predicate<LivingEntity> avoidPredicate,
+				float maxDist, double walkSpeedModifier, double sprintSpeedModifier,
+				Predicate<LivingEntity> predicateOnAvoidEntity)
+		{
+			super(mob, avoidClass, avoidPredicate, maxDist, walkSpeedModifier, sprintSpeedModifier, predicateOnAvoidEntity);
+		}
+
+		@Override
+		public boolean canUse()
+		{
+			int now = this.mob.tickCount;
+			if (now - lastCheckTick < CHECK_INTERVAL) return false;
+			lastCheckTick = now;
+			return super.canUse();
 		}
 	}
 }

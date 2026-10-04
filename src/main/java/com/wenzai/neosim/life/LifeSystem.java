@@ -2,8 +2,8 @@ package com.wenzai.neosim.life;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
-import com.wenzai.neosim.building.ControlBoxPersistence;
-import com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord;
+import com.wenzai.neosim.block.ControlBoxPersistence;
+import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.schematic.SchematicData;

@@ -1,9 +1,9 @@
 package com.wenzai.neosim.client.gui;
 
 import com.wenzai.neosim.Config;
-import com.wenzai.neosim.building.ControlBoxPersistence;
-import com.wenzai.neosim.building.ControlBoxPersistence.ControlBoxRecord;
-import com.wenzai.neosim.building.ControlBoxPersistence.Resident;
+import com.wenzai.neosim.block.ControlBoxPersistence;
+import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
+import com.wenzai.neosim.block.ControlBoxPersistence.Resident;
 import com.wenzai.neosim.client.BuildingNameLocalizer;
 import com.wenzai.neosim.client.ClientDataHolder;
 import com.wenzai.neosim.client.gui.config.ConfigPanel;
@@ -318,7 +318,7 @@ public class CityInfoGui extends Screen implements ConfigPanel.Host
 		lines.add(Component.translatable(P + "overview.weekday", HudInfo.weekday(data.getDayOfWeek())).getString());
 		lines.add(Component.translatable(P + "overview.day", data.getDay()).getString());
 		lines.add(Component.translatable(P + "overview.population", data.getPopulation()).getString());
-		lines.add(Component.translatable(P + "overview.credit", String.format("%.2f", data.getCredit())).getString());
+		lines.add(Component.translatable(P + "overview.credit", HudInfo.amount(data.getCredit())).getString());
 		lines.add(Component.translatable(P + "overview.mode", HudInfo.modeName(data.getMode())).getString());
 		lines.add(Component.translatable(P + "overview.populationMax", Config.MAX_POPULATION.get()).getString());
 		lines.add(Component.translatable(P + "overview.buildings", records.size()).getString());
