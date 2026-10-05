@@ -5,6 +5,7 @@ import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.building.InventoryManager;
 import com.wenzai.neosim.npc.Entity;
+import com.wenzai.neosim.util.ChunkWindows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
@@ -208,13 +209,16 @@ public class MineTask extends PlotTask
 	}
 
 	// 该层矩形内是否已出现基岩：挖到基岩层即无法继续下挖，触发采尽
+	// 区块窗口只覆盖游标附近：未加载格不读（读会触发同步加载），按"未出现基岩"处理
 	private boolean layerHasBedrock(int y)
 	{
 		for (int r = 0; r < rows(); r++)
 		{
 			for (int c = 0; c < cols(); c++)
 			{
-				if (level.getBlockState(cellPos(r, c, y)).getBlock() == Blocks.BEDROCK) return true;
+				BlockPos p = cellPos(r, c, y);
+				if (!ChunkWindows.isLoaded(level, p)) continue;
+				if (level.getBlockState(p).getBlock() == Blocks.BEDROCK) return true;
 			}
 		}
 		return false;
@@ -290,6 +294,20 @@ public class MineTask extends PlotTask
 	private BlockPos cellPos(int row, int col, int y)
 	{
 		return new BlockPos(record.rx1() + insetX() + col, y, record.rz1() + insetZ() + row);
+	}
+
+	// 区块窗口跟随作业格（游标 3×3，含当前挖掘高度）
+	@Override
+	protected BlockPos workCursorPos()
+	{
+		return cellPos(cursorRow, cursorCol);
+	}
+
+	// 本任务的盒子方块类型（矿业盒）
+	@Override
+	protected boolean isMyBox(Block block)
+	{
+		return block instanceof MiningBox;
 	}
 
 	private void refreshChests()

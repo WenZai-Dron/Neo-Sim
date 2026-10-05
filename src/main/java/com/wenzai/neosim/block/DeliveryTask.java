@@ -32,6 +32,12 @@ public class DeliveryTask
 
 	private static final int WINDOW_REFRESH_TICKS = 20;
 
+	// 工人实体缺失多久后触发兜底恢复（10 秒）
+	private static final int WORKER_MISSING_TICKS = 200;
+
+	// 站点窗口重扫间隔（5 秒）：箱链可能变长 / 换位置
+	private static final int SITE_REFRESH_TICKS = 100;
+
 	// 快递员经验：每投料 1 个物品 = 1 经验单位（不提供配置项）
 	private static final int XP_PER_ITEM = 1;
 
@@ -61,6 +67,16 @@ public class DeliveryTask
 	protected Entity worker;
 	protected int workerMissingTicks;
 	protected int windowTimer;
+	protected int siteRefreshTimer;
+
+	// 站点窗口（盒子 ±1 + 整条箱链）是否已登记
+	protected boolean siteWindowRegistered;
+
+	// 本次下班是否已经释放过窗口（避免每 tick 重复释放）
+	protected boolean offDutyReleased;
+
+	// 盒子方块已不存在（区块加载后校验得出）：由引擎清理任务与记录
+	protected boolean boxGone;
 
 	// 派单扫描节流计数（每 20 tick 扫一次全城缺料工地）
 	protected int orderScanTicks;
@@ -91,6 +107,7 @@ public class DeliveryTask
 		{
 			NeoSim.WORKER_MAP.put(boxPos(), record.worker());
 			DeliveryChunkLoader.registerBox(level, boxPos());
+			siteWindowRegistered = true;
 
 			// 等级从 NPC 读回：否则重启后 jobLevel 从 1 起算，会把高等级快递员反向写低
 			Entity npc = Entity.findByNpcName(level, record.worker());
@@ -172,6 +189,7 @@ public class DeliveryTask
 			jobLevel = Math.max(1.0F, (float) npc.getJobCourier());
 			updateRecord();
 			DeliveryChunkLoader.registerBox(level, boxPos());
+			siteWindowRegistered = true;
 			LOGGER.info("NeoSim-DeliveryTask: hired courier '{}' for delivery box at {}", name, boxPos());
 		}
 	}
@@ -237,13 +255,21 @@ public class DeliveryTask
 			return;
 		}
 
-		// 夜间：正在配送则先送完再回家（防认领死锁与材料丢失），否则回家休息
-		if (isNightTime() && !hasActiveOrder())
+		// 休息（夜间 / 抽到休息日）：正在配送则先送完再回家（防认领死锁与材料丢失）；
+		// 没有在途货就把站点窗口一起放掉再回家——夜里/休息日不占区块
+		if (isOffDuty() && !hasActiveOrder())
 		{
+			releaseSiteWindowOnce();
 			if (worker != null) goOffWork();
 			else restNewWorker();
 			return;
 		}
+		offDutyReleased = false;
+
+		// 上班：先确保站点窗口（含箱链）已登记且区块真正加载，再开始判定。
+		// 注册→loaded 有 1~2 tick 延迟，跳过去会把"还没加载"误判成"站点不在岗/缺料"
+		if (!ensureSiteWindowLoaded()) return;
+
 		ensureWorkerAtSite();
 
 		if (!hasWorker())
@@ -289,7 +315,33 @@ public class DeliveryTask
 		}
 
 		resolveWorkerNpc();
-		if (worker == null) return;
+		if (worker == null)
+		{
+			// 工人实体消失（死亡 / 档案被删 / 重生成）：超时后先尝试从档案恢复；
+			// 恢复不了就解雇并释放订单，避免工地认领被永久占住
+			workerMissingTicks++;
+			if (workerMissingTicks >= WORKER_MISSING_TICKS)
+			{
+				workerMissingTicks = 0;
+				tryRestoreWorker();
+
+				// 恢复不了（已死亡/档案被删）：tryRestoreWorker 内部已解雇回等待，
+				// 这里必须再把订单释放掉，否则工地认领会被永久占住、其它快递盒接不了这一单
+				if (worker == null)
+				{
+					releaseOrder();
+					if (state != DeliveryState.WAITING_WORKER)
+					{
+						setState(DeliveryState.WAITING_WORKER);
+					}
+					clearHand();
+					updateRecord();
+					LOGGER.warn("NeoSim-DeliveryTask: worker missing, order released at {}", boxPos());
+				}
+			}
+			return;
+		}
+		workerMissingTicks = 0;
 
 		updateWindow();
 
@@ -577,6 +629,56 @@ public class DeliveryTask
 		return com.wenzai.neosim.Config.isRestTime(level.getDayTime());
 	}
 
+	// 现在是否该下班：夜间或抽到休息日都算；工人实体不可见时退回按时间判断
+	private boolean isOffDuty()
+	{
+		resolveWorkerNpc();
+		return worker != null ? worker.isRestingNow() : isNightTime();
+	}
+
+	// 盒子方块是否已不存在（引擎据此清理任务）
+	public boolean isBoxGone()
+	{
+		return boxGone;
+	}
+
+	// 确保站点窗口（盒子 ±1 + 整条箱链）已登记、已真正加载，并校验盒子方块还在
+	// - 返回 false 表示本 tick 还不能开始判定（等下一 tick）
+	// - 注册 → loaded 有 1~2 tick 延迟：先等加载再读方块，既不触发同步加载，
+	//   也不会把"还没加载"误判成"盒子没了"
+	// - 每 SITE_REFRESH_TICKS 重扫一次：箱链变长 / 换位置后窗口跟上（顺带复验盒子）
+	private boolean ensureSiteWindowLoaded()
+	{
+		boolean revalidated = false;
+		if (!siteWindowRegistered || ++siteRefreshTimer >= SITE_REFRESH_TICKS)
+		{
+			siteRefreshTimer = 0;
+			DeliveryChunkLoader.registerBox(level, boxPos());
+			siteWindowRegistered = true;
+			revalidated = true;
+		}
+
+		if (!level.hasChunkAt(boxPos())) return false;
+
+		if (revalidated && !(level.getBlockState(boxPos()).getBlock() instanceof DeliveryBox))
+		{
+			boxGone = true;
+			LOGGER.warn("NeoSim-DeliveryTask: delivery box gone at {}", boxPos());
+			return false;
+		}
+		return true;
+	}
+
+	// 下班：站点窗口与滚动窗口一起放掉（重复调用无副作用）
+	private void releaseSiteWindowOnce()
+	{
+		if (offDutyReleased) return;
+		offDutyReleased = true;
+		DeliveryChunkLoader.releaseAll(level, boxPos());
+		siteWindowRegistered = false;
+		siteRefreshTimer = 0;
+	}
+
 	// 下班：回生活点
 	private void goOffWork()
 	{
@@ -638,7 +740,8 @@ public class DeliveryTask
 		Entity npc = Manage.spawnSingle(level, cityName, name, boxPos());
 		if (npc != null)
 		{
-			npc.assignToSite(boxPos());
+			// 恢复岗位（不是新雇佣）：保留当天休息日
+			npc.restoreAssignedSite(boxPos());
 			worker = npc;
 			LOGGER.info("NeoSim-DeliveryTask: courier '{}' restored to delivery box at {}", name, boxPos());
 		}

@@ -189,8 +189,24 @@ public class RebuildBoxEngine
 				continue;
 			}
 
+			// 控制箱被拆：终止任务、删记录（玩家需重新放控制箱再绑）
+			if (task.isAbandoned())
+			{
+				synchronized (tasks)
+				{
+					tasks.remove(task);
+				}
+				task.onBoxDestroyed();
+				RebuildBoxPersistence.removeAt(level, task.boxPos());
+				LOGGER.warn("NeoSim-RebuildBoxEngine: control box gone, task dropped at {}", task.boxPos());
+				continue;
+			}
+
 			// 盒子没了（爆炸/外部移除）：清理任务与记录
-			if (!(level.getBlockState(task.boxPos()).getBlock() instanceof RebuildBox))
+			// 只在区块已加载时判定，避免对未加载区块读方块触发同步加载
+			// （UNBOUND 任务的控制箱窗口可能已收窄，盒子区块不一定常驻）
+			if (level.hasChunkAt(task.boxPos())
+					&& !(level.getBlockState(task.boxPos()).getBlock() instanceof RebuildBox))
 			{
 				synchronized (tasks)
 				{
@@ -250,6 +266,27 @@ public class RebuildBoxEngine
 		}
 	}
 
+	// 控制箱被拆：终止绑定到它的重建任务并删记录（与启动恢复同一语义）
+	public static void removeByControlBox(ServerLevel level, BlockPos controlBoxPos)
+	{
+		List<RebuildTask> hits = new ArrayList<>();
+		synchronized (tasks)
+		{
+			for (RebuildTask t : tasks)
+			{
+				if (controlBoxPos.equals(t.record().controlBoxPos())) hits.add(t);
+			}
+			tasks.removeAll(hits);
+		}
+		for (RebuildTask t : hits)
+		{
+			t.onBoxDestroyed();
+			RebuildBoxPersistence.removeAt(level, t.boxPos());
+			LOGGER.warn("NeoSim-RebuildBoxEngine: control box at {} broken, task dropped at {}",
+					controlBoxPos, t.boxPos());
+		}
+	}
+
 	// 启动恢复：按城市读 RebuildBox.json，重建任务
 	private static void maybeRestoreTasks(ServerLevel level)
 	{
@@ -277,18 +314,9 @@ public class RebuildBoxEngine
 						continue;
 					}
 
-					if (!(level.getBlockState(rec.boxPos()).getBlock() instanceof RebuildBox))
-					{
-						RebuildBoxPersistence.removeAt(level, rec.boxPos());
-						LOGGER.warn("NeoSim-RebuildBoxEngine: skip restore at {} — box gone", rec.boxPos());
-						continue;
-					}
-					if (!(level.getBlockState(rec.controlBoxPos()).getBlock() instanceof ControlBox))
-					{
-						RebuildBoxPersistence.removeAt(level, rec.boxPos());
-						LOGGER.warn("NeoSim-RebuildBoxEngine: skip restore at {} — control box gone", rec.boxPos());
-						continue;
-					}
+					// 盒子 / 控制箱是否还在改由任务在"区块加载完之后"校验：
+					// prepare() 会先登记控制箱区块、等加载再判；盒子本身由本引擎每 tick 的带守卫检查兜底。
+					// 这里不再读方块，否则未加载的区块会被主线程同步加载
 					if (SchematicRegistry.getInstance().get(rec.schematicName()) == null)
 					{
 						LOGGER.warn("NeoSim-RebuildBoxEngine: schematic '{}' not loaded yet for {} — task kept idle",

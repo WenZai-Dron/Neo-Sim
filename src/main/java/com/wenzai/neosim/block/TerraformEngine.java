@@ -99,10 +99,24 @@ public class TerraformEngine
 		{
 			tasks.add(task);
 		}
-		TerraformChunkLoader.registerForPlot(level, rec);
+		// 区块加载交给任务自己按阶段收放（等待/扫描=整块，作业=游标窗口）
 		LOGGER.info("NeoSim-TerraformEngine: started {} at {} ({}x{}, targets={})",
 				plan, boxPos, maxX - minX + 1, maxZ - minZ + 1, targets.size());
 		return null;
+	}
+
+	// 盒子没了：解雇对应NPC（全图按名查找，限半径会漏掉远走的工人）
+	private static void releaseWorker(ServerLevel level, TerraformPersistence.TerraformRecord rec)
+	{
+		if (rec.worker() == null || rec.worker().isEmpty()) return;
+		NeoSim.WORKER_MAP.remove(rec.boxPos());
+		com.wenzai.neosim.npc.Entity npc =
+				com.wenzai.neosim.npc.Entity.findByNpcName(level, rec.worker());
+		if (npc != null)
+		{
+			npc.releaseFromSite();
+			npc.setBuildAnim(0.0F);
+		}
 	}
 
 	// 按模盒坐标查找任务（GUI 渲染线程读取，需同步）
@@ -157,6 +171,20 @@ public class TerraformEngine
 		}
 		for (TerraformTask task : snapshot)
 		{
+			// 盒子没了（区块加载后由任务校验得出）：清理任务、解雇工人、删记录、放区块
+			if (task.isBoxGone())
+			{
+				synchronized (tasks)
+				{
+					tasks.remove(task);
+				}
+				releaseWorker(level, task.record());
+				task.onBoxDestroyed();
+				TerraformPersistence.removeAt(level, task.boxPos());
+				LOGGER.warn("NeoSim-TerraformEngine: terraform box gone, task removed at {}", task.boxPos());
+				continue;
+			}
+
 			try
 			{
 				task.tick();
@@ -239,13 +267,8 @@ public class TerraformEngine
 				String city = dir.getFileName().toString();
 				for (TerraformPersistence.TerraformRecord rec : TerraformPersistence.load(level, city))
 				{
-					// 模盒方块没了：删记录并跳过
-					if (!(level.getBlockState(rec.boxPos()).getBlock() instanceof BuildingConstructor))
-					{
-						TerraformPersistence.removeAt(level, rec.boxPos());
-						LOGGER.warn("NeoSim-TerraformEngine: skip restore at {} — box gone", rec.boxPos());
-						continue;
-					}
+					// 模盒方块是否还在改由任务在"区块加载完之后"校验（task.isBoxGone 时引擎清理）：
+					// 这里不再读方块，否则未加载的区块会被主线程同步加载
 
 					TerraformPlan plan = TerraformPlan.valueOfSafe(rec.plan());
 					if (plan == null)

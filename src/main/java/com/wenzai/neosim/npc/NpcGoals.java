@@ -161,8 +161,8 @@ public class NpcGoals
 		}
 	}
 
-	// 白天在家休息：onDayStart 按概率置 restToday 的无业有家NPC白天待在生活点附近，次日清晨重新掷骰
-	// 有工作时（assignToSite）该目标会被移除且 restToday 被清除
+	// 白天在家休息：onDayStart 按概率置 restToday 的有家NPC（含在岗工人）白天待在生活点附近，次日清晨重新掷骰
+	// 分派/雇佣当天会清掉 restToday（assignToSite），恢复岗位（读档/解冻）则保留
 	public static class StayHomeGoal extends HomeGoal
 	{
 		public StayHomeGoal(Entity npc, double speed)
@@ -174,7 +174,7 @@ public class NpcGoals
 		protected boolean stateActive()
 		{
 			return !com.wenzai.neosim.Config.isRestTime(npc.level().getDayTime())
-					&& npc.isRestToday() && !npc.hasJob();
+					&& npc.isRestToday();
 		}
 	}
 
@@ -434,17 +434,24 @@ public class NpcGoals
 			return Math.abs(dx) <= 0.75 && Math.abs(dz) <= 0.75 && Math.abs(dy) <= 1.0;
 		}
 
+		// 现在能不能走：休息时段/休息日不赴工；
+		// 但身上还压着在途材料（快递）时先送完这一单再回家——回家交给 GoHomeGoal
+		private boolean canGoNow()
+		{
+			return !npc.isRestingNow() || !npc.isCarriageEmpty();
+		}
+
 		@Override
 		public boolean canUse()
 		{
-			// 休息时间不赴工：夜里/休息日不该被拽去工地干活
-			return target != null && !hasArrived() && !npc.isRestingNow();
+			// 休息时间不赴工：夜里/休息日不该被拽去工地干活（在途送货除外）
+			return target != null && !hasArrived() && canGoNow();
 		}
 
 		@Override
 		public boolean canContinueToUse()
 		{
-			return target != null && !hasArrived() && stuckTicks < 200 && !npc.isRestingNow();
+			return target != null && !hasArrived() && stuckTicks < 200 && canGoNow();
 		}
 
 		@Override

@@ -197,6 +197,21 @@ public class WorkPlotEngine
 		}
 		for (PlotTask task : snapshot)
 		{
+			// 盒子没了（区块加载后由任务校验得出）：清理任务、释放工人与区块、删记录
+			if (task.isBoxGone())
+			{
+				synchronized (tasks)
+				{
+					tasks.remove(task);
+				}
+				releaseWorker(level, task.record());
+				task.releaseResources();
+				WorkBoxPersistence.removeAt(level, task.boxPos());
+				UNBOUND_BOXES.remove(task.boxPos());
+				LOGGER.warn("NeoSim-WorkPlotEngine: work box gone, task removed at {}", task.boxPos());
+				continue;
+			}
+
 			try
 			{
 				task.tick();
@@ -286,16 +301,8 @@ public class WorkPlotEngine
 						continue;
 					}
 
-					// 盒子方块没了：释放工人并跳过
-					Block block = level.getBlockState(rec.boxPos()).getBlock();
-					boolean typeOk = ("farming".equals(rec.type()) && block instanceof FarmingBox)
-							|| ("mining".equals(rec.type()) && block instanceof MiningBox);
-					if (!typeOk)
-					{
-						releaseWorker(level, rec);
-						LOGGER.warn("NeoSim-WorkPlotEngine: skip restore work box at {} — block gone", rec.boxPos());
-						continue;
-					}
+					// 盒子方块是否还在改由任务在"区块加载完之后"校验（task.isBoxGone 时引擎清理）：
+					// 这里不再读方块，否则未加载的区块会被主线程同步加载
 
 					// 绑定矩形不存在（标记棒已移除）：释放工人，记录退回未绑定，跳过
 					if (!rectStillExists(level, rec))
@@ -352,7 +359,8 @@ public class WorkPlotEngine
 				continue;
 			}
 
-			// 盒子方块没了则移除
+			// 盒子方块没了则移除；区块未加载就等下次重绑（读未加载区块会触发同步加载）
+			if (!level.hasChunkAt(boxPos)) continue;
 			Block block = level.getBlockState(boxPos).getBlock();
 			boolean typeOk = ("farming".equals(rec.type()) && block instanceof FarmingBox)
 					|| ("mining".equals(rec.type()) && block instanceof MiningBox);

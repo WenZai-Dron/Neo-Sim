@@ -12,6 +12,7 @@ import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.storage.CityManager;
 import com.wenzai.neosim.storage.FileCreater;
 import com.wenzai.neosim.storage.ModSavedData;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.AABB;
@@ -21,6 +22,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
+import net.neoforged.fml.event.config.ModConfigEvent;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
@@ -96,6 +98,9 @@ public class NeoSim
 
 		// 注册网络包
 		modEventBus.addListener(this::registerPayloads);
+
+		// 配置热重载后重新应用视距 / 模拟距离
+		modEventBus.addListener(this::onConfigReloading);
 	}
 
 	// 玩家加入自动同步数据，触发对应界面
@@ -515,6 +520,43 @@ public class NeoSim
 
 		// 服务器初始化蓝图
 		com.wenzai.neosim.schematic.SchematicRegistry.getInstance().initializeAsync();
+
+		// 应用 neo-sim.toml 的视距 / 模拟距离（0 = 关闭，保持 server.properties）
+		applyServerDistances(event.getServer());
+	}
+
+	// 视距 / 模拟距离：0 = 关闭（保持 server.properties），1-16 覆盖服务器设置
+	// simulation 不能大于 view，否则原版会告警并自行截断，这里主动取小
+	private static void applyServerDistances(MinecraftServer server)
+	{
+		if (server == null || server.getPlayerList() == null) return;
+		var list = server.getPlayerList();
+		int view = Config.VIEW_DISTANCE.get();
+		int sim = Config.SIMULATION_DISTANCE.get();
+
+		if (view > 0)
+		{
+			list.setViewDistance(view);
+		}
+		int effectiveView = view > 0 ? view : list.getViewDistance();
+
+		int appliedSim = list.getSimulationDistance();
+		if (sim > 0)
+		{
+			appliedSim = Math.min(sim, effectiveView);
+			list.setSimulationDistance(appliedSim);
+		}
+
+		LOGGER.info("NeoSim-Config: viewDistance={} (effective {}), simulationDistance={} (effective {})",
+				view > 0 ? view : "off", effectiveView,
+				sim > 0 ? sim : "off", appliedSim);
+	}
+
+	// 配置热重载：只重新应用视距 / 模拟距离
+	private void onConfigReloading(ModConfigEvent.Reloading event)
+	{
+		if (event.getConfig().getSpec() != Config.SPEC) return;
+		applyServerDistances(net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer());
 	}
 
 	// 世界加载：从存档恢复标记位置

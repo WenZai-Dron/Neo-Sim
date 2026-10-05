@@ -152,8 +152,8 @@ public class DeliveryEngine
 		cleanupClaims();
 		com.wenzai.neosim.building.ConstructionEngine.invalidateWaitingCache();
 
-		// 总开关关闭：暂停快递派送（任务保留，重新打开后继续）
-		if (!com.wenzai.neosim.Config.WORKBOX_ENABLED.get()) return;
+		// 总开关关闭：暂停快递派送（任务保留，重新打开后继续）；盒子清理仍然照做
+		boolean enabled = com.wenzai.neosim.Config.WORKBOX_ENABLED.get();
 
 		List<DeliveryTask> snapshot;
 		synchronized (tasks)
@@ -162,6 +162,21 @@ public class DeliveryEngine
 		}
 		for (DeliveryTask task : snapshot)
 		{
+			// 盒子没了（爆炸 / 命令删除 / 区块加载后校验失败）：清理任务、解雇工人、删记录
+			if (task.isBoxGone())
+			{
+				synchronized (tasks)
+				{
+					tasks.remove(task);
+				}
+				task.onBoxDestroyed();
+				DeliveryBoxPersistence.removeAt(level, task.boxPos());
+				LOGGER.warn("NeoSim-DeliveryEngine: delivery box gone, task removed at {}", task.boxPos());
+				continue;
+			}
+
+			if (!enabled) continue;
+
 			try
 			{
 				task.tick();
@@ -238,14 +253,8 @@ public class DeliveryEngine
 				String city = dir.getFileName().toString();
 				for (DeliveryBoxPersistence.DeliveryBoxRecord rec : DeliveryBoxPersistence.load(level, city))
 				{
-					// 盒子方块没了：释放工人并跳过
-					Block block = level.getBlockState(rec.boxPos()).getBlock();
-					if (!(block instanceof DeliveryBox))
-					{
-						releaseWorker(level, rec);
-						LOGGER.warn("NeoSim-DeliveryEngine: skip restore delivery box at {} — block gone", rec.boxPos());
-						continue;
-					}
+					// 盒子是否还在改由任务在"站点区块加载完之后"校验（task.isBoxGone 时引擎清理）：
+					// 这里不再读方块，否则未加载的区块会被同步加载，还会把"没加载"误判成"盒子没了"
 
 					// 重建雇佣关系
 					if (rec.worker() != null && !rec.worker().isEmpty())
@@ -291,21 +300,6 @@ public class DeliveryEngine
 			{
 				claimedSites.remove(s);
 			}
-		}
-	}
-
-	// 盒子没了时解雇对应NPC
-	private static void releaseWorker(ServerLevel level, DeliveryBoxPersistence.DeliveryBoxRecord rec)
-	{
-		if (rec.worker() == null || rec.worker().isEmpty()) return;
-		NeoSim.WORKER_MAP.remove(rec.boxPos());
-
-		// 全图按名查找：限半径会漏掉离家/远走的快递员，导致其AI永不恢复
-		Entity npc = Entity.findByNpcName(level, rec.worker());
-		if (npc != null)
-		{
-			npc.releaseFromSite();
-			npc.setBuildAnim(0.0F);
 		}
 	}
 

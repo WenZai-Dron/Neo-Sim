@@ -205,6 +205,8 @@ public class LangEnUs extends LanguageProvider
 		add("gui.neosim.ui.status.unsaved","unsaved changes");
 		add("gui.neosim.ui.status.saved","matches file");
 		add("config.neosim.hideHudInGui","Hide the HUD while a screen is open");
+		add("config.neosim.viewDistance","Server view distance (0 = off, keep server.properties)");
+		add("config.neosim.simulationDistance","Server simulation distance (0 = off, keep server.properties)");
 
 		add("gui.neosim.DeliveryBox.title","Delivery Box");
 		add("gui.neosim.DeliveryBox.worker","Courier: %s");

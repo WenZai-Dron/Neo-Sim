@@ -243,6 +243,8 @@ public class LangZhCn extends LanguageProvider
 		add("gui.neosim.ui.status.unsaved","有未保存的改动");
 		add("gui.neosim.ui.status.saved","已与文件一致");
 		add("config.neosim.hideHudInGui","打开界面时隐藏 HUD");
+		add("config.neosim.viewDistance","服务端视距（0=关闭，沿用 server.properties）");
+		add("config.neosim.simulationDistance","服务端模拟距离（0=关闭，沿用 server.properties）");
 
 		add("config.neosim.deliveryCreditPerUnit","每件材料送达扣款");
 		add("config.neosim.deliveryChunkRadius","快递员区块窗口半径");

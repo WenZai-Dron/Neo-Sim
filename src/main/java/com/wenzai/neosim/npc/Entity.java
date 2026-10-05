@@ -1130,7 +1130,7 @@ public class Entity extends PathfinderMob
 
 			// 仍在工作：重新裁剪成工作AI（registerGoals 是完整AI，会带回闲逛/社交）
 			BlockPos site = getAssignedSite();
-			if (site != null) assignToSite(site);
+			if (site != null) restoreAssignedSite(site);
 		}
 	}
 
@@ -1399,7 +1399,7 @@ public class Entity extends PathfinderMob
 					getPersistentData().getInt(KEY_ASSIGNED_SITE_X),
 					getPersistentData().getInt(KEY_ASSIGNED_SITE_Y),
 					getPersistentData().getInt(KEY_ASSIGNED_SITE_Z));
-			assignToSite(site);
+			restoreAssignedSite(site);
 		}
 
 		// 恢复数据，确保客户端能渲染名字
@@ -1488,8 +1488,19 @@ public class Entity extends PathfinderMob
 		this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 	}
 
-	// 分配NPC
+	// 分配NPC（雇佣 / 换岗）：清掉当天休息日，立刻上班
 	public void assignToSite(BlockPos site)
+	{
+		assignToSite(site, true);
+	}
+
+	// 恢复岗位（读档 / 解冻重注册）：保留当天休息日，别把"今天休息"抹掉
+	public void restoreAssignedSite(BlockPos site)
+	{
+		assignToSite(site, false);
+	}
+
+	private void assignToSite(BlockPos site, boolean clearRestDay)
 	{
 		getPersistentData().putInt(KEY_ASSIGNED_SITE_X, site.getX());
 		getPersistentData().putInt(KEY_ASSIGNED_SITE_Y, site.getY());
@@ -1499,8 +1510,8 @@ public class Entity extends PathfinderMob
 		siteCacheValid = true;
 		cachedAssignedSite = site;
 
-		// 有工作：今日不休息；新岗位不继承待命状态
-		setRestToday(false);
+		// 分派即上班（恢复岗位时保留当天休息日）；新岗位不继承待命状态
+		if (clearRestDay) setRestToday(false);
 		this.stayPut = false;
 
 		// 寻路目标尚未注册（如从NBT加载时）则先注册
@@ -1509,11 +1520,13 @@ public class Entity extends PathfinderMob
 			this.registerGoals();
 		}
 
-		// 移除AI：保留赴工、夜晚回家、游泳、看向玩家、环视，以及敌对生物逃离
+		// 移除AI：保留赴工、夜晚回家、休息日在家的留守、游泳、看向玩家、环视，以及敌对生物逃离
 		// 夜晚回家必须留着：休息时间赴工目标停掉后，工人得能自己走回家（不许被传送）
+		// 休息日留守也要留着：在岗工人抽到休息日时得待在家，而不是去赴工
 		this.goalSelector.getAvailableGoals().stream()
 				.filter(w -> !(w.getGoal() instanceof NpcGoals.MoveToSiteGoal)
 						  && !(w.getGoal() instanceof NpcGoals.GoHomeGoal)
+						  && !(w.getGoal() instanceof NpcGoals.StayHomeGoal)
 						  && !(w.getGoal() instanceof FloatGoal)
 						  && !(w.getGoal() instanceof LookAtPlayerGoal)
 						  && !(w.getGoal() instanceof RandomLookAroundGoal)

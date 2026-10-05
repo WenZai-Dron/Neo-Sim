@@ -57,6 +57,24 @@ public class Config
 		BUILDER.pop();
 	}
 
+	// 服务端视距（覆盖 server.properties；0 = 关闭，保持服务器原设置）
+	static
+	{
+		BUILDER.push("server");
+
+		VIEW_DISTANCE = BUILDER
+				.translation("config.neosim.viewDistance")
+				.comment("0 = off (keep server.properties), 1-16 = force view distance")
+				.defineInRange("viewDistance", 8, 0, 16);
+
+		SIMULATION_DISTANCE = BUILDER
+				.translation("config.neosim.simulationDistance")
+				.comment("0 = off (keep server.properties), 1-16 = force simulation distance")
+				.defineInRange("simulationDistance", 8, 0, 16);
+
+		BUILDER.pop();
+	}
+
 	// 生活系统
 	static
 	{
@@ -404,6 +422,11 @@ public class Config
 
 	// 打开界面时隐藏 HUD
 	public static final ModConfigSpec.BooleanValue HIDE_HUD_IN_GUI;
+
+	// 服务端视距 / 模拟距离（0 = 关闭，不改动服务器设置）
+	public static final ModConfigSpec.IntValue VIEW_DISTANCE;
+
+	public static final ModConfigSpec.IntValue SIMULATION_DISTANCE;
 
 	// NPC
 	public static final ModConfigSpec.IntValue NPC_MIN_AGE;

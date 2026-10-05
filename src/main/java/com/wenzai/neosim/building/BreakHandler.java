@@ -72,6 +72,11 @@ public class BreakHandler
 			{
 				RebuildBoxEngine.removeAt(level, pos);
 			}
+			else if (b instanceof ControlBox)
+			{
+				// 爆炸炸掉控制箱：与玩家破坏同款处理（删记录、居民失去家、绑定的重建任务终止）
+				handleControlBoxBreak(level, pos);
+			}
 			else if (b instanceof Marker)
 			{
 				// 爆炸炸掉标记棒：立即注销，光幕不再残留
@@ -147,6 +152,10 @@ public class BreakHandler
 		{
 			com.wenzai.neosim.npc.CityLivingManager.evictResidents(level, removed);
 		}
+
+		// 控制箱被拆 = 绑定失效：终止绑到它的重建任务并删记录
+		com.wenzai.neosim.block.RebuildBoxEngine.removeByControlBox(level, pos);
+
 		LOGGER.info("NeoSim-BreakHandler: control box broken at {}", pos);
 	}
 }

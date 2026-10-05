@@ -74,6 +74,9 @@ public class ConstructionTask
 	// 依附方块表兜底：第二轮扫完后仍有被推迟的方块时回卷重试的上限
 	private static final int MAX_RETRY_ROUNDS = 4;
 
+	// 建造工实体缺失多久后触发兜底恢复（10 秒）；期间暂停施工，防"无人也能盖完"
+	private static final int WORKER_MISSING_TICKS = 200;
+
 	// 当前轮回卷次数、本轮被推迟的方块数、本轮是否已放置过方块（判断"还有进展"）
 	private int retryRound;
 	private int deferredThisRound;
@@ -224,7 +227,7 @@ public class ConstructionTask
 			{
 				// 累计超时后处理
 				workerMissingTicks++;
-				if (workerMissingTicks >= 200)
+				if (workerMissingTicks >= WORKER_MISSING_TICKS)
 				{
 					workerMissingTicks = 0;
 					String workerName = NeoSim.WORKER_MAP.get(box);
@@ -294,9 +297,31 @@ public class ConstructionTask
 			}
 		}
 
-		// 建造中：实体在场但不在模盒正上方时，等就位
+		// 建造中：实体缺失先暂停施工（防"无人也能盖完"），超时后兜底恢复；
+		// 恢复不了由 tryRestoreWorker 内部解雇回 WAITING_FOR_WORKER
 		resolveBuilderNpc();
-		if (builderNpc != null && builderNpc.getPregnancyStage() <= 0.0F)
+		if (builderNpc == null)
+		{
+			workerMissingTicks++;
+			if (workerMissingTicks >= WORKER_MISSING_TICKS)
+			{
+				workerMissingTicks = 0;
+				BlockPos box = building.getConstructorPos();
+				if (box == null) box = building.getControlBoxPos();
+				String workerName = box != null ? NeoSim.WORKER_MAP.get(box) : null;
+				if (workerName != null && !workerName.isEmpty() && !workerExistsInLevel(workerName))
+				{
+					tryRestoreWorker();
+				}
+			}
+			setBuilderAnim(0.0F);
+			clearBuilderHand();
+			return;
+		}
+		workerMissingTicks = 0;
+
+		// 实体在场但不在模盒正上方时，等就位
+		if (builderNpc.getPregnancyStage() <= 0.0F)
 		{
 			BlockPos box = building.getConstructorPos();
 			if (box == null) box = building.getControlBoxPos();
@@ -1289,7 +1314,8 @@ public class ConstructionTask
 						PhysicsWorld.toWorld(level, box));
 		if (npc != null)
 		{
-			npc.assignToSite(PhysicsWorld.toWorld(level, box));
+			// 恢复岗位（不是新雇佣）：保留当天休息日
+			npc.restoreAssignedSite(PhysicsWorld.toWorld(level, box));
 			PhysicsWorld.attachNpc(level, npc, box);
 			builderNpc = npc;
 			LOGGER.info("NeoSim-ConstructionTask: worker '{}' restored to site (was missing)", workerName);

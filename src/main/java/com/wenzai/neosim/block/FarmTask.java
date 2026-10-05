@@ -6,6 +6,7 @@ import com.wenzai.neosim.building.InventoryManager;
 import com.wenzai.neosim.compat.crops.CropEntry;
 import com.wenzai.neosim.compat.crops.CropRegistry;
 import com.wenzai.neosim.npc.Entity;
+import com.wenzai.neosim.util.ChunkWindows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -912,6 +913,7 @@ public class FarmTask extends PlotTask
 					for (int y = minY; y <= maxY + 8 && chopLeaves.size() < 256; y++)
 					{
 						BlockPos p = new BlockPos(x, y, z);
+						if (!ChunkWindows.isLoaded(level, p)) continue;
 						if (level.getBlockState(p).getBlock() == leavesBlock)
 						{
 							chopLeaves.add(p);
@@ -1023,12 +1025,20 @@ public class FarmTask extends PlotTask
 		if (!hasFieldWork()) return false;
 		boolean forestry = isForestryMode();
 		int rows = rows(), cols = cols();
+
+		// 区块窗口只覆盖游标附近：未加载的格子不读（读会触发同步加载），有未加载格时保守当作"有活"
+		boolean unloaded = false;
 		for (int row = 0; row < rows; row++)
 		{
 			for (int col = 0; col < cols; col++)
 			{
 				BlockPos pos = cellPos(row, col);
 				if (cellOutsideBuildHeight(pos)) continue;
+				if (!ChunkWindows.isLoaded(level, pos))
+				{
+					unloaded = true;
+					continue;
+				}
 				BlockState bs = level.getBlockState(pos);
 				BlockState below = level.getBlockState(pos.below());
 
@@ -1050,7 +1060,7 @@ public class FarmTask extends PlotTask
 				}
 			}
 		}
-		return false;
+		return unloaded;
 	}
 
 	// 畜牧轮结束/缺饲料时：节流刷新田间探测（10 tick 一次）；返回刷新后的 fieldBusy
@@ -1068,13 +1078,27 @@ public class FarmTask extends PlotTask
 	private void ensureFieldWater()
 	{
 		if (waterPlaced) return;
-		waterPlaced = true;
 		int yWater = record.ry() - 1;
-		if (yWater < level.getMinBuildHeight()) return;
+		if (yWater < level.getMinBuildHeight())
+		{
+			waterPlaced = true;
+			return;
+		}
 		int rxMin = record.rx1() + insetX();
 		int rxMax = record.rx2() - insetX();
 		int rzMin = record.rz1() + insetZ();
 		int rzMax = record.rz2() - insetZ();
+
+		// 整田没加载完先不铺（needsFullPlotWindow 在铺水完成前保持整块窗口）：
+		// 既不漏铺，也避免对未加载区块调 setBlock 触发同步加载
+		for (int x = rxMin; x <= rxMax; x++)
+		{
+			for (int z = rzMin; z <= rzMax; z++)
+			{
+				if (!ChunkWindows.isLoaded(level, new BlockPos(x, yWater, z))) return;
+			}
+		}
+		waterPlaced = true;
 
 		// 地块内已经有水：不再重复布置
 		for (int x = rxMin; x <= rxMax; x++)
@@ -1381,12 +1405,15 @@ public class FarmTask extends PlotTask
 		for (int i = 0; i < 16; i++)
 		{
 			BlockPos p = randomPenPos();
+			// 围栏跨多区块时，未加载格不读（读会触发同步加载）
+			if (!ChunkWindows.isLoaded(level, p)) continue;
 			if (level.getBlockState(p).isAir() && level.getBlockState(p.above()).isAir())
 			{
 				return p;
 			}
 		}
-		return randomPenPos();
+		BlockPos fallback = randomPenPos();
+		return ChunkWindows.isLoaded(level, fallback) ? fallback : boxPos().above();
 	}
 
 	// 矩形内随机格子
@@ -1463,6 +1490,27 @@ public class FarmTask extends PlotTask
 	private BlockPos cellPos(int row, int col)
 	{
 		return new BlockPos(record.rx1() + insetX() + col, record.ry(), record.rz1() + insetZ() + row);
+	}
+
+	// 区块窗口跟随作业格（游标 3×3）
+	@Override
+	protected BlockPos workCursorPos()
+	{
+		return cellPos(cursorRow, cursorCol);
+	}
+
+	// 本任务的盒子方块类型（农业盒）
+	@Override
+	protected boolean isMyBox(Block block)
+	{
+		return block instanceof FarmingBox;
+	}
+
+	// 铺水要逐格读全田、畜牧围栏要整片看：这两类动作需要整块地块窗口，其余时间只用游标 3×3
+	@Override
+	protected boolean needsFullPlotWindow()
+	{
+		return !waterPlaced || isLivestockMode();
 	}
 
 	// 游标前进：走完一整轮返回true（操作 int 字段，record 仅持久化时同步）

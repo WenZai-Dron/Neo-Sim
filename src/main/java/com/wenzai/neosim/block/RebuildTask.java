@@ -16,6 +16,7 @@ import com.wenzai.neosim.schematic.SchematicRegistry;
 import com.wenzai.neosim.schematic.SpecialMarker;
 import com.wenzai.neosim.storage.ModSavedData;
 import com.wenzai.neosim.storage.SimData;
+import com.wenzai.neosim.util.ChunkWindows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -29,8 +30,11 @@ import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -51,6 +55,12 @@ public class RebuildTask
 
 	// 依附方块表兜底：一轮扫完仍有被推迟的方块（支撑 / 连接还没就位）时的回卷重试上限
 	private static final int MAX_RETRY_ROUNDS = 4;
+
+	// 材料箱重扫间隔（5 秒）：玩家中途加箱子/换位置时窗口跟着动
+	private static final int CHEST_REFRESH_TICKS = 100;
+
+	// 未绑定（控制箱缺失 / 几何推不出来）的复验间隔：别每 tick 读方块
+	private static final int UNBOUND_RETRY_TICKS = 100;
 
 	public enum State
 	{
@@ -84,6 +94,17 @@ public class RebuildTask
 	private boolean prepared;
 	private boolean chunksRegistered;
 	private boolean destroyed;
+
+	// 未绑定复验计时
+	private int unboundRetryTicks;
+
+	// 控制箱被拆：终止任务、删记录（引擎据 isAbandoned 清理）
+	private boolean abandoned;
+
+	// 强加载窗口：当前已登记的扫描层 / 材料箱重扫计时 / 材料箱坐标
+	private int windowLayer = Integer.MIN_VALUE;
+	private int windowChestTimer;
+	private List<BlockPos> windowChests;
 	private SchematicData schematic;
 	private LightweightBlockContainer container;
 	private BlueprintPlacement placement;
@@ -145,11 +166,17 @@ public class RebuildTask
 		return state;
 	}
 
+	// 控制箱被拆（任务应被引擎终止并删记录）
+	public boolean isAbandoned()
+	{
+		return abandoned;
+	}
+
 	// 服务器停止前的收尾
 	public void onBoxDestroyed()
 	{
 		destroyed = true;
-		RebuildChunkLoader.release(level, boxPos);
+		releaseWindow();
 	}
 
 	public void tick()
@@ -166,6 +193,9 @@ public class RebuildTask
 		{
 			if (b.getControlBoxPos() != null && b.getControlBoxPos().equals(originPos)) return;
 		}
+
+		// 强加载窗口跟随扫描层滚动（每 tick 检查，换层才真正重算）
+		updateChunkWindow();
 
 		// 区块尚未加载完（小建筑首轮可能一 tick 跑完）：稍后再试，别急着判定完成
 		if (retryTicks > 0)
@@ -364,11 +394,9 @@ public class RebuildTask
 	{
 		if (prepared) return true;
 
-		if (!(level.getBlockState(controlBoxPos).getBlock() instanceof ControlBox))
-		{
-			setState(State.UNBOUND);
-			return false;
-		}
+		// 未绑定（控制箱缺失 / 几何推不出来）：每 5 秒回头复验一次，别每 tick 读方块
+		if (state == State.UNBOUND && ++unboundRetryTicks < UNBOUND_RETRY_TICKS) return false;
+		unboundRetryTicks = 0;
 
 		if (schematic == null)
 		{
@@ -383,6 +411,21 @@ public class RebuildTask
 			if (sx <= 0 || sy <= 0 || sz <= 0) return false;
 		}
 
+		// 控制箱区块：先登记再等加载。对未加载区块读方块会触发主线程同步加载
+		if (!level.hasChunkAt(controlBoxPos))
+		{
+			RebuildChunkLoader.setWindow(level, boxPos, minimalWindow());
+			return false;
+		}
+
+		if (!(level.getBlockState(controlBoxPos).getBlock() instanceof ControlBox))
+		{
+			// 控制箱被拆：终止任务、删记录（由引擎做清理），玩家需重新放控制箱再绑
+			abandoned = true;
+			LOGGER.warn("NeoSim-RebuildTask: control box gone at {}, task abandoned", boxPos);
+			return false;
+		}
+
 		ensureChunks();
 
 		if (placement == null)
@@ -390,6 +433,7 @@ public class RebuildTask
 			placement = resolvePlacement();
 			if (placement == null)
 			{
+				// 几何推不出来：保留探测窗口，每 5 秒复验（别当成"盒子没了"清掉）
 				setState(State.UNBOUND);
 				return false;
 			}
@@ -422,7 +466,76 @@ public class RebuildTask
 				Math.max(a.getX(), Math.max(b.getX(), Math.max(boxPos.getX(), controlBoxPos.getX()))),
 				Math.max(a.getY(), Math.max(b.getY(), Math.max(boxPos.getY(), controlBoxPos.getY()))),
 				Math.max(a.getZ(), Math.max(b.getZ(), Math.max(boxPos.getZ(), controlBoxPos.getZ()))));
-		RebuildChunkLoader.register(level, boxPos, min, max);
+		RebuildChunkLoader.setWindow(level, boxPos, probeWindow(min, max));
+	}
+
+	// 最小窗口：重建盒 + 控制箱两个区块（未绑定/等待期用，别占整栋）
+	private Set<Long> minimalWindow()
+	{
+		Set<Long> out = new HashSet<>();
+		out.add(ChunkWindows.of(boxPos));
+		out.add(ChunkWindows.of(controlBoxPos));
+		return out;
+	}
+
+	// 探测期窗口：粗略包围盒覆盖的区块（仍受 rebuildMaxChunks 上限约束）
+	private Set<Long> probeWindow(BlockPos min, BlockPos max)
+	{
+		Set<Long> out = new HashSet<>();
+		ChunkWindows.addRect(out, min.getX(), min.getZ(), max.getX(), max.getZ());
+		return out;
+	}
+
+	// 强加载窗口：当前扫描层 ±1 的整栋覆盖 + 重建盒 ±1（含相邻材料箱）+ 控制箱所在区块
+	// 几何探测阶段用 ensureChunks 的粗略包围盒；探测完成后的第一次调用会由差量自动收窄到当前层
+	private void updateChunkWindow()
+	{
+		if (placement == null) return;
+		int layer = Math.max(0, Math.min(sy - 1, cursor / Math.max(1, sx * sz)));
+
+		// 材料箱每 5 秒重扫一次（玩家可能中途加箱子 / 换位置）
+		boolean chestRefresh = windowChests == null || ++windowChestTimer >= CHEST_REFRESH_TICKS;
+		if (chestRefresh)
+		{
+			windowChestTimer = 0;
+			windowChests = new ArrayList<>();
+			for (ChestBlockEntity chest : InventoryManager.findNearbyChests(level, boxPos))
+			{
+				windowChests.add(chest.getBlockPos());
+			}
+		}
+
+		// 没换层、箱子也没重扫：窗口无需重算
+		if (chunksRegistered && layer == windowLayer && !chestRefresh) return;
+
+		Set<Long> desired = new HashSet<>();
+
+		// 当前层 ±1：该层蓝图覆盖的整片区域（旋转/镜像后取两角包围盒）
+		for (int dy = -1; dy <= 1; dy++)
+		{
+			int y = layer + dy;
+			if (y < 0 || y >= sy) continue;
+			BlockPos c0 = placement.pos(0, y, 0);
+			BlockPos c1 = placement.pos(sx - 1, y, sz - 1);
+			ChunkWindows.addRect(desired, c0.getX(), c0.getZ(), c1.getX(), c1.getZ());
+		}
+
+		// 重建盒 ±1（覆盖相邻材料箱）+ 控制箱所在区块
+		ChunkWindows.addAround(desired, boxPos, 1);
+		desired.add(ChunkWindows.of(controlBoxPos));
+		ChunkWindows.addAll(desired, windowChests);
+
+		RebuildChunkLoader.setWindow(level, boxPos, desired);
+		chunksRegistered = true;
+		windowLayer = layer;
+	}
+
+	// 释放本任务强制加载的区块（未绑定 / 拆除 / 完成）
+	private void releaseWindow()
+	{
+		RebuildChunkLoader.release(level, boxPos);
+		chunksRegistered = false;
+		windowLayer = Integer.MIN_VALUE;
 	}
 
 	private BlueprintPlacement resolvePlacement()

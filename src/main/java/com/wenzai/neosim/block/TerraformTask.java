@@ -8,6 +8,7 @@ import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.npc.NpcGoals;
 import com.wenzai.neosim.storage.FileCreater;
+import com.wenzai.neosim.util.ChunkWindows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -22,7 +23,9 @@ import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 // 整地任务状态机：复用模盒已雇佣的建筑师，逐块整地
 public class TerraformTask
@@ -35,6 +38,10 @@ public class TerraformTask
 
 	// 缺料后重新检查箱子的间隔（3 秒）
 	private static final int RESOURCE_RECHECK_TICKS = 60;
+
+	// 区块窗口：作业游标 3×3；跟随游标滚动的刷新间隔
+	private static final int CHUNK_WINDOW_RADIUS = 1;
+	private static final int CHUNK_WINDOW_TICKS = 10;
 
 	public enum TerraformState
 	{
@@ -69,6 +76,12 @@ public class TerraformTask
 	private List<ChestBlockEntity> nearbyChests = new ArrayList<>();
 	private int workerMissingTicks;
 	private boolean chunksLoaded;
+	private boolean scanWindowLoaded;
+	private int chunkWindowTimer;
+
+	// 盒子方块校验（区块加载后进行）与结果
+	private boolean boxValidated;
+	private boolean boxGone;
 	private Item lastMissingItem;
 	private int resourceWaitTicks;
 	private boolean chestNoticeSent;
@@ -169,11 +182,17 @@ public class TerraformTask
 	// 每 tick 调度
 	public void tick()
 	{
-		if (paused) return;
+		// 盒子方块校验：只在区块已加载时读（未加载就等下次），避免同步加载未加载区块
+		validateBoxLazily();
+		if (boxGone) return;
+
+		// 暂停（下班）也走一次窗口收放：暂停不占区块
 		updateChunkLoading();
+		if (paused) return;
 		if (state == TerraformState.COMPLETE) return;
 
-		if (isNightTime())
+		// 夜间或抽到休息日：下班回家、不干活（与"休息日不占区块"同一条判定）
+		if (isNightTime() || isWorkerResting())
 		{
 			if (isWorkerOnShift()) goOffWork();
 			else restNewWorker();
@@ -229,17 +248,26 @@ public class TerraformTask
 		if (hasWorker())
 		{
 			resolveWorkerNpc();
-			if (worker != null)
+			if (worker == null)
 			{
-				if (NpcGoals.MoveToSiteGoal.isAboveSite(worker, boxPos()))
+				// 实体消失（死亡 / 档案被删）：超时兜底恢复；恢复不了由 tryRestoreWorker 内部解雇回等待
+				workerMissingTicks++;
+				if (workerMissingTicks >= 200)
 				{
-					worker.getNavigation().stop();
+					workerMissingTicks = 0;
+					tryRestoreWorker();
 				}
-				else
-				{
-					clearHand();
-					return;
-				}
+			}
+			else if (NpcGoals.MoveToSiteGoal.isAboveSite(worker, boxPos()))
+			{
+				workerMissingTicks = 0;
+				worker.getNavigation().stop();
+			}
+			else
+			{
+				workerMissingTicks = 0;
+				clearHand();
+				return;
 			}
 		}
 
@@ -587,7 +615,8 @@ public class TerraformTask
 		Entity npc = Manage.spawnSingle(level, cityName, name, boxPos());
 		if (npc != null)
 		{
-			npc.assignToSite(boxPos());
+			// 恢复岗位（不是新雇佣）：保留当天休息日
+			npc.restoreAssignedSite(boxPos());
 			worker = npc;
 			LOGGER.info("NeoSim-TerraformTask: worker '{}' restored at {}", name, boxPos());
 		}
@@ -602,27 +631,97 @@ public class TerraformTask
 		}
 	}
 
-	// 区块加载：有工人即加载，完成/拆除后释放
+	// 区块加载：等待/扫描阶段要整块地块（扫描逐块读方块状态，缺区块会触发同步加载），
+	// 作业阶段收窄成「游标 3×3 + 盒子 + 材料箱」，随游标滚动；完成/拆除后释放
 	private void updateChunkLoading()
 	{
-		boolean shouldLoad = hasWorker() && state != TerraformState.COMPLETE;
-		if (shouldLoad && !chunksLoaded)
+		boolean shouldLoad = !paused && hasWorker() && state != TerraformState.COMPLETE
+				&& !isWorkerResting();
+
+		// 只有真正开始逐块整地才收窄；此前（含扫描）保持整块窗口，避免扫描时同步加载区块
+		boolean scanWindow = state != TerraformState.TERRAFORMING
+				&& state != TerraformState.WAITING_RESOURCE;
+
+		if (shouldLoad)
 		{
-			TerraformChunkLoader.registerForPlot(level, record);
-			chunksLoaded = true;
+			if (!chunksLoaded || scanWindow != scanWindowLoaded
+					|| (!scanWindow && ++chunkWindowTimer >= CHUNK_WINDOW_TICKS))
+			{
+				chunkWindowTimer = 0;
+				Set<Long> desired = new HashSet<>();
+				if (scanWindow)
+				{
+					ChunkWindows.addRect(desired, record.minX(), record.minZ(), record.maxX(), record.maxZ());
+				}
+				else
+				{
+					ChunkWindows.addAround(desired, workCursorPos(), CHUNK_WINDOW_RADIUS);
+				}
+				desired.add(ChunkWindows.of(boxPos()));
+				ChunkWindows.addAll(desired, chestPositions());
+				TerraformChunkLoader.setWindow(level, boxPos(), desired);
+				chunksLoaded = true;
+				scanWindowLoaded = scanWindow;
+			}
 		}
-		else if (!shouldLoad && chunksLoaded)
+		else if (chunksLoaded)
 		{
-			TerraformChunkLoader.releaseForPlot(level, record);
+			TerraformChunkLoader.releaseForPlot(level, boxPos());
 			chunksLoaded = false;
+			chunkWindowTimer = 0;
 		}
+	}
+
+	// 盒子方块是否已不存在（引擎据此清理任务）
+	public boolean isBoxGone()
+	{
+		return boxGone;
+	}
+
+	// 盒子方块校验：只在区块已加载时读，未加载就等下次
+	// （对未加载区块调 getBlockState 会触发主线程同步加载）
+	private void validateBoxLazily()
+	{
+		if (boxValidated || boxGone) return;
+		if (!level.hasChunkAt(boxPos())) return;
+
+		boxValidated = true;
+		boxGone = !(level.getBlockState(boxPos()).getBlock() instanceof BuildingConstructor);
+		if (boxGone)
+		{
+			LOGGER.warn("NeoSim-TerraformTask: terraform box gone at {}", boxPos());
+		}
+	}
+
+	// 工人今天抽到休息日（与夜间同等对待：不干活、不占区块）
+	private boolean isWorkerResting()
+	{
+		resolveWorkerNpc();
+		return worker != null && worker.isRestingNow();
+	}
+
+	// 当前整地目标（无目标时退回盒子位置）
+	private BlockPos workCursorPos()
+	{
+		return processedIndex >= 0 && processedIndex < targets.size() ? targets.get(processedIndex) : boxPos();
+	}
+
+	// 材料箱所在坐标（相邻 6 面 + 大箱另一半）
+	private List<BlockPos> chestPositions()
+	{
+		List<BlockPos> out = new ArrayList<>(nearbyChests.size());
+		for (ChestBlockEntity chest : nearbyChests)
+		{
+			out.add(chest.getBlockPos());
+		}
+		return out;
 	}
 
 	protected void releaseChunks()
 	{
 		if (chunksLoaded)
 		{
-			TerraformChunkLoader.releaseForPlot(level, record);
+			TerraformChunkLoader.releaseForPlot(level, boxPos());
 			chunksLoaded = false;
 		}
 	}

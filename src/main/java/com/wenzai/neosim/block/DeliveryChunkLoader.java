@@ -1,10 +1,13 @@
 package com.wenzai.neosim.block;
 
 import com.wenzai.neosim.Config;
+import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.util.ChunkWindows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 import java.util.*;
 
@@ -21,21 +24,25 @@ public class DeliveryChunkLoader
 	{
 	}
 
-	// 站点区：快递盒所在区块 ±1，快递员在雇状态下常驻
+	// 站点区：快递盒所在区块 ±1 + 整条箱链所在区块（链上的箱子都要能读，链可能横向延伸很远）
+	// - 箱链扫描只读已加载区块，不触发同步加载；已纳入的区块会保持加载，链路一旦发现就自我维持
+	// - 只增不减：某格一时不可见（未加载/临时拆除）不会把窗口丢掉；解雇/拆盒由 releaseAll 统一清空
 	public static void registerBox(ServerLevel level, BlockPos box)
 	{
 		Set<Long> set = boxTickets.computeIfAbsent(box, b -> new HashSet<>());
-		int cx = box.getX() >> 4;
-		int cz = box.getZ() >> 4;
-		for (int dx = -1; dx <= 1; dx++)
+		Set<Long> desired = new HashSet<>();
+		ChunkWindows.addAround(desired, box, 1);
+		for (ChestBlockEntity chest : InventoryManager.findChainedChests(level, box))
 		{
-			for (int dz = -1; dz <= 1; dz++)
+			desired.add(ChunkWindows.of(chest.getBlockPos()));
+		}
+
+		for (Long l : desired)
+		{
+			if (set.add(l))
 			{
-				ChunkPos cp = new ChunkPos(cx + dx, cz + dz);
-				if (set.add(cp.toLong()))
-				{
-					level.getChunkSource().addRegionTicket(DELIVERY_TICKET, cp, 0, cp);
-				}
+				ChunkPos cp = new ChunkPos(l);
+				level.getChunkSource().addRegionTicket(DELIVERY_TICKET, cp, 0, cp);
 			}
 		}
 	}

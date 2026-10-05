@@ -147,20 +147,14 @@ public class LifeSystem
 		}
 	}
 
-	// 有家无业市民清晨按配置概率在家休息（索引遍历全部已加载NPC）
+	// 有家市民清晨按配置概率在家休息（含在岗工人：在岗也可能抽到休息日）
+	// 索引遍历全部已加载NPC；无家者不休息
 	private static void rollRestToday(ServerLevel level)
 	{
 		double restChance = restChance();
 		for (Entity npc : com.wenzai.neosim.npc.NpcRegistry.allLoaded())
 		{
-			if (npc.getHomePos() != null && !npc.hasJob())
-			{
-				npc.setRestToday(RANDOM.nextDouble() < restChance);
-			}
-			else
-			{
-				npc.setRestToday(false);
-			}
+			npc.setRestToday(npc.getHomePos() != null && RANDOM.nextDouble() < restChance);
 		}
 	}
 

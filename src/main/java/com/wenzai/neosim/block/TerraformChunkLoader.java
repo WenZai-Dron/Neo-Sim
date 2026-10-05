@@ -1,61 +1,45 @@
 package com.wenzai.neosim.block;
 
+import com.wenzai.neosim.util.ChunkWindows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
+// 整地强制加载：等待/扫描阶段要整块地块（扫描逐块读方块状态），作业阶段收窄成「游标 3×3 + 盒子 + 材料箱」
+// - 距离 0 的 region ticket = FULL 等级（可读写方块，不跑实体刻），代价最小
+// - 按任务记账：两个整地任务共享区块时互不误释放
 public class TerraformChunkLoader
 {
 	private static final TicketType<ChunkPos> TERRAFORM_TICKET =
 			TicketType.create("neo_sim:terraform", Comparator.comparingLong(ChunkPos::toLong));
 
-	// 按任务记账（两个整地任务共享区块时互不误释放）
 	private static final Map<BlockPos, Set<Long>> taskTickets = new HashMap<>();
 
 	private TerraformChunkLoader()
 	{
 	}
 
-	// 为整地地块覆盖的所有区块注册
-	public static void registerForPlot(ServerLevel level, TerraformPersistence.TerraformRecord record)
+	// 用任务算好的窗口替换该任务的加载集合
+	public static void setWindow(ServerLevel level, BlockPos box, Set<Long> desired)
 	{
-		Set<Long> set = taskTickets.computeIfAbsent(record.boxPos(), b -> new HashSet<>());
-		int minCX = Math.min(record.minX(), record.maxX()) >> 4;
-		int maxCX = Math.max(record.minX(), record.maxX()) >> 4;
-		int minCZ = Math.min(record.minZ(), record.maxZ()) >> 4;
-		int maxCZ = Math.max(record.minZ(), record.maxZ()) >> 4;
-
-		for (int cx = minCX; cx <= maxCX; cx++)
-		{
-			for (int cz = minCZ; cz <= maxCZ; cz++)
-			{
-				ChunkPos cp = new ChunkPos(cx, cz);
-				if (set.add(cp.toLong()))
-				{
-					level.getChunkSource().addRegionTicket(TERRAFORM_TICKET, cp, 0, cp);
-				}
-			}
-		}
+		ChunkWindows.apply(level, TERRAFORM_TICKET, taskTickets, box, desired);
 	}
 
-	// 释放该整地任务加载的区块
-	public static void releaseForPlot(ServerLevel level, TerraformPersistence.TerraformRecord record)
+	// 释放该任务加载的区块
+	public static void releaseForPlot(ServerLevel level, BlockPos box)
 	{
-		Set<Long> set = taskTickets.remove(record.boxPos());
-		if (set == null) return;
-		for (Long l : set)
-		{
-			ChunkPos cp = new ChunkPos(l);
-			level.getChunkSource().removeRegionTicket(TERRAFORM_TICKET, cp, 0, cp);
-		}
+		ChunkWindows.release(level, TERRAFORM_TICKET, taskTickets, box);
 	}
 
 	// 服务器停止/世界卸载时清空
 	public static void clear()
 	{
-		taskTickets.clear();
+		ChunkWindows.clearAll(taskTickets);
 	}
 }
