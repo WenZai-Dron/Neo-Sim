@@ -1,25 +1,34 @@
 package com.wenzai.neosim.life;
 
+import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.block.ControlBoxPersistence;
 import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
+import com.wenzai.neosim.npc.CityLivingManager;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
+import com.wenzai.neosim.npc.NpcRegistry;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicRegistry;
 import com.wenzai.neosim.storage.CityManager;
 import com.wenzai.neosim.storage.FileCreater;
 import com.wenzai.neosim.storage.ModSavedData;
+import com.wenzai.neosim.storage.NpcData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.common.ModConfigSpec;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.IllegalFormatException;
+import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
+// 生活系统：逐城推进的每日/每分钟结算入口（衰老、房租、生育、关系、休息），公告与模板也在这里
 public class LifeSystem
 {
 	private static final Logger LOGGER = LogUtils.getLogger();
@@ -36,6 +45,9 @@ public class LifeSystem
 	private static final int SECOND_TICKS = 20;
 	private static int secondTimer = 0;
 
+	// 高龄寿终：超过寿终年龄后每天 1/10 概率自然死亡
+	private static final double OLD_AGE_DEATH_CHANCE = 0.1;
+
 	private LifeSystem()
 	{
 	}
@@ -50,7 +62,7 @@ public class LifeSystem
 			try
 			{
 				// 衰老与寿终（含未加载档案结算）
-				AgingSystem.onDayStart(level, dayOfWeek, city);
+				agingOnDayStart(level, dayOfWeek, city);
 
 				// 房租与收入
 				collectRent(level, city);
@@ -147,12 +159,99 @@ public class LifeSystem
 		}
 	}
 
+	// 衰老与寿终（每日第一步）：先长岁，再处理成年离家与高龄寿终
+	// city 仅用于未加载档案结算；加载中实体按实体改，未加载档案走 patch*
+	private static void agingOnDayStart(ServerLevel level, int dayOfWeek, String city)
+	{
+		int adultAge = Config.LIFE_ADULT_AGE.get();
+		int maxAge = Config.LIFE_MAX_AGE.get();
+		boolean adultAgingDay = dayOfWeek == Config.LIFE_AGING_ADULT_DAY.get();
+		boolean childAgingDay = Config.LIFE_AGING_CHILD_DAYS.get().contains(dayOfWeek);
+
+		// 只扫本城已加载 NPC（快照，避免逐城重复全量扫描 + 同一 NPC 被多城重复结算）
+		List<Entity> loaded = new ArrayList<>(NpcRegistry.byCity(city));
+		for (Entity npc : loaded)
+		{
+			if (npc.getNpcName().isEmpty() || npc.getCityName().isEmpty()) continue;
+
+			// 每周长岁
+			boolean child = npc.getAge() < adultAge;
+			boolean aged = false;
+			if ((child && childAgingDay) || (!child && adultAgingDay))
+			{
+				npc.setAge((short) (npc.getAge() + 1));
+				npc.syncToJson();
+				aged = true;
+			}
+
+			// 成年离家
+			if (aged && child && npc.getAge() == adultAge)
+			{
+				CityLivingManager.releaseHome(level, npc);
+				announce(level, npc.getCityName(), tpl(Config.ANNOUNCE_ADULT_LEAVE, npc.getNpcName(), adultAge));
+			}
+
+			// 高龄寿终
+			if (npc.getAge() > maxAge && RANDOM.nextDouble() < OLD_AGE_DEATH_CHANCE)
+			{
+				LOGGER.info("NeoSim-LifeSystem.aging: '{}' died of old age at {}", npc.getNpcName(), npc.getAge());
+				npc.die(level.damageSources().genericKill());
+			}
+		}
+
+		// 未加载NPC：数据侧同样结算
+		if (city.isEmpty()) return;
+
+		Set<String> loadedNames = new HashSet<>();
+		for (Entity npc : NpcRegistry.byCity(city))
+		{
+			loadedNames.add(npc.getNpcName());
+		}
+
+		for (String name : NpcData.listNpcNames(level, city))
+		{
+			if (loadedNames.contains(name)) continue;
+			JsonObject json = NpcData.load(level, city, name);
+			if (json == null || !json.has("age")) continue;
+
+			int age = json.get("age").getAsShort();
+			boolean child = age < adultAge;
+			boolean aged = false;
+			if ((child && childAgingDay) || (!child && adultAgingDay))
+			{
+				age++;
+				aged = true;
+			}
+
+			// 成年离家：清生活点+城市记录移除+公告
+			if (aged && child && age == adultAge)
+			{
+				NpcData.patchClearHome(level, city, name);
+				CityLivingManager.releaseHomeByName(level, city, name);
+				announce(level, city, tpl(Config.ANNOUNCE_ADULT_LEAVE, name, adultAge));
+			}
+
+			// 高龄寿终：删档、退房、族谱、人口同步
+			if (age > maxAge && RANDOM.nextDouble() < OLD_AGE_DEATH_CHANCE)
+			{
+				LOGGER.info("NeoSim-LifeSystem.aging: '{}' died of old age while unloaded at {}", name, age);
+				Manage.dieUnloaded(level, city, name);
+				continue;
+			}
+
+			if (aged)
+			{
+				NpcData.patchAge(level, city, name, (short) age);
+			}
+		}
+	}
+
 	// 有家市民清晨按配置概率在家休息（含在岗工人：在岗也可能抽到休息日）
 	// 索引遍历全部已加载NPC；无家者不休息
 	private static void rollRestToday(ServerLevel level)
 	{
 		double restChance = restChance();
-		for (Entity npc : com.wenzai.neosim.npc.NpcRegistry.allLoaded())
+		for (Entity npc : NpcRegistry.allLoaded())
 		{
 			npc.setRestToday(npc.getHomePos() != null && RANDOM.nextDouble() < restChance);
 		}

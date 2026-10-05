@@ -251,7 +251,7 @@ public class WorkPlotEngine
 		}
 		UNBOUND_BOXES.clear();
 		restoredFromDisk = false;
-		PlotChunkLoader.clear();
+		ChunkLoaders.Plot.clear();
 		LOGGER.info("NeoSim-WorkPlotEngine: tasks saved & cleared on server stopping");
 	}
 

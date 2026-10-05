@@ -244,7 +244,7 @@ public class RebuildBoxEngine
 			tasks.clear();
 		}
 		restoredFromDisk = false;
-		RebuildChunkLoader.clear();
+		ChunkLoaders.Rebuild.clear();
 		LOGGER.info("NeoSim-RebuildBoxEngine: tasks saved & cleared on server stopping");
 	}
 

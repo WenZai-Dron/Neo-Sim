@@ -299,7 +299,7 @@ public class RebuildTask
 			if (world.equals(boxPos)) continue;
 			phaseCellsInRound++;
 
-			// 只处理已加载区块（强制加载由 RebuildChunkLoader 负责）
+			// 只处理已加载区块（强制加载由 ChunkLoaders.Rebuild 负责）
 			if (!level.hasChunkAt(world)) continue;
 			loadedInRound++;
 
@@ -414,7 +414,7 @@ public class RebuildTask
 		// 控制箱区块：先登记再等加载。对未加载区块读方块会触发主线程同步加载
 		if (!level.hasChunkAt(controlBoxPos))
 		{
-			RebuildChunkLoader.setWindow(level, boxPos, minimalWindow());
+			ChunkLoaders.Rebuild.setWindow(level, boxPos, minimalWindow());
 			return false;
 		}
 
@@ -466,7 +466,7 @@ public class RebuildTask
 				Math.max(a.getX(), Math.max(b.getX(), Math.max(boxPos.getX(), controlBoxPos.getX()))),
 				Math.max(a.getY(), Math.max(b.getY(), Math.max(boxPos.getY(), controlBoxPos.getY()))),
 				Math.max(a.getZ(), Math.max(b.getZ(), Math.max(boxPos.getZ(), controlBoxPos.getZ()))));
-		RebuildChunkLoader.setWindow(level, boxPos, probeWindow(min, max));
+		ChunkLoaders.Rebuild.setWindow(level, boxPos, probeWindow(min, max));
 	}
 
 	// 最小窗口：重建盒 + 控制箱两个区块（未绑定/等待期用，别占整栋）
@@ -525,7 +525,7 @@ public class RebuildTask
 		desired.add(ChunkWindows.of(controlBoxPos));
 		ChunkWindows.addAll(desired, windowChests);
 
-		RebuildChunkLoader.setWindow(level, boxPos, desired);
+		ChunkLoaders.Rebuild.setWindow(level, boxPos, desired);
 		chunksRegistered = true;
 		windowLayer = layer;
 	}
@@ -533,7 +533,7 @@ public class RebuildTask
 	// 释放本任务强制加载的区块（未绑定 / 拆除 / 完成）
 	private void releaseWindow()
 	{
-		RebuildChunkLoader.release(level, boxPos);
+		ChunkLoaders.Rebuild.release(level, boxPos);
 		chunksRegistered = false;
 		windowLayer = Integer.MIN_VALUE;
 	}

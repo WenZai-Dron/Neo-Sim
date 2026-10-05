@@ -12,7 +12,6 @@ import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.npc.NpcGoals;
 import com.wenzai.neosim.storage.ModSavedData;
 import com.wenzai.neosim.storage.SimData;
-import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -106,7 +105,7 @@ public class DeliveryTask
 		if (record.worker() != null && !record.worker().isEmpty())
 		{
 			NeoSim.WORKER_MAP.put(boxPos(), record.worker());
-			DeliveryChunkLoader.registerBox(level, boxPos());
+			ChunkLoaders.Delivery.registerBox(level, boxPos());
 			siteWindowRegistered = true;
 
 			// 等级从 NPC 读回：否则重启后 jobLevel 从 1 起算，会把高等级快递员反向写低
@@ -188,7 +187,7 @@ public class DeliveryTask
 			worker = npc;
 			jobLevel = Math.max(1.0F, (float) npc.getJobCourier());
 			updateRecord();
-			DeliveryChunkLoader.registerBox(level, boxPos());
+			ChunkLoaders.Delivery.registerBox(level, boxPos());
 			siteWindowRegistered = true;
 			LOGGER.info("NeoSim-DeliveryTask: hired courier '{}' for delivery box at {}", name, boxPos());
 		}
@@ -207,7 +206,7 @@ public class DeliveryTask
 		setState(DeliveryState.WAITING_WORKER);
 		clearHand();
 		releaseOrder();
-		DeliveryChunkLoader.releaseAll(level, boxPos());
+		ChunkLoaders.Delivery.releaseAll(level, boxPos());
 		updateRecord();
 		LOGGER.info("NeoSim-DeliveryTask: fired courier for delivery box at {}", boxPos());
 	}
@@ -229,7 +228,7 @@ public class DeliveryTask
 	// 盒子被破坏时清理：释放区块/认领、解雇快递员
 	public void onBoxDestroyed()
 	{
-		DeliveryChunkLoader.releaseAll(level, boxPos());
+		ChunkLoaders.Delivery.releaseAll(level, boxPos());
 		String name = NeoSim.WORKER_MAP.remove(boxPos());
 		if (name != null) releaseNpc(name);
 		worker = null;
@@ -517,7 +516,7 @@ public class DeliveryTask
 		worker.setItemInHand(InteractionHand.MAIN_HAND, worker.getCarriageDisplay());
 
 		// 城市公告：XXX 正前往 XXX 运送 XX 个 XXX
-		Component buildingName = BlueprintName.component(best.getBuilding().getSchematicName());
+		Component buildingName = NeoSim.blueprintName(best.getBuilding().getSchematicName());
 		LifeSystem.announce(level, cityName,
 				LifeSystem.tpl(Config.ANNOUNCE_DELIVERY_DISPATCH,
 						worker.getNpcName(), buildingName, loaded,
@@ -653,7 +652,7 @@ public class DeliveryTask
 		if (!siteWindowRegistered || ++siteRefreshTimer >= SITE_REFRESH_TICKS)
 		{
 			siteRefreshTimer = 0;
-			DeliveryChunkLoader.registerBox(level, boxPos());
+			ChunkLoaders.Delivery.registerBox(level, boxPos());
 			siteWindowRegistered = true;
 			revalidated = true;
 		}
@@ -674,7 +673,7 @@ public class DeliveryTask
 	{
 		if (offDutyReleased) return;
 		offDutyReleased = true;
-		DeliveryChunkLoader.releaseAll(level, boxPos());
+		ChunkLoaders.Delivery.releaseAll(level, boxPos());
 		siteWindowRegistered = false;
 		siteRefreshTimer = 0;
 	}
@@ -786,7 +785,7 @@ public class DeliveryTask
 		if (windowTimer >= WINDOW_REFRESH_TICKS)
 		{
 			windowTimer = 0;
-			DeliveryChunkLoader.setWindow(level, boxPos(),
+			ChunkLoaders.Delivery.setWindow(level, boxPos(),
 					worker != null ? worker.blockPosition() : null);
 		}
 	}

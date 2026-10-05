@@ -223,7 +223,7 @@ public class TerraformEngine
 			tasks.clear();
 		}
 		restoredFromDisk = false;
-		TerraformChunkLoader.clear();
+		ChunkLoaders.Terraform.clear();
 		LOGGER.info("NeoSim-TerraformEngine: tasks saved & cleared on server stopping");
 	}
 

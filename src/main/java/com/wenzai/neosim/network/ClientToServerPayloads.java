@@ -796,7 +796,7 @@ public class ClientToServerPayloads
 				String city = com.wenzai.neosim.storage.CityManager.getCity(player.getUUID());
 				if (city.isEmpty()) return;
 				PacketDistributor.sendToPlayer(player, new ServerToClientPayloads.HireListResponsePayload(
-						com.wenzai.neosim.building.HireListService.collect(
+						com.wenzai.neosim.building.ListServices.collectHire(
 								player.serverLevel(), city, payload.jobKind())));
 			}).exceptionally(e ->
 			{
@@ -914,7 +914,7 @@ public class ClientToServerPayloads
 				if (!(context.player() instanceof ServerPlayer player)) return;
 				if (!com.wenzai.neosim.util.JsonUtil.check(player.getUUID(), "missing_scan", 2000)) return;
 				java.util.List<ServerToClientPayloads.MissingScanResponsePayload.MissingEntry> entries =
-						com.wenzai.neosim.building.MissingScanService.scan(player.serverLevel(), payload.boxPos());
+						com.wenzai.neosim.building.ListServices.scanMissing(player.serverLevel(), payload.boxPos());
 				PacketDistributor.sendToPlayer(player,
 						new ServerToClientPayloads.MissingScanResponsePayload(payload.boxPos(), entries));
 			}).exceptionally(e ->
@@ -1021,7 +1021,7 @@ public class ClientToServerPayloads
 				String city = com.wenzai.neosim.storage.CityManager.getCity(player.getUUID());
 				if (city.isEmpty()) return;
 				PacketDistributor.sendToPlayer(player, new ServerToClientPayloads.HomelessListResponsePayload(
-						com.wenzai.neosim.building.HomelessListService.collect(player.serverLevel(), city)));
+						com.wenzai.neosim.building.ListServices.collectHomeless(player.serverLevel(), city)));
 			}).exceptionally(e ->
 			{
 				NeoSim.LOGGER.error("NeoSim-HomelessListRequest: Fail", e);

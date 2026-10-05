@@ -1,7 +1,9 @@
 package com.wenzai.neosim.client.gui;
 
+import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.NeoSimClient;
 import com.wenzai.neosim.client.ClientDataHolder;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 
@@ -53,10 +55,10 @@ public final class HudInfo
 		};
 	}
 
-	// 金额文本：三位分节 + 两位小数（HUD 与城市信息页共用，保证两处显示永远一致）
+	// 金额文本：唯一实现在 NeoSim.amount（HUD / 城市信息页 / 指令共用）
 	public static String amount(double value)
 	{
-		return String.format("%,.2f", value);
+		return NeoSim.amount(value);
 	}
 
 	// 单个 HUD 字段的文本（键见 UiSettings.FIELD_KEYS）：HUD 的取值都从这里出

@@ -11,7 +11,6 @@ import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.NpcGoals;
 import com.wenzai.neosim.schematic.*;
 import com.wenzai.neosim.storage.FileCreater;
-import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
@@ -148,7 +147,7 @@ public class ConstructionTask
 		}
 
 		// 区块窗口随建造进度滚动（当前层 ±1），整栋不再数天常驻全部区块
-		BuildingChunkLoader.updateWindow(building, level);
+		ChunkLoaders.Building.updateWindow(building, level);
 
 		// 防删改：蓝图原点越出本维度建造高度则安全中止
 		if (building.getControlBoxPos() != null && schematic != null)
@@ -1011,7 +1010,7 @@ public class ConstructionTask
 		if (level.getServer() == null) return;
 		sendPacketToCityPlayers(new com.wenzai.neosim.network.ServerToClientPayloads.ResourceShortagePacket(
 				LifeSystem.tpl(Config.ANNOUNCE_MISSING_MATERIAL,
-						BlueprintName.component(building.getSchematicName()),
+						NeoSim.blueprintName(building.getSchematicName()),
 						item.getDescription())));
 	}
 
@@ -1085,7 +1084,7 @@ public class ConstructionTask
 	{
 		sendPacketToCityPlayers(new com.wenzai.neosim.network.ServerToClientPayloads.BuildingCompletePacket(
 				LifeSystem.tpl(Config.ANNOUNCE_BUILDING_COMPLETE,
-						BlueprintName.component(building.getSchematicName()))));
+						NeoSim.blueprintName(building.getSchematicName()))));
 		LOGGER.info("NeoSim-ConstructionTask: announce complete — {}", building.getSchematicName());
 	}
 
@@ -1426,7 +1425,7 @@ public class ConstructionTask
 			builderNpc.setBuildAnim(0.0F);
 		}
 		clearBuilderHand();
-		BuildingChunkLoader.releaseForBuilding(building, level);
+		ChunkLoaders.Building.releaseForBuilding(building, level);
 		building.setBuildingComplete(true);
 		building.setState(BuildingInstance.BuildState.COMPLETE);
 		currentState = BuildingInstance.BuildState.COMPLETE;

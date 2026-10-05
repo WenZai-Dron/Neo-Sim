@@ -551,13 +551,13 @@ public abstract class PlotTask
 				}
 				desired.add(ChunkWindows.of(boxPos()));
 				ChunkWindows.addAll(desired, chestPositions());
-				PlotChunkLoader.setWindow(level, boxPos(), desired);
+				ChunkLoaders.Plot.setWindow(level, boxPos(), desired);
 				chunksLoaded = true;
 			}
 		}
 		else if (chunksLoaded)
 		{
-			PlotChunkLoader.releaseForPlot(level, boxPos());
+			ChunkLoaders.Plot.releaseForPlot(level, boxPos());
 			chunksLoaded = false;
 			chunkWindowTimer = 0;
 		}
@@ -622,7 +622,7 @@ public abstract class PlotTask
 	{
 		if (chunksLoaded)
 		{
-			PlotChunkLoader.releaseForPlot(level, boxPos());
+			ChunkLoaders.Plot.releaseForPlot(level, boxPos());
 			chunksLoaded = false;
 		}
 	}

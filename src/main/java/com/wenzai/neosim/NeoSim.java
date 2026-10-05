@@ -12,6 +12,7 @@ import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.storage.CityManager;
 import com.wenzai.neosim.storage.FileCreater;
 import com.wenzai.neosim.storage.ModSavedData;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -598,5 +599,20 @@ public class NeoSim
 		com.wenzai.neosim.storage.NpcData.flushDirty();
 		com.wenzai.neosim.life.RelationshipPersistence.flushAndClear();
 		LOGGER.info("NeoSim: activeCityName reset on server stopping");
+	}
+
+	// 金额文本：三位分节 + 两位小数（HUD、城市信息页、指令回执共用同一份实现）
+	public static String amount(double value)
+	{
+		return String.format("%,.2f", value);
+	}
+
+	// 蓝图名组件：用于服务端发出的公告/提示
+	// 中文客户端显示汉化名（blueprint.neosim.* 键由 datagen 从 zh_cn_names.json 生成），
+	// 其他语言（以及未收录的自定义蓝图）回落到蓝图自带英文名
+	public static Component blueprintName(String schematicName)
+	{
+		if (schematicName == null || schematicName.isEmpty()) return Component.literal("");
+		return Component.translatableWithFallback("blueprint.neosim." + schematicName, schematicName);
 	}
 }

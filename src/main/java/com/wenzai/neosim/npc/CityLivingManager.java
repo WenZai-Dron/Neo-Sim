@@ -2,6 +2,7 @@ package com.wenzai.neosim.npc;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
+import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.ControlBoxPersistence;
 import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
 import com.wenzai.neosim.block.ControlBoxPersistence.Resident;
@@ -9,7 +10,6 @@ import com.wenzai.neosim.building.BuildingInstance;
 import com.wenzai.neosim.building.ConstructionTask;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.storage.FileCreater;
-import com.wenzai.neosim.util.BlueprintName;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -178,7 +178,7 @@ public class CityLivingManager
 		rec.residents().remove(target);
 		ControlBoxPersistence.updateRecord(level, cityName, rec);
 		announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_EVICT_RESIDENT,
-				residentName, BlueprintName.component(rec.schematicName())));
+				residentName, NeoSim.blueprintName(rec.schematicName())));
 		LOGGER.info("NeoSim-CityLivingManager: evicted '{}' from '{}'", residentName, rec.schematicName());
 		return true;
 	}
@@ -198,7 +198,7 @@ public class CityLivingManager
 		rec.residents().clear();
 		ControlBoxPersistence.updateRecord(level, cityName, rec);
 		announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_EVICT_ALL,
-				BlueprintName.component(rec.schematicName()), count));
+				NeoSim.blueprintName(rec.schematicName()), count));
 		LOGGER.info("NeoSim-CityLivingManager: evicted all {} residents from '{}'", count, rec.schematicName());
 		return count;
 	}
@@ -318,7 +318,7 @@ public class CityLivingManager
 		ControlBoxPersistence.updateRecord(level, cityName, rec);
 
 		announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_MOVE_IN,
-				npc.getNpcName(), BlueprintName.component(rec.schematicName())));
+				npc.getNpcName(), NeoSim.blueprintName(rec.schematicName())));
 		LOGGER.info("NeoSim-CityLivingManager: '{}' moved into '{}' at {} (stand {})", npc.getNpcName(),
 				rec.schematicName(), slot, stand);
 	}

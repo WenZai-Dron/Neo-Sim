@@ -7,12 +7,14 @@ import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.life.LifeSystem;
+import com.wenzai.neosim.life.ReproductionSystem;
 import com.wenzai.neosim.storage.ModSavedData;
 import com.wenzai.neosim.storage.NpcData;
 import com.wenzai.neosim.util.JsonUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.fml.loading.FMLPaths;
 
@@ -74,7 +76,7 @@ public class Manage
 			if (hasWanderer(level, cityName)) return;
 		}
 
-		spawnWithAnnouncement(level, cityName);
+		spawnAt(level, level.getSharedSpawnPos(), cityName, null);
 	}
 
 	// 城市内是否有流浪者：已加载实体+未加载档案双查
@@ -109,60 +111,6 @@ public class Manage
 	private static boolean hasLoadedNpc(ServerLevel level, String cityName)
 	{
 		return !NpcRegistry.byCity(cityName).isEmpty();
-	}
-
-	// 自动入城：生成新NPC并公告
-	public static void spawnWithAnnouncement(ServerLevel level, String cityName)
-	{
-		if (getPopulation(level, cityName) >= Config.MAX_POPULATION.get()) return;
-
-		Entity npc = Entity.NPC.get().create(level);
-		if (npc == null)
-		{
-			NeoSim.LOGGER.error("NeoSim-spawnWithAnnouncement: Fail to create NPC");
-			return;
-		}
-
-		// 随机姓名与性别（命名风格取该城市最近一次玩家语言）
-		Entity.generateAndSetName(level, npc, cityName);
-		npc.setNpcName(npc.getNpcName());
-
-		// 随机皮肤
-		npc.setSkin(Entity.randomSkin(npc.getSex()));
-
-		// 记录所属城市，用于死亡时删除文件
-		npc.setCityName(cityName);
-
-		// 入城公告必须先于入住公告：tryAssignHome 内部会广播入住公告
-		LifeSystem.announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_SPAWN, npc.getNpcName()));
-
-		// 有空位则分配生活点（先于保存）
-		CityLivingManager.tryAssignHome(level, npc);
-
-		// 放置在世界出生点
-		BlockPos spawnPos = level.getSharedSpawnPos();
-		npc.moveTo(spawnPos.getX() + 0.5D, spawnPos.getY(), spawnPos.getZ() + 0.5D, 0.0F, 0.0F);
-
-		// 加入世界
-		level.addFreshEntity(npc);
-
-		// 保存数据
-		if (level.getServer().isDedicatedServer())
-		{
-			NpcData.save(npc, cityName);
-		}
-		else
-		{
-			String saveName = level.getServer().getWorldData().getLevelName();
-			NpcData.save(npc, cityName, saveName);
-		}
-
-		// 更新人口（内存值 +1，不再目录列举）
-		short pop = getPopulation(level, cityName);
-		ModSavedData.get(level).setPopulation(cityName, (short) (pop + 1), level);
-
-		NeoSim.LOGGER.info("NeoSim-spawnWithAnnouncement: Spawned {} (sex={}) in city {}",
-				npc.getNpcName(), npc.getSex(), cityName);
 	}
 
 	// 从文件恢复城市中所有NPC（服务器重启/全量恢复）
@@ -391,7 +339,7 @@ public class Manage
 		String city = npc.getCityName();
 
 		// 卸载时清除临产目标缓存（防残留）
-		com.wenzai.neosim.life.ReproductionSystem.clearBirthTarget(name);
+		ReproductionSystem.clearBirthTarget(name);
 
 		// 实体即将 discard（NBT 不保留）：在途物品先归还岗位旁箱子（岗位区块由快递盒任务保持加载）
 		npc.returnCarriage();
@@ -437,25 +385,26 @@ public class Manage
 		return best;
 	}
 
-	// 在指定城市生成NPC，姓名与性别随机（triggerPlayer 用于决定命名池语言，可为 null）
-	public static void spawnAt(ServerLevel level, BlockPos pos, String cityName, @Nullable UUID triggerPlayer)
+	// 生成一名居民到指定位置的唯一入口（指令与自动补人共用；triggerPlayer 为 null 时命名池取城市语言）
+	// 返回 null = 未生成，唯一原因是人口已达上限
+	@Nullable
+	public static Entity spawnAt(ServerLevel level, BlockPos pos, String cityName, @Nullable UUID triggerPlayer)
 	{
 		// 人口上限检查
-		short currentPop = getPopulation(level, cityName);
-		if (currentPop >= Config.MAX_POPULATION.get())
+		if (getPopulation(level, cityName) >= Config.MAX_POPULATION.get())
 		{
 			NeoSim.LOGGER.warn("NeoSim-spawnAt: Population at max ({}), city: {}", Config.MAX_POPULATION.get(), cityName);
-			return;
+			return null;
 		}
 
 		Entity npc = Entity.NPC.get().create(level);
 		if (npc == null)
 		{
 			NeoSim.LOGGER.error("NeoSim-spawnAt: Fail to create NPC");
-			return;
+			return null;
 		}
 
-		// 随机姓名与性别（指令使用者即触发玩家：用其客户端语言）
+		// 随机姓名与性别（命名池按触发玩家的客户端语言）
 		Entity.generateAndSetName(level, npc, cityName, triggerPlayer);
 		npc.setNpcName(npc.getNpcName());
 
@@ -465,10 +414,13 @@ public class Manage
 		// 记录所属城市，用于死亡时删除文件
 		npc.setCityName(cityName);
 
+		// 入城公告必须先于入住公告：tryAssignHome 内部会广播入住公告
+		LifeSystem.announce(level, cityName, LifeSystem.tpl(Config.ANNOUNCE_SPAWN, npc.getNpcName()));
+
 		// 有空位则分配生活点（先于保存）
 		CityLivingManager.tryAssignHome(level, npc);
 
-		// 放置到指定位置（其实就是指令使用者的原地）
+		// 放置到指定位置
 		npc.moveTo(pos.getX() + 0.5D, pos.getY(), pos.getZ() + 0.5D, 0.0F, 0.0F);
 
 		// 加入世界
@@ -491,72 +443,68 @@ public class Manage
 
 		NeoSim.LOGGER.info("NeoSim-spawnAt: Spawned {} (sex={}) in city {} at ({}, {}, {})",
 				npc.getNpcName(), npc.getSex(), cityName, npc.getX(), npc.getY(), npc.getZ());
+		return npc;
 	}
 
-	// 生成第一个NPC
-	public static class NpcAdd
+	// 移除居民：退房 + 摘族谱 + 删档 + 人口 -1 + 清岗位表；实体在加载中则一并移除（不播死亡公告）
+	public static boolean removeNpc(ServerLevel level, String cityName, String npcName)
 	{
-		private NpcAdd()
+		Entity loaded = findLoaded(cityName, npcName);
+		if (loaded == null && NpcData.load(level, cityName, npcName) == null) return false;
+
+		// 临产目标缓存先清：实体 discard 后不会再走 die 的清理
+		ReproductionSystem.clearBirthTarget(npcName);
+		if (loaded != null)
 		{
+			// 在途物品先归还岗位旁箱子，再移除实体
+			loaded.returnCarriage();
+			loaded.discard();
 		}
 
-		static void spawn(ServerLevel level)
-		{
-			Entity npc = Entity.NPC.get().create(level);
-			if (npc == null)
-			{
-				NeoSim.LOGGER.error("NeoSim-NpcAdd: Fail");
-				return;
-			}
+		// 族谱按名字摘除（未加载也生效）
+		Genealogy.onDeath(level, cityName, npcName);
 
-			// 分配姓名
-			String cityName0 = ModSavedData.getActiveCityName();
-			Entity.generateAndSetName(level, npc, cityName0);
-			npc.setNpcName(npc.getNpcName());
+		// 退房：空出生活点
+		CityLivingManager.releaseHomeByName(level, cityName, npcName);
 
-			// 随机皮肤
-			npc.setSkin(Entity.randomSkin(npc.getSex()));
+		// 删档 + 同步人口（内存值 -1）
+		NpcData.delete(level, cityName, npcName);
+		short pop = getPopulation(level, cityName);
+		ModSavedData.get(level).setPopulation(cityName, (short) Math.max(0, pop - 1), level);
 
-			// 记录所属城市，用于死亡时删除文件
-			String cityName = ModSavedData.getActiveCityName();
-			npc.setCityName(cityName);
+		// 岗位表：清掉以该居民为工人的条目
+		NeoSim.WORKER_MAP.values().removeIf(npcName::equals);
 
-			// 有空位则分配生活点（先于保存）
-			CityLivingManager.tryAssignHome(level, npc);
-
-			// 放置在世界出生点
-			BlockPos spawnPos = level.getSharedSpawnPos();
-			npc.moveTo(
-					spawnPos.getX() + 0.5D,
-					spawnPos.getY(),
-					spawnPos.getZ() + 0.5D,
-					0.0F,
-					0.0F
-			);
-
-			// 加入世界
-			level.addFreshEntity(npc);
-
-			// 保存数据
-			if (cityName.isEmpty())
-			{
-				NeoSim.LOGGER.warn("NeoSim-Add: cityName is empty");
-			}
-			else
-			{
-				if (level.getServer().isDedicatedServer())
-				{
-					NpcData.save(npc, cityName);
-				}
-				else
-				{
-					String saveName = level.getServer().getWorldData().getLevelName();
-					NpcData.save(npc, cityName, saveName);
-				}
-			}
-
-			NeoSim.LOGGER.info("NeoSim-Add: Spawned {} at ({}, {}, {})",
-					npc.getNpcName(), npc.getX(), npc.getY(), npc.getZ());
-		}
+		NeoSim.LOGGER.info("NeoSim-removeNpc: removed '{}' (city={})", npcName, cityName);
+		return true;
 	}
+
+	// 把居民送到玩家身边：已加载的清寻路与目标后传送，未加载的按档案在玩家处恢复
+	public static boolean teleportToPlayer(ServerLevel level, String cityName, String npcName, ServerPlayer target)
+	{
+		Entity npc = findLoaded(cityName, npcName);
+		if (npc != null)
+		{
+			npc.getNavigation().stop();
+			npc.setTarget(null);
+			npc.teleportTo(level, target.getX(), target.getY(), target.getZ(), Set.of(), target.getYRot(), 0.0F);
+			NeoSim.LOGGER.info("NeoSim-teleportToPlayer: '{}' teleported to {}", npcName, target.getName().getString());
+			return true;
+		}
+
+		// 未加载：按档案在玩家所在方块恢复（实体化不改人口）
+		return spawnSingle(level, cityName, npcName, BlockPos.containing(target.position())) != null;
+	}
+
+	// 已加载的同名居民（未加载返回 null）
+	@Nullable
+	public static Entity findLoaded(String cityName, String npcName)
+	{
+		for (Entity npc : NpcRegistry.byCity(cityName))
+		{
+			if (npcName.equals(npc.getNpcName())) return npc;
+		}
+		return null;
+	}
+
 }

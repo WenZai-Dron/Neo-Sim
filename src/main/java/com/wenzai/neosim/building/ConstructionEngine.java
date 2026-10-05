@@ -2,6 +2,7 @@ package com.wenzai.neosim.building;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.block.ChunkLoaders;
 import com.wenzai.neosim.client.ClientBlockInteractions;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.schematic.PreviewState;
@@ -110,7 +111,7 @@ public class ConstructionEngine
 		lastTask = task;
 
 		// 强制加载建筑区域区块
-		BuildingChunkLoader.registerForBuilding(building, level);
+		ChunkLoaders.Building.registerForBuilding(building, level);
 		LOGGER.info("NeoSim-ConstructionEngine: {} tasks, started '{}' at {}",
 				tasks.size(), schematic.getName(), preview.getOrigin());
 
@@ -217,6 +218,26 @@ public class ConstructionEngine
 		waitingCache = null;
 	}
 
+	// 暂停/恢复指定建筑模盒的建造任务（GUI 与指令共用同一入口）；返回是否找到任务
+	public static boolean setPausedAt(ServerLevel level, BlockPos constructorPos, boolean paused)
+	{
+		ConstructionTask task = findTask(constructorPos);
+		if (task == null) return false;
+
+		if (paused)
+		{
+			task.pause();
+		}
+		else
+		{
+			task.resume();
+		}
+
+		// 暂停状态挂在实例上，随任务一起落盘
+		saveAllTasks(level);
+		return true;
+	}
+
 	// 模盒被破坏时取消模盒建造任务
 	public static void cancelTaskAt(BlockPos constructorPos, ServerLevel level)
 	{
@@ -244,7 +265,7 @@ public class ConstructionEngine
 			// 释放加载的区块
 			for (ConstructionTask t : removedTasks)
 			{
-				BuildingChunkLoader.releaseForBuilding(t.getBuilding(), level);
+				ChunkLoaders.Building.releaseForBuilding(t.getBuilding(), level);
 			}
 		}
 	}
@@ -304,7 +325,7 @@ public class ConstructionEngine
 				}
 
 				// 完工：释放加载的区块
-				BuildingChunkLoader.releaseForBuilding(finished, level);
+				ChunkLoaders.Building.releaseForBuilding(finished, level);
 				synchronized (tasks)
 				{
 					tasks.remove(task);
@@ -434,7 +455,7 @@ public class ConstructionEngine
 					}
 
 					// 重启后重新注册强制加载区块
-					BuildingChunkLoader.registerForBuilding(building, level);
+					ChunkLoaders.Building.registerForBuilding(building, level);
 					LOGGER.info("NeoSim-ConstructionEngine: restored task '{}' at {} (state {})",
 							building.getSchematicName(), building.getControlBoxPos(), building.getState());
 				}

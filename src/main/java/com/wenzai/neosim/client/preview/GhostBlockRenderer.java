@@ -84,7 +84,7 @@ public class GhostBlockRenderer
 		if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) return;
 
 		SchematicPreviewManager mgr = SchematicPreviewManager.getInstance();
-		ClientPreviewState state = mgr.getState();
+		SchematicPreviewManager state = mgr.getState();
 		if (!state.isActive() || state.getSchematic() == null) return;
 
 		// 模盒被破坏则取消预览

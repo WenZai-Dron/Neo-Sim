@@ -13,6 +13,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import javax.annotation.Nullable;
+
 // 服务端权威的"玩家 → 城市"会话表
 // 替代全局静态 activeCityName 的多人语义：每个玩家独立属于一个城市
 // 城市只在有玩家在线时演化（LifeSystem 遍历 onlineCities）
@@ -94,6 +96,19 @@ public final class CityManager
 		ModSavedData.get(level).syncCityToClients(level, cityName);
 		LOGGER.info("NeoSim-CityManager: created city '{}' by {}", cityName, player.getName().getString());
 		return null;
+	}
+
+	// 退城：从 player.json 移除 + 清会话表。返回退出的城市名，null=本来就没有城市
+	@Nullable
+	public static String leaveCity(ServerLevel level, Player player)
+	{
+		String city = getCity(player.getUUID());
+		if (city.isEmpty()) return null;
+		if (!FileCreater.removePlayerFromCity(level, city, player.getName().getString())) return null;
+
+		CITY_BY_PLAYER.remove(player.getUUID());
+		LOGGER.info("NeoSim-CityManager: {} left city '{}'", player.getName().getString(), city);
+		return city;
 	}
 
 	// 加入已有城市。返回 null=成功，否则为按客户端语言显示的提示组件

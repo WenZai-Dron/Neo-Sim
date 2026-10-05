@@ -16,10 +16,15 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+
+import javax.annotation.Nullable;
 
 @EventBusSubscriber(modid = NeoSim.MOD_ID)
 public class FileCreater
@@ -248,45 +253,42 @@ public class FileCreater
 
 	// player.json 成员关系内存化——按文件路径缓存 mtime + 玩家集合，mtime 未变直接命中，
 	// 消灭公告/同步循环里每玩家每次读盘 + 解析（isPlayerInCity 高频调用点：ModSavedData.syncCityToClients / LifeSystem 公告 / CityLivingManager）
-	private static boolean checkPlayerInFile(Path playerFile, String playerName)
+	private static Set<String> readPlayers(Path playerFile)
 	{
-		if (!Files.exists(playerFile))
-		{
-			return false;
-		}
+		if (!Files.exists(playerFile)) return Set.of();
 
-		// mtime 未变 → 命中缓存集合
-		Set<String> players = null;
-		PlayerListCache cached = PLAYER_CACHE.get(playerFile);
 		try
 		{
 			long mtime = Files.getLastModifiedTime(playerFile).toMillis();
-			if (cached != null && cached.mtime == mtime)
+			PlayerListCache cached = PLAYER_CACHE.get(playerFile);
+			if (cached != null && cached.mtime == mtime) return cached.players;
+
+			JsonObject json = JsonUtil.readObject(playerFile);
+			if (json == null)
 			{
-				players = cached.players;
+				repairCorruptedPlayerJson(playerFile);
+				return Set.of();
 			}
-			else
+
+			// 保序：名单顺序即文件内顺序，列名单与写回都要沿用
+			Set<String> players = new LinkedHashSet<>();
+			for (JsonElement e : JsonUtil.getArray(json, "players"))
 			{
-				JsonObject json = JsonUtil.readObject(playerFile);
-				if (json == null)
-				{
-					repairCorruptedPlayerJson(playerFile);
-					return false;
-				}
-				players = new HashSet<>();
-				for (JsonElement e : JsonUtil.getArray(json, "players"))
-				{
-					if (e.isJsonPrimitive()) players.add(e.getAsString());
-				}
-				PLAYER_CACHE.put(playerFile, new PlayerListCache(mtime, players));
+				if (e.isJsonPrimitive()) players.add(e.getAsString());
 			}
+			PLAYER_CACHE.put(playerFile, new PlayerListCache(mtime, players));
+			return players;
 		}
 		catch (Exception e)
 		{
 			// 读失败按"不在列表"处理（保持旧行为）
-			return false;
+			return Set.of();
 		}
-		return players.contains(playerName);
+	}
+
+	private static boolean checkPlayerInFile(Path playerFile, String playerName)
+	{
+		return readPlayers(playerFile).contains(playerName);
 	}
 
 	// 写 player.json 后失效缓存（加入/创建城市时调用，避免旧 mtime 内容）
@@ -295,34 +297,18 @@ public class FileCreater
 		PLAYER_CACHE.remove(playerFile);
 	}
 
+	// 去重追加一名成员后整份写回
 	private static void writePlayerJson(Path playerFile, String playerName)
 	{
-		List<String> players = new ArrayList<>();
+		List<String> players = new ArrayList<>(readPlayers(playerFile));
+		if (!players.contains(playerName)) players.add(playerName);
 
-		// 读取玩家列表
-		if (Files.exists(playerFile))
-		{
-			JsonObject json = JsonUtil.readObject(playerFile);
-			if (json == null)
-			{
-				repairCorruptedPlayerJson(playerFile);
-			}
-			else
-			{
-				for (JsonElement e : JsonUtil.getArray(json, "players"))
-				{
-					if (e.isJsonPrimitive()) players.add(e.getAsString());
-				}
-			}
-		}
+		writePlayerList(playerFile, players);
+	}
 
-		// 去重添加
-		if (!players.contains(playerName))
-		{
-			players.add(playerName);
-		}
-
-		// 写入
+	// 覆盖写成员集合（写后失效缓存）
+	private static void writePlayerList(Path playerFile, Collection<String> players)
+	{
 		JsonObject json = new JsonObject();
 		JsonArray arr = new JsonArray();
 		for (String p : players)
@@ -332,7 +318,7 @@ public class FileCreater
 		json.add("players", arr);
 		JsonUtil.write(playerFile, json);
 		invalidatePlayerCache(playerFile);
-		LOGGER.info("NeoSim-writePlayerJson: Succeed, {}", playerFile.toAbsolutePath());
+		LOGGER.info("NeoSim-writePlayerList: Succeed, {}", playerFile.toAbsolutePath());
 	}
 
 	// 服务端：查找玩家所属城市
@@ -427,6 +413,67 @@ public class FileCreater
 		return level.getServer().isDedicatedServer()
 				? findPlayerCity(playerName)
 				: findPlayerCity(level.getServer().getWorldData().getLevelName(), playerName);
+	}
+
+	// 城市目录（服务端/单机分流后的 data 根 + 城市名）
+	private static Path cityDir(ServerLevel level, String cityName)
+	{
+		Path dataDir = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
+		if (!level.getServer().isDedicatedServer())
+		{
+			dataDir = dataDir.resolve(level.getServer().getWorldData().getLevelName());
+		}
+		return dataDir.resolve(cityName);
+	}
+
+	// 城市名单（player.json 成员，顺序与文件一致）
+	public static List<String> listCityPlayers(ServerLevel level, String cityName)
+	{
+		return new ArrayList<>(readPlayers(cityDir(level, cityName).resolve("player.json")));
+	}
+
+	// 退城：从 player.json 移除成员；不在名单里返回 false
+	public static boolean removePlayerFromCity(ServerLevel level, String cityName, String playerName)
+	{
+		Path playerFile = cityDir(level, cityName).resolve("player.json");
+		List<String> players = new ArrayList<>(readPlayers(playerFile));
+		if (!players.remove(playerName)) return false;
+
+		writePlayerList(playerFile, players);
+		return true;
+	}
+
+	// 删城：整目录移到 data/.trash/<时间戳>-<城市名>/ 备份；有在线玩家或移动失败返回 null
+	@Nullable
+	public static Path deleteCity(ServerLevel level, String cityName)
+	{
+		if (CityManager.onlineCities(level).contains(cityName))
+		{
+			LOGGER.warn("NeoSim-deleteCity: refused, city '{}' has online players", cityName);
+			return null;
+		}
+
+		Path dir = cityDir(level, cityName);
+		if (!Files.isDirectory(dir)) return null;
+
+		String stamp = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").format(LocalDateTime.now());
+		Path trashDir = dir.getParent().resolve(".trash").resolve(stamp + "-" + cityName);
+		try
+		{
+			Files.createDirectories(trashDir.getParent());
+			Files.move(dir, trashDir);
+			PLAYER_CACHE.remove(dir.resolve("player.json"));
+
+			// 城市数据缓存按路径键控：清了才不会让重建的同名城市读到旧值
+			SimData.CityData.flushAndClear();
+			LOGGER.info("NeoSim-deleteCity: moved city '{}' to {}", cityName, trashDir.toAbsolutePath());
+			return trashDir;
+		}
+		catch (IOException e)
+		{
+			LOGGER.error("NeoSim-deleteCity: Fail, {}", e.getMessage(), e);
+			return null;
+		}
 	}
 
 	@SubscribeEvent

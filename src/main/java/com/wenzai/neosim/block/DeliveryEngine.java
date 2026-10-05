@@ -210,7 +210,7 @@ public class DeliveryEngine
 			claimedSites.clear();
 		}
 		restoredFromDisk = false;
-		DeliveryChunkLoader.clear();
+		ChunkLoaders.Delivery.clear();
 		LOGGER.info("NeoSim-DeliveryEngine: tasks saved & cleared on server stopping");
 	}
 

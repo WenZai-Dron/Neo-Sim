@@ -659,14 +659,14 @@ public class TerraformTask
 				}
 				desired.add(ChunkWindows.of(boxPos()));
 				ChunkWindows.addAll(desired, chestPositions());
-				TerraformChunkLoader.setWindow(level, boxPos(), desired);
+				ChunkLoaders.Terraform.setWindow(level, boxPos(), desired);
 				chunksLoaded = true;
 				scanWindowLoaded = scanWindow;
 			}
 		}
 		else if (chunksLoaded)
 		{
-			TerraformChunkLoader.releaseForPlot(level, boxPos());
+			ChunkLoaders.Terraform.releaseForPlot(level, boxPos());
 			chunksLoaded = false;
 			chunkWindowTimer = 0;
 		}
@@ -721,7 +721,7 @@ public class TerraformTask
 	{
 		if (chunksLoaded)
 		{
-			TerraformChunkLoader.releaseForPlot(level, boxPos());
+			ChunkLoaders.Terraform.releaseForPlot(level, boxPos());
 			chunksLoaded = false;
 		}
 	}
