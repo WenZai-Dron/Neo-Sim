@@ -8,6 +8,7 @@ import com.wenzai.neosim.block.DeliveryBox;
 import com.wenzai.neosim.block.FarmingBox;
 import com.wenzai.neosim.block.MiningBox;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.life.SocialGoal;
@@ -1601,10 +1602,25 @@ public class Entity extends PathfinderMob
 		cachedAssignedSite = null;
 		this.currentMoveTarget = null;
 
+		// 停掉在跑的寻路：removeGoal 只会停掉“正在运行”的目标，导航路径还可能来自任务直接下达的移动，
+		// 不停住的话解雇后 NPC 会沿旧路径继续走向工地
+		this.getNavigation().stop();
+
 		// 清空现有目标，重新注册完整AI
 		this.goalSelector.getAvailableGoals().stream().toList()
 				.forEach(w -> goalSelector.removeGoal(w.getGoal()));
 		this.registerGoals();
+
+		// 解除外部模组（Sable 等）的结构跟踪：它们会每 tick 把"拥有结构局部坐标"的实体钉回甲板，
+		// 不解除的话解雇后 NPC 依旧被拴在工作点上
+		if (level() instanceof ServerLevel serverLevel)
+		{
+			PhysicsWorld.detachNpc(serverLevel, this);
+		}
+
+		// 岗位复位：放下手臂、清空手持（工具是岗位配发的，解雇后不留）
+		setBuildAnim(0.0F);
+		setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
 
 		// 岗位已解除：撤销快递工作速度加成
 		refreshWalkSpeed();
@@ -1704,9 +1720,11 @@ public class Entity extends PathfinderMob
 		}
 	}
 
-	// 自愈：站点方块已不存在（盒子被破坏/爆炸/命令删除）时，解除工作状态恢复完整AI
+	// 自愈：岗位已经不成立时解除工作状态、恢复完整AI。两种不成立：
+	//   1. 站点方块已不存在（盒子被破坏/爆炸/命令删除）
+	//   2. 岗位表里已经没有这个 NPC（解雇时实体未加载 / 岗位表与记录不一致）
 	// 解雇路径只能覆盖“已加载”的NPC；区块未加载或离得远的NPC由这里兜底，
-	// 否则 NPC 会一直保持工作AI并反复走向已不存在的站点
+	// 否则 NPC 会一直保持工作AI并反复走向岗位
 	private void selfHealStaleSite()
 	{
 		if (isFrozen()) return;
@@ -1714,8 +1732,21 @@ public class Entity extends PathfinderMob
 		BlockPos site = getAssignedSite();
 		if (site == null) return;
 
-		// 站点区块未加载：跳过，等加载后再判定（避免把未加载误判成方块消失）
+		// 站点区块未加载：跳过，等加载后再判定（避免把未加载误判成方块消失，也避免走到未加载区块取方块）
 		if (!level().isLoaded(site)) return;
+
+		// 岗位表里已经没有这个 NPC：解雇时实体没加载（远走/区块卸载）或岗位表与记录不一致，
+		// 解雇指令没落到实体身上。这里兜底解除，否则它会带着工作AI继续走向工地。
+		// 必须等岗位表恢复完（读档首 tick 各引擎还没重建完，此时表是空的）再判定。
+		if (NeoSim.jobTablesRestored() && !NeoSim.WORKER_MAP.containsValue(getNpcName()))
+		{
+			LOGGER.info("NeoSim-Entity: self-heal release '{}' at site {} - no longer employed",
+					getNpcName(), site);
+			releaseFromSite();
+			setBuildAnim(0.0F);
+			setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+			return;
+		}
 
 		Block b = level().getBlockState(site).getBlock();
 		boolean validSite = b instanceof FarmingBox

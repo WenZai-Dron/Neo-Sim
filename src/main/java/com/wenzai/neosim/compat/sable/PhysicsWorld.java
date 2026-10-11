@@ -119,6 +119,24 @@ public final class PhysicsWorld
 		}
 	}
 
+	// 解除 NPC 的结构跟踪（解雇时调用，与 attachNpc 配对）
+	public static void detachNpc(ServerLevel level, Entity npc)
+	{
+		if (npc == null) return;
+		for (IPhysicsAdapter a : PhysicsAdapterRegistry.activeAdapters())
+		{
+			try
+			{
+				a.detachNpc(level, npc);
+			}
+			catch (Throwable t)
+			{
+				// 单个适配器异常不阻断其他模组
+				LOGGER.warn("NeoSim-PhysicsWorld: adapter {} detachNpc failed, skipped", a.modId(), t);
+			}
+		}
+	}
+
 	// 方块读写适配器（受总开关控制；当前停用恒为 null）
 	private static IPhysicsAdapter blockIoAdapter()
 	{

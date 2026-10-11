@@ -196,8 +196,11 @@ public class DeliveryTask
 	// 解雇快递员
 	public void fireWorker()
 	{
+		// 岗位表可能缺条目（岗位表与记录不一致 / 读档竞态）：退回按记录里的快递员名解雇，
+		// 否则解雇会静默失败——NPC 依旧带着工作AI走向站点/工地
 		String name = NeoSim.WORKER_MAP.remove(boxPos());
-		if (name != null)
+		if (name == null || name.isEmpty()) name = record.worker();
+		if (name != null && !name.isEmpty())
 		{
 			releaseNpc(name);
 		}
@@ -757,14 +760,12 @@ public class DeliveryTask
 
 	protected void releaseNpc(String name)
 	{
+		// 该NPC已被别的岗位雇走：不解除（解雇只针对本岗位）
+		if (NeoSim.WORKER_MAP.containsValue(name)) return;
+
 		// 全图按名查找：限半径会漏掉离家/远走的快递员，导致其AI永不恢复
 		Entity npc = Entity.findByNpcName(level, name);
-		if (npc != null)
-		{
-			npc.releaseFromSite();
-			npc.setBuildAnim(0.0F);
-			npc.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
-		}
+		if (npc != null) npc.releaseFromSite();
 	}
 
 	// 手持

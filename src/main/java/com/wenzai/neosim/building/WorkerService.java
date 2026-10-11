@@ -8,10 +8,13 @@ import com.wenzai.neosim.block.BuildingConstructor;
 import com.wenzai.neosim.block.DeliveryEngine;
 import com.wenzai.neosim.block.DeliveryTask;
 import com.wenzai.neosim.block.PlotTask;
+import com.wenzai.neosim.block.TerraformEngine;
+import com.wenzai.neosim.block.TerraformTask;
 import com.wenzai.neosim.block.WorkPlotEngine;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
+import com.wenzai.neosim.npc.NpcRegistry;
 import com.wenzai.neosim.storage.CityManager;
 import com.wenzai.neosim.storage.NpcData;
 import net.minecraft.core.BlockPos;
@@ -19,6 +22,10 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.slf4j.Logger;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 // 服务端雇佣/解雇核心（客户端 GUI 只发包，此处做全部校验与落盘）
 public final class WorkerService
@@ -108,19 +115,24 @@ public final class WorkerService
 	// 解雇：返回 null=成功，否则为按客户端语言显示的提示组件
 	public static Component tryFire(ServerLevel level, BlockPos boxPos)
 	{
+		// 整地任务：按记录解雇（记录是读档恢复岗位表的依据，必须一并清掉）
+		TerraformTask terraform = TerraformEngine.findTask(boxPos);
+		if (terraform != null)
+		{
+			terraform.fireWorker();
+			TerraformEngine.saveAll(level);
+			return null;
+		}
+
 		ConstructionTask ct = ConstructionEngine.findTask(boxPos);
 		if (ct != null && ct.getState() != BuildingInstance.BuildState.COMPLETE)
 		{
+			// 岗位表可能缺条目（岗位表与记录不一致 / 读档竞态）：退回按建筑记录里的工人名解雇，
+			// 否则解雇会静默失败——按钮显示已解雇，NPC 却依旧带着工作AI走向工地
 			String name = NeoSim.WORKER_MAP.remove(boxPos);
-			if (name != null)
-			{
-				Entity npc = Entity.findByNpcName(level, name);
-				if (npc != null)
-				{
-					npc.releaseFromSite();
-					npc.setBuildAnim(0.0F);
-				}
-			}
+			if (name == null || name.isEmpty()) name = ct.getBuilding().getWorkerName();
+			ct.getBuilding().setWorkerName(null);
+			releaseClaimants(level, boxPos, name);
 
 			// 状态由 ConstructionTask.tick 自动回落 WAITING_FOR_WORKER
 			ConstructionEngine.saveAllTasks(level);
@@ -145,18 +157,45 @@ public final class WorkerService
 		if (level.getBlockState(boxPos).getBlock() instanceof BuildingConstructor)
 		{
 			String name = NeoSim.WORKER_MAP.remove(boxPos);
-			if (name != null)
+			releaseClaimants(level, boxPos, name);
+			if (name != null && !name.isEmpty())
 			{
-				Entity npc = Entity.findByNpcName(level, name);
-				if (npc != null)
-				{
-					npc.releaseFromSite();
-					npc.setBuildAnim(0.0F);
-				}
 				LOGGER.info("NeoSim-WorkerService: pre-hire cancelled for '{}' at {}", name, boxPos);
 			}
 			return null;
 		}
 		return Component.translatable("msg.neosim.worker.noFirePost");
+	}
+
+	// 解雇还认领本岗位的已加载NPC。
+	// name：岗位表/记录里记的工人名（可能为null）。除此之外再按“岗位坐标仍指向本盒”扫描兜底——
+	// 岗位表缺条目时（读档竞态 / 岗位表与记录不一致）只靠名字会漏，解雇就成了静默失败。
+	// 已被别的岗位雇走的NPC一律不动（解雇只针对本岗位）。
+	private static void releaseClaimants(ServerLevel level, BlockPos boxPos, String name)
+	{
+		Set<String> released = new HashSet<>();
+
+		if (name != null && !name.isEmpty() && !NeoSim.WORKER_MAP.containsValue(name))
+		{
+			released.add(name);
+			Entity npc = Entity.findByNpcName(level, name);
+			if (npc != null) npc.releaseFromSite();
+		}
+
+		BlockPos worldPos = PhysicsWorld.toWorld(level, boxPos);
+		for (Entity npc : new ArrayList<>(NpcRegistry.allLoaded()))
+		{
+			if (npc == null || !npc.isAlive()) continue;
+			if (released.contains(npc.getNpcName())) continue;
+			if (NeoSim.WORKER_MAP.containsValue(npc.getNpcName())) continue;
+
+			BlockPos site = npc.getAssignedSite();
+			if (site == null) continue;
+			if (!site.equals(worldPos) && !site.equals(boxPos)) continue;
+
+			released.add(npc.getNpcName());
+			LOGGER.info("NeoSim-WorkerService: released stale claimant '{}' at {}", npc.getNpcName(), boxPos);
+			npc.releaseFromSite();
+		}
 	}
 }

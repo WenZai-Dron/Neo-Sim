@@ -123,6 +123,12 @@ public class WorkPlotEngine
 		WorkBoxPersistence.removeAt(level, pos);
 	}
 
+	// 岗位表是否已从磁盘恢复：Entity 自愈据此判断“未被雇佣”，避免读档首 tick 误判
+	public static boolean isRestored()
+	{
+		return restoredFromDisk;
+	}
+
 	// 按盒子坐标查找任务（GUI渲染线程读取，需同步）
 	public static PlotTask findTask(BlockPos pos)
 	{

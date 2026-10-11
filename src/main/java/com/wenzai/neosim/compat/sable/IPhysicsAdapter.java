@@ -61,4 +61,10 @@ public interface IPhysicsAdapter
 	default void attachNpc(ServerLevel level, Entity npc, BlockPos localPos)
 	{
 	}
+
+	// 解除 NPC 的结构跟踪（解雇 / 岗位取消时调用，与 attachNpc 配对）
+	// 必须解除：支持“每 tick 把实体钉回结构局部坐标”的模组，会把解雇后的 NPC 永久拴在工作点上
+	default void detachNpc(ServerLevel level, Entity npc)
+	{
+	}
 }

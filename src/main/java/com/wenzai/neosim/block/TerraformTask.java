@@ -179,6 +179,38 @@ public class TerraformTask
 		clearHand();
 	}
 
+	// 解雇工人：清记录里的工人并立即落盘
+	// （记录是读档恢复岗位表的依据，不清的话重启后引擎会把解雇的工人重新雇回来）
+	public void fireWorker()
+	{
+		// 岗位表可能缺条目（岗位表与记录不一致 / 读档竞态）：退回按记录里的工人名解雇，
+		// 否则解雇会静默失败——NPC 依旧带着工作AI走向模盒
+		String name = NeoSim.WORKER_MAP.remove(boxPos());
+		if (name == null || name.isEmpty()) name = record.worker();
+		if (name != null && !name.isEmpty())
+		{
+			releaseNpc(name);
+		}
+
+		record = record.withWorker(null);
+		setState(TerraformState.WAITING_WORKER);
+
+		// 先清手（此时 worker 字段还指着实体），再断开字段
+		clearHand();
+		worker = null;
+		releaseChunks();
+		TerraformPersistence.updateRecord(level, cityName, record);
+		LOGGER.info("NeoSim-TerraformTask: fired worker for terraform box at {}", boxPos());
+	}
+
+	// 解除NPC岗位（全图按名查找：限半径会漏掉离家/远走的工人；已被别的岗位雇走的不动）
+	private void releaseNpc(String name)
+	{
+		if (NeoSim.WORKER_MAP.containsValue(name)) return;
+		Entity npc = Entity.findByNpcName(level, name);
+		if (npc != null) npc.releaseFromSite();
+	}
+
 	// 每 tick 调度
 	public void tick()
 	{

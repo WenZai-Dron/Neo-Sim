@@ -225,6 +225,32 @@ public class SablePhysicsAdapter implements IPhysicsAdapter
 		}
 	}
 
+	// 解除 NPC 的子世界跟踪：清 plotPosition 与 trackingSubLevel
+	// Sable 的 EntityMixin.tick 在 plotPosition != null 时每 tick 把实体 setPos 回甲板上的该局部坐标，
+	// 解雇后不解除的话 NPC 会被永久钉在工作点上（表现为“解雇了还在往工地跑/待在工地”）
+	@Override
+	public void detachNpc(ServerLevel level, Entity npc)
+	{
+		if (npc == null) return;
+		try
+		{
+			if (Ref.stickExtClass != null && Ref.stickExtClass.isInstance(npc)
+					&& Ref.stickSetPlotPosition != null)
+			{
+				Ref.stickSetPlotPosition.invoke(npc, (Object) null);
+			}
+			if (Ref.moveExtClass != null && Ref.moveExtClass.isInstance(npc)
+					&& Ref.moveSetTrackingSubLevel != null)
+			{
+				Ref.moveSetTrackingSubLevel.invoke(npc, (Object) null);
+			}
+		}
+		catch (Throwable t)
+		{
+			fail("detachNpc", t, false);
+		}
+	}
+
 	// 局部坐标 → 世界坐标（供 NPC 生成/导航等需要世界坐标的场景）
 	@Override
 	public BlockPos toWorld(ServerLevel level, BlockPos localPos)

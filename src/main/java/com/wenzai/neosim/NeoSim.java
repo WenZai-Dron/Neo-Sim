@@ -601,6 +601,17 @@ public class NeoSim
 		LOGGER.info("NeoSim: activeCityName reset on server stopping");
 	}
 
+	// 各工作盒引擎是否已把岗位表从磁盘重建完：
+	// 读档首 tick 实体先于引擎 tick（引擎在 ServerTickEvent.Post 里恢复），此时 WORKER_MAP 还是空的，
+	// 不能据此判定“未被雇佣”，否则会把在岗工人全部误释放
+	public static boolean jobTablesRestored()
+	{
+		return com.wenzai.neosim.block.WorkPlotEngine.isRestored()
+				&& com.wenzai.neosim.block.DeliveryEngine.isRestored()
+				&& com.wenzai.neosim.block.TerraformEngine.isRestored()
+				&& com.wenzai.neosim.building.ConstructionEngine.isRestored();
+	}
+
 	// 金额文本：三位分节 + 两位小数（HUD、城市信息页、指令回执共用同一份实现）
 	public static String amount(double value)
 	{

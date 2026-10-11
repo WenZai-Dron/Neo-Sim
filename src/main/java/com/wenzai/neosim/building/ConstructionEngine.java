@@ -118,7 +118,7 @@ public class ConstructionEngine
 		// 建造开始：一次性从建筑所属城市的资金中扣除费用
 		if (com.wenzai.neosim.storage.ModSavedData.get(level).getMode() != 2)
 		{
-			double fee = schematic.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get();
+			double fee = BuildCost.fee(schematic);
 			if (fee > 0)
 			{
 				ConstructionTask.deductCredits(level, building, fee);
@@ -154,6 +154,12 @@ public class ConstructionEngine
 				Math.max(c0.getX(), c1.getX()) + 1.0D,
 				Math.max(c0.getY(), c1.getY()) + 1.0D,
 				Math.max(c0.getZ(), c1.getZ()) + 1.0D);
+	}
+
+	// 岗位表是否已从磁盘恢复：Entity 自愈据此判断“未被雇佣”，避免读档首 tick 误判
+	public static boolean isRestored()
+	{
+		return restoredFromDisk;
 	}
 
 	// 按模盒坐标查找建造任务（GUI渲染线程调用，与服务端tick并发，需同步）
