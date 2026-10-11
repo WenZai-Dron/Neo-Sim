@@ -593,6 +593,8 @@ public class LangEnUs extends LanguageProvider
 		add("config.neosim.creditsPerBlock.tooltip","Credit points deducted per block placed (not in Creative mode)");
 		add("config.neosim.maxPopulation","Max Population");
 		add("config.neosim.maxPopulation.tooltip","Maximum population of the city");
+		add("config.neosim.moddedCreditsPerBlock","Modded Blocks Credits Per Block");
+		add("config.neosim.moddedCreditsPerBlock.tooltip","Credit points deducted per block from other mods (namespaces other than minecraft / neo_sim); 0.02 matches the vanilla rate");
 		add("config.neosim.npcMinAge","NPC Min Age");
 		add("config.neosim.npcMinAge.tooltip","Minimum random age of NPCs");
 		add("config.neosim.npcMaxAge","NPC Max Age");

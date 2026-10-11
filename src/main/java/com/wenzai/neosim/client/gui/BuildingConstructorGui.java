@@ -2,6 +2,7 @@ package com.wenzai.neosim.client.gui;
 
 import com.wenzai.neosim.block.TerraformEngine;
 import com.wenzai.neosim.block.TerraformPlan;
+import com.wenzai.neosim.building.ConstructionEngine;
 import com.wenzai.neosim.client.BuildingNameLocalizer;
 import com.wenzai.neosim.client.ClientDataHolder;
 import com.wenzai.neosim.client.preview.SchematicPreviewManager;
@@ -510,7 +511,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		// 按控制盒坐标查找模盒的建造任务
 		if (activeTask == null)
 		{
-			activeTask = com.wenzai.neosim.building.ConstructionEngine.findTask(constructorPos);
+			activeTask = ConstructionEngine.findTask(constructorPos);
 		}
 
 		// 检查任务是否完成
@@ -779,8 +780,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		// 排序名称
 		Comparator<SchematicData> cmp = switch (sortIndex)
 		{
-			case 1 -> Comparator.comparingDouble(d ->
-					d.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get());
+			case 1 -> Comparator.comparingDouble(ConstructionEngine::buildCost);
 			case 2 -> Comparator.comparing(SchematicData::getAuthor, String.CASE_INSENSITIVE_ORDER);
 			default -> Comparator.comparing(d -> BuildingNameLocalizer.localize(d.getName()),
 					String.CASE_INSENSITIVE_ORDER);
@@ -802,7 +802,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 			String author = data.hasKnownAuthor() ? data.getAuthor()
 					: Component.translatable(P + "unknownAuthor").getString();
 
-			double cost = data.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get();
+			double cost = ConstructionEngine.buildCost(data);
 			Button bpBtn = addButton(idx, btnPosX, btnPosY, colSizeW, 20,
 					Component.literal(BuildingNameLocalizer.localize(data.getName())),
 					b -> onBlueprintPicked(data));
@@ -1143,7 +1143,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 	private void showMissingMaterialsPage()
 	{
 		// 重新查找任务，确保拿到控制箱坐标（扫箱子范围与服务端取料一致）
-		activeTask = com.wenzai.neosim.building.ConstructionEngine.findTask(constructorPos);
+		activeTask = ConstructionEngine.findTask(constructorPos);
 		buildMissingPageButtons();
 		requestMissingScan();
 	}
@@ -1348,7 +1348,7 @@ public class BuildingConstructorGui extends Screen implements HireListPanel.Host
 		int posY = 60;
 
 		// 左上角信息块
-		double cost = data.getTotalSolidBlocks() * com.wenzai.neosim.Config.CREDITS_PER_BLOCK.get();
+		double cost = ConstructionEngine.buildCost(data);
 		gfx.drawString(font, Component.translatable(P + "dimensions", data.getDimensionString()),
 				posX, posY, 0xFFFFFF);
 		posY += 14;

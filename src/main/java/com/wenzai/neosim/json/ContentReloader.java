@@ -33,6 +33,9 @@ public final class ContentReloader
 		com.wenzai.neosim.compat.crops.CropRegistry.reload();
 		com.wenzai.neosim.schematic.MaterialCalculator.invalidateClassification();
 
+		// 建造费用按"是不是模组方块"分价：判定依据刚重载过，报价缓存一并作废
+		com.wenzai.neosim.building.ConstructionEngine.invalidateBuildCost();
+
 		// 界面个人设置（NeoSim/Json/ui/<玩家名>.json）：只有客户端读，专用服务器跳过
 		if (net.neoforged.fml.loading.FMLEnvironment.dist == net.neoforged.api.distmarker.Dist.CLIENT)
 		{

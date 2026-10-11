@@ -29,6 +29,12 @@ public class Config
 				.translation("config.neosim.creditsPerBlock")
 				.defineInRange("creditsPerBlock", 0.02, 0.0, 1.0);
 
+		// 其他模组的方块建造费用（命名空间非 minecraft / neo_sim；默认与原版同价）
+		MODDED_CREDITS_PER_BLOCK = BUILDER
+				.translation("config.neosim.moddedCreditsPerBlock")
+				.comment("Build cost per block from other mods (namespaces other than minecraft / neo_sim)")
+				.defineInRange("moddedCreditsPerBlock", 0.02, 0.0, 1.0);
+
 		MAX_POPULATION = BUILDER
 				.translation("config.neosim.maxPopulation")
 				.defineInRange("maxPopulation", 200, 1, 1024);
@@ -417,6 +423,9 @@ public class Config
 
 	// 建造费用
 	public static final ModConfigSpec.DoubleValue CREDITS_PER_BLOCK;
+
+	// 其他模组的方块建造费用
+	public static final ModConfigSpec.DoubleValue MODDED_CREDITS_PER_BLOCK;
 
 	public static final ModConfigSpec.IntValue MAX_POPULATION;
 

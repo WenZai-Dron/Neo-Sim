@@ -602,6 +602,8 @@ public class LangZhCn extends LanguageProvider
 		add("config.neosim.creditsPerBlock.tooltip","每放置一个方块扣除的信用点");
 		add("config.neosim.maxPopulation","最大人口数");
 		add("config.neosim.maxPopulation.tooltip","城市的最大人口数");
+		add("config.neosim.moddedCreditsPerBlock","模组方块信用点");
+		add("config.neosim.moddedCreditsPerBlock.tooltip","其他模组的方块（命名空间非 minecraft / neo_sim）每放置一个扣除的信用点，默认与原版同价");
 		add("config.neosim.npcMinAge","NPC最小年龄");
 		add("config.neosim.npcMinAge.tooltip","NPC的最小随机年龄");
 		add("config.neosim.npcMaxAge","NPC最大年龄");

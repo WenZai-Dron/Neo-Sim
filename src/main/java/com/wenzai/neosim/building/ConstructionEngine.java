@@ -1,15 +1,20 @@
 package com.wenzai.neosim.building;
 
 import com.mojang.logging.LogUtils;
+import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.ChunkLoaders;
 import com.wenzai.neosim.client.ClientBlockInteractions;
+import com.wenzai.neosim.compat.modded.ModBlockRegistry;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
+import com.wenzai.neosim.schematic.BlockStatePalette;
+import com.wenzai.neosim.schematic.LightweightBlockContainer;
 import com.wenzai.neosim.schematic.PreviewState;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -39,6 +44,9 @@ public class ConstructionEngine
 
 	// 最近创建的任务，供GUI读取（volatile 跨线程可见 + 完工后置空防 GUI 残留引用）
 	public static volatile ConstructionTask lastTask;
+
+	// 蓝图 -> 其他模组方块数：GUI 每帧报价都要用，按蓝图实例缓存；键用弱引用，蓝图重建后旧条目可回收
+	private static final Map<SchematicData, Integer> MODDED_BLOCK_COUNT = new WeakHashMap<>();
 
 	// 从预览状态创建建造任务
 	public static BuildingInstance createBuilding(SchematicData schematic,
@@ -118,7 +126,7 @@ public class ConstructionEngine
 		// 建造开始：一次性从建筑所属城市的资金中扣除费用
 		if (com.wenzai.neosim.storage.ModSavedData.get(level).getMode() != 2)
 		{
-			double fee = BuildCost.fee(schematic);
+			double fee = buildCost(schematic);
 			if (fee > 0)
 			{
 				ConstructionTask.deductCredits(level, building, fee);
@@ -471,5 +479,68 @@ public class ConstructionEngine
 		{
 			LOGGER.error("NeoSim-ConstructionEngine: restore failed", e);
 		}
+	}
+
+	// 整栋建筑的建造费用：原版 / 本模组方块按 [general] creditsPerBlock，
+	// 其他模组的方块（命名空间非 minecraft / neo_sim）按 [general] moddedCreditsPerBlock。
+	// 开工扣款与 GUI 报价必须同源，只此一份实现
+	public static double buildCost(SchematicData data)
+	{
+		int modded = countModdedBlocks(data);
+		int vanilla = Math.max(0, data.getTotalSolidBlocks() - modded);
+		return vanilla * Config.CREDITS_PER_BLOCK.get() + modded * Config.MODDED_CREDITS_PER_BLOCK.get();
+	}
+
+	// 蓝图里"其他模组的方块"数量（不含空气；缺模组的方块在读取时已解析成空气，天然不计入）
+	public static int countModdedBlocks(SchematicData data)
+	{
+		synchronized (MODDED_BLOCK_COUNT)
+		{
+			Integer cached = MODDED_BLOCK_COUNT.get(data);
+			if (cached != null)
+			{
+				return cached;
+			}
+
+			int count = countModded(data);
+			MODDED_BLOCK_COUNT.put(data, count);
+			return count;
+		}
+	}
+
+	// 内容表重载后清空缓存（方块解析结果可能已变）
+	public static void invalidateBuildCost()
+	{
+		synchronized (MODDED_BLOCK_COUNT)
+		{
+			MODDED_BLOCK_COUNT.clear();
+		}
+	}
+
+	// 按 palette 聚合统计模组方块：只在缓存未命中时扫一遍蓝图
+	private static int countModded(SchematicData data)
+	{
+		LightweightBlockContainer container = data.getBlockContainer();
+		BlockStatePalette palette = container.getPalette();
+		int[] usage = container.countPaletteUsage();
+
+		int count = 0;
+		int n = Math.min(palette.size(), usage.length);
+
+		// palette id 0 = 空气，从 1 开始
+		for (int id = 1; id < n; id++)
+		{
+			if (usage[id] == 0)
+			{
+				continue;
+			}
+
+			BlockState state = palette.getBlockState(id);
+			if (state != null && ModBlockRegistry.isModded(state.getBlock()))
+			{
+				count += usage[id];
+			}
+		}
+		return count;
 	}
 }

@@ -885,6 +885,7 @@ public class ConfigPanel
 			ok = AttachedBlockTable.saveExternalRules(attachedEditable,
 					Component.translatable(P + "fileComment.attached").getString());
 			com.wenzai.neosim.schematic.MaterialCalculator.invalidateClassification();
+			com.wenzai.neosim.building.ConstructionEngine.invalidateBuildCost();
 		}
 		if (cropDirty)
 		{
