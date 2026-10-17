@@ -3,8 +3,11 @@ package com.wenzai.neosim.client.preview;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
@@ -40,15 +43,10 @@ import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
 import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.level.storage.WritableLevelData;
-import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.ticks.LevelTickAccess;
-import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.world.entity.EntityType;
 
 import java.util.List;
 import java.util.function.Predicate;
@@ -58,11 +56,11 @@ import javax.annotation.Nullable;
 
 // 预览专用「假世界」：给预览自造的方块实体当 Level 用。
 //
-// 为什么需要它：Create 6 这类模组的方块实体渲染器开头就是
+// 用途：Create 6 这类模组的方块实体渲染器开头就是
 //     if (VisualizationManager.supportsVisualization(be.getLevel())) return;
-// 而 Flywheel 1.0 的判定是「后端开启 且 (level 是 VisualizationLevel 且它自己支持可视化 或 level == Minecraft.level)」。
-// 我们原来把真实客户端世界 setLevel 给预览 BE，正好命中最后一条 → 渲染器直接 return，
-// 齿轮 / 传动轴这些由渲染器画的部分整块消失（外壳是静态模型所以还在）。
+// Flywheel 1.0 的判定是「后端开启 且 (level 是 VisualizationLevel 且它自己支持可视化 或 level == Minecraft.level)」。
+// 把真实客户端世界当 Level 传进去正好命中最后一条，渲染器直接 return，
+// 齿轮 / 传动轴这些由渲染器画的部分整块不画（外壳是静态模型所以还在）。
 //
 // 这个类是 Level 的普通子类：既不实现 Flywheel 的 VisualizationLevel，也不是 Minecraft.level，
 // 于是 supportsVisualization 返回 false，模组渲染器会走「降级绘制」那条路，把几何真正写进缓冲。

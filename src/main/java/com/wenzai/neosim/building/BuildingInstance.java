@@ -3,6 +3,7 @@ package com.wenzai.neosim.building;
 import com.wenzai.neosim.schematic.BlueprintPlacement;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicFrame;
+import com.wenzai.neosim.schematic.SchematicScanOrder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.ChunkPos;
@@ -29,6 +30,11 @@ public class BuildingInstance
 
 	// 落地链缓存（位置 + 朝向的唯一实现，见 BlueprintPlacement）：setter 改动即失效
 	private BlueprintPlacement placement;
+
+	// 建造扫描顺序缓存：按真实落点排序的结果，每栋建筑算一次即可（朝向/旋转/镜像变了才重建）。
+	// 绝不能在每 tick 重算 —— 排序要遍历整层所有格子，大蓝图会直接把服务器线程堵死
+	private SchematicScanOrder scanOrder;
+	private int scanOrderKey = Integer.MIN_VALUE;
 
 	// 建造进度
 	private int buildProgress;
@@ -92,6 +98,34 @@ public class BuildingInstance
 		return placement;
 	}
 
+	// 建造扫描顺序（层 低→高，层内按"离玩家近→远、左→右"）：缓存复用，不要每 tick 重算
+	public SchematicScanOrder scanOrder()
+	{
+		if (schematic == null) return null;
+
+		int key = OrderKey.of(schematic, facing, mirror, rotation);
+		if (scanOrder == null || scanOrderKey != key)
+		{
+			scanOrder = SchematicScanOrder.of(placement(), facing,
+					schematic.getSizeX(), schematic.getSizeZ());
+			scanOrderKey = key;
+		}
+		return scanOrder;
+	}
+
+	// 缓存键：蓝图对象 + 朝向 + 镜像 + 旋转（任一改动都要重建顺序）
+	private static final class OrderKey
+	{
+		private static int of(SchematicData schematic, Direction facing, Mirror mirror, Rotation rotation)
+		{
+			int h = System.identityHashCode(schematic);
+			h = h * 31 + (facing == null ? 0 : facing.ordinal() + 1);
+			h = h * 31 + (mirror == null ? 0 : mirror.ordinal() + 1);
+			h = h * 31 + (rotation == null ? 0 : rotation.ordinal() + 1);
+			return h;
+		}
+	}
+
 	// 蓝图局部坐标同步到世界坐标
 	public BlockPos blueprintToWorld(int bx, int by, int bz)
 	{
@@ -118,6 +152,7 @@ public class BuildingInstance
 	{
 		this.schematic = v;
 		this.placement = null;
+		this.scanOrder = null;
 	}
 
 	public BlockPos getControlBoxPos()
@@ -129,6 +164,7 @@ public class BuildingInstance
 	{
 		this.controlBoxPos = v;
 		this.placement = null;
+		this.scanOrder = null;
 	}
 
 	public Rotation getRotation()
@@ -140,6 +176,7 @@ public class BuildingInstance
 	{
 		this.rotation = v;
 		this.placement = null;
+		this.scanOrder = null;
 	}
 
 	public Mirror getMirror()
@@ -151,6 +188,7 @@ public class BuildingInstance
 	{
 		this.mirror = v;
 		this.placement = null;
+		this.scanOrder = null;
 	}
 
 	public Direction getFacing()
@@ -162,6 +200,7 @@ public class BuildingInstance
 	{
 		this.facing = v;
 		this.placement = null;
+		this.scanOrder = null;
 	}
 
 	public int getBuildProgress()

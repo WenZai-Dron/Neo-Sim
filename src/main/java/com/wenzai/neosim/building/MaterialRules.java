@@ -27,6 +27,11 @@ import javax.annotation.Nullable;
 // 与 compat/modded_blocks.json 的分工：那张表管"排第几轮建造"，这张表管"要不要材料"，互不影响。
 public final class MaterialRules
 {
+	// 工具类：只有静态成员，禁止实例化
+	private MaterialRules()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	public static final String CATEGORY = "building";
@@ -137,17 +142,13 @@ public final class MaterialRules
 
 	private static final List<MaterialRule> RULES = new ArrayList<>();
 
-	// 每块缓存每个模式的结论，元素 null = 本表对该模式没有结论（原版 / 本模组方块且未命中规则）
-	// —— 必须用 Boolean 而不是 boolean："表判定为免费" 与 "表没判定" 是两种不同结果，混成一个 false 会让
-	//    原版方块在普通 / 困难模式下全部免费（曾经踩过这个坑）。重载时整体清空，与 CLASS_CACHE 同步失效
+	// 每块缓存每个模式的结论：null = 本表对该模式没有结论（原版 / 本模组方块且未命中规则）
+	// 用 Boolean 而不是 boolean：「表判定为免费」与「表没判定」是两种结果，混成一个 false 会让
+	// 原版方块在普通 / 困难模式下全部免费；重载时整体清空，与 CLASS_CACHE 同步失效
 	private static volatile Map<Block, Boolean[]> CACHE = new IdentityHashMap<>();
 
 	private static volatile Stats stats = new Stats(0, 0, 0, 0, 0L);
 	private static volatile boolean loaded;
-
-	private MaterialRules()
-	{
-	}
 
 	// ---- 查询 ----
 

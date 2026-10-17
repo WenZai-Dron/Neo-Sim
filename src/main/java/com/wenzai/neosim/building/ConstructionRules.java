@@ -2,26 +2,30 @@ package com.wenzai.neosim.building;
 
 import com.google.gson.JsonObject;
 import com.mojang.logging.LogUtils;
+import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import com.wenzai.neosim.json.JsonContent;
+import com.wenzai.neosim.schematic.MaterialCalculator;
+import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
 import javax.annotation.Nullable;
 
-// 建造顺序表（NeoSim/Json/building/rules.json）：
-// 两轮建造里，"哪些方块算第二轮专属"。每一轮内部的主序列都固定是 Sim-U-Kraft 的顺序 ——
-// 层(低→高) → 深度 → 宽度，逐格推进（容器索引 y*(sizeX*sizeZ) + z*sizeX + x 就是这个次序）。
+// 建造顺序表（NeoSim/Json/building/rules.json）：决定两轮建造里哪些方块算第二轮专属。
 //
-// deferAttachedToSecondPass = true（默认）：依附性方块（门 / 火把 / 梯子 / 灯笼 / 藤蔓…）排第二轮。
-// deferFluidsToSecondPass  = true（默认）：流体（水 / 岩浆 / 含水方块的水面）排第二轮——
-//   第一轮把池底 / 池壁围好，水最后落进容器里，不在建造途中先漫开把后面要放的方块冲掉。
+// 轮次归属：
+//   依附性方块（门 / 火把 / 梯子 / 灯笼 / 藤蔓…）与流体（水 / 岩浆 / 含水方块的水面）默认排第二轮；
+//   其余方块排第一轮。第一轮把池底 / 池壁围好，水最后落进容器，不在建造途中先漫开。
 //
-// 两个都设 false 时第一轮会按主序列把所有方块一路放下去（顺序与 Sim-U-Kraft 完全一致，
-// 代价是依附方块少了"支撑先就位"的保障、水会先漫开）。
-//
-// 无论怎么配，第一轮放不下去的方块（没支撑 / canSurvive 不过 / 材料不够）都会跳过，
-// 由第二轮重试 —— 第二轮逻辑不随本表改变。
+// 每轮内部的推进顺序与归属无关，固定按 SchematicScanOrder：层 低→高，
+// 层内从离玩家最近的一排开始、一排排往面向方向推，每排从左往右。
+// 第一轮放不下去的方块（没支撑 / canSurvive 不过 / 材料不够）跳过，由第二轮重试。
 public final class ConstructionRules
 {
+	// 工具类：只有静态成员，禁止实例化
+	private ConstructionRules()
+	{
+	}
+
 	private static final Logger LOGGER = LogUtils.getLogger();
 
 	public static final String CATEGORY = "building";
@@ -30,10 +34,6 @@ public final class ConstructionRules
 	private static volatile boolean deferAttached = true;
 	private static volatile boolean deferFluids = true;
 	private static volatile boolean loaded;
-
-	private ConstructionRules()
-	{
-	}
 
 	public static void ensureLoaded()
 	{
@@ -55,12 +55,10 @@ public final class ConstructionRules
 	}
 
 	// 该方块是否属于第二轮专属（第一轮跳过、第二轮才收）：依附性方块与流体各看各的开关
-	public static boolean deferredToSecondPass(net.minecraft.world.level.block.state.BlockState state)
+	public static boolean deferredToSecondPass(BlockState state)
 	{
-		if (deferFluidsToSecondPass()
-				&& com.wenzai.neosim.compat.attached.AttachedBlockTable.isFluid(state)) return true;
-		return deferAttachedToSecondPass()
-				&& com.wenzai.neosim.schematic.MaterialCalculator.isAttachedBlock(state);
+		if (deferFluidsToSecondPass() && AttachedBlockTable.isFluid(state)) return true;
+		return deferAttachedToSecondPass() && MaterialCalculator.isAttachedBlock(state);
 	}
 
 	public static boolean isLoaded()
@@ -124,7 +122,7 @@ public final class ConstructionRules
 		state.addProperty("file", "NeoSim/Json/" + CATEGORY + "/" + FILE_NAME);
 		state.addProperty("deferAttachedToSecondPass", deferAttached);
 		state.addProperty("deferFluidsToSecondPass", deferFluids);
-		state.addProperty("order", "layer(low->high) -> depth -> width");
+		state.addProperty("order", "layer low->high; near->far toward facing; left->right");
 		state.addProperty("loadedAtMillis", System.currentTimeMillis());
 		JsonContent.writeState(state, "building-rules");
 	}

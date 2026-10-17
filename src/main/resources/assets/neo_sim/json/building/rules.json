@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_comment": "建造顺序表（建造分类）：决定两轮建造里哪些方块算第二轮专属。每一轮内部的主序列固定为 Sim-U-Kraft 的顺序：层(低→高) → 深度 → 宽度，逐格推进。deferAttachedToSecondPass = true（默认）时依附性方块（门 / 火把 / 梯子 / 灯笼 / 藤蔓…）排第二轮；deferFluidsToSecondPass = true（默认）时流体（水 / 岩浆 / 含水方块的水面）排第二轮——第一轮先把池底池壁围好，水最后落进容器，不在建造途中先漫开。两个都设 false 则第一轮按主序列一路放完（顺序与 Sim-U-Kraft 完全一致，代价是依附方块少了支撑先就位的保障、水会先漫开）。无论怎么配，第一轮放不下去的方块（没支撑 / canSurvive 不过 / 材料不够）都会跳过并由第二轮重试，第二轮逻辑不随本表改变。外部文件 NeoSim/Json/building/rules.json 覆盖本内置文件，加载摘要写在 _state/loaded-building-rules.json。",
+  "_comment": "建造顺序表（建造分类）：决定两轮建造里哪些方块算第二轮专属。deferAttachedToSecondPass = true（默认）时依附性方块（门 / 火把 / 梯子 / 灯笼 / 藤蔓…）排第二轮；deferFluidsToSecondPass = true（默认）时流体（水 / 岩浆 / 含水方块的水面）排第二轮——第一轮先把池底池壁围好，水最后落进容器，不在建造途中先漫开。两个都设 false 则第一轮按顺序一路放完。每轮内部的推进顺序与归属无关，固定为：层 低→高，层内从离玩家最近的一排开始、一排排朝玩家面向推进，每排从左往右（见 SchematicScanOrder）。第一轮放不下去的方块（没支撑 / canSurvive 不过 / 材料不够）跳过，由第二轮重试。外部文件 NeoSim/Json/building/rules.json 覆盖本内置文件，加载摘要写在 _state/loaded-building-rules.json。",
   "deferAttachedToSecondPass": true,
   "deferFluidsToSecondPass": true
 }

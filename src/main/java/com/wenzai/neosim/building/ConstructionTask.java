@@ -93,8 +93,6 @@ public class ConstructionTask
 	// 最近一次已通知的缺料
 	private Item lastNotifiedMissingItem;
 
-	// 诊断：本次建造的朝向下、扫描顺序明细只打一次（便于对照"到底哪一步在转"）
-	private boolean scanLogged;
 
 	// 当前缺料
 	private Item lastMissingMaterial;
@@ -383,12 +381,10 @@ public class ConstructionTask
 		// 放置后触发完整方块更新（邻居更新/形状传播/onPlace），保证模组方块（机械连接、红石等）正确联动
 		int placeFlags = Block.UPDATE_ALL;
 
-		// 扫描顺序：resumeIndex 的解码方式（哪条轴铺一排、哪条轴一排排推进）由建筑朝向决定，
-		// 保证"不管玩家按 R 转了几次，都是一排排朝面向方向推进"（见 SchematicScanOrder）
-		SchematicScanOrder scan = SchematicScanOrder.of(
-				building.placement(), sx, container.getSizeY(), sz);
+		// 扫描顺序：按"真实落点坐标"排序（离玩家近的排先建、每排从左往右）。
+		// 取建筑上的缓存实例 —— 绝不在这里重算：排序要遍历整层，每 tick 重算会堵死服务器线程
+		SchematicScanOrder scan = building.scanOrder();
 		BlockPos.MutableBlockPos scanPos = new BlockPos.MutableBlockPos();
-		logScanOrderOnce(scan, sx, container.getSizeY(), sz, scanPos);
 
 		// C6b/C7：跳过循环每 tick 上限——大段空气/标记区不得单 tick 连续扫描数万格
 		int scanned = 0;
@@ -427,8 +423,7 @@ public class ConstructionTask
 			}
 
 			// 两轮：第一轮只放实心方块，第二轮放依附性方块（门 / 火把 / 梯子 / 灯笼…）与流体（水 / 岩浆）。
-			// 每一轮内部都按 Sim-U-Kraft 的顺序推进：层(低→高) → 深度 → 宽度，逐格不跳档
-			// （容器索引 y*(sizeX*sizeZ) + z*sizeX + x 就是这个次序，resumeIndex 单调递增，回卷只发生在整轮扫完之后）。
+			// 每轮内部按 SchematicScanOrder 推进：层 低→高，层内离玩家最近的一排先建、一排排朝面向推。
 			// 流体排第二轮是为了让池底 / 池壁先围好，水最后落进容器里，不在建造过程中先漫开。
 			// 哪些方块算"第二轮专属"由 ConstructionRules（building/rules.json）决定
 			if (ConstructionRules.deferredToSecondPass(desired) != phaseTwo)
@@ -670,31 +665,6 @@ public class ConstructionTask
 			LOGGER.info("NeoSim-ConstructionTask: Complete {} (Lv.{}, builder auto-resigned)",
 					building.getSchematicName(), (int) builderLevel);
 		}
-	}
-
-	// 诊断：一次建造只打一遍——朝向/旋转/镜像 + 蓝图各轴在世界里的走向 + 前 20 格的落点顺序。
-	// 拿来判断"建造顺序/方向不对"到底出在哪一步（蓝图朝向、玩家旋转、扫描顺序）
-	private void logScanOrderOnce(SchematicScanOrder scan, int sx, int sy, int sz,
-								  BlockPos.MutableBlockPos scanPos)
-	{
-		if (scanLogged) return;
-		scanLogged = true;
-
-		StringBuilder order = new StringBuilder();
-		int shown = Math.min(20, sx * sy * sz);
-		for (int i = 0; i < shown; i++)
-		{
-			scan.pos(i, scanPos);
-			BlockPos w = building.blueprintToWorld(scanPos.getX(), scanPos.getY(), scanPos.getZ());
-			order.append('(').append(scanPos.getX()).append(',').append(scanPos.getY()).append(',')
-					.append(scanPos.getZ()).append(")→").append(w.getX()).append(',').append(w.getZ())
-					.append("  ");
-		}
-
-		LOGGER.info("NeoSim-ConstructionTask: scan order — size={}x{}x{} facing={} rotation={} mirror={} "
-						+ "boxes={} | first {} cells (blueprint→world x,z): {}",
-				sx, sy, sz, building.getFacing(), building.getRotation(), building.getMirror(),
-				building.getControlBoxPos(), shown, order);
 	}
 
 	// 特殊标记
@@ -1012,8 +982,9 @@ public class ConstructionTask
 		LightweightBlockContainer container = schematic.getBlockContainer();
 		int sx = container.getSizeX();
 		int sz = container.getSizeZ();
-		SchematicScanOrder scan = SchematicScanOrder.of(
-				building.placement(), sx, container.getSizeY(), sz);
+		// 用建筑上的缓存顺序（同 tick 内不重算，见 BuildingInstance.scanOrder）
+		SchematicScanOrder scan = building.scanOrder();
+		if (scan == null) return null;
 		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 		Item result = null;
 		for (int i = resumeIndex; i < container.getTotalVolume(); i++)
@@ -1102,8 +1073,8 @@ public class ConstructionTask
 			LightweightBlockContainer container = schematic.getBlockContainer();
 			int sx = container.getSizeX();
 			int sz = container.getSizeZ();
-			SchematicScanOrder scan = SchematicScanOrder.of(
-					building.placement(), sx, container.getSizeY(), sz);
+			// 用建筑上的缓存顺序（不重算）
+			SchematicScanOrder scan = building.scanOrder();
 			BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 			for (int i = resumeIndex; i < container.getTotalVolume(); i++)
 			{
