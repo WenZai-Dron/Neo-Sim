@@ -161,6 +161,13 @@ public class GhostBlockRenderer
 		// 落地帧在世界里的最小角：BE 的顶点存的是相对 origin 的局部坐标，渲染时要用帧原点换算
 		private BlockPos frameMin = BlockPos.ZERO;
 
+		// 诊断：每个 RenderType 只打一行 BE 几何统计，重建时清空
+		private final java.util.Set<String> beBeQuadLog = new java.util.LinkedHashSet<>();
+
+		// 预览假世界：给 BE 当 Level 用，让「支持 Flywheel 实例化」的模组渲染器别把活儿甩给实例化后端（见 PreviewLevel 类注释）
+		@Nullable
+		private PreviewLevel previewLevel;
+
 		@Nullable
 		private Level lastLevel;
 
@@ -213,6 +220,10 @@ public class GhostBlockRenderer
 			BlueprintLevelView view = new BlueprintLevelView(blocks, min, level);
 			view.setBlockEntities(blockEntities);
 			view.setOutsideIsAir(true);
+
+			// BE 的 Level 用预览假世界（不是真实客户端世界）：否则支持 Flywheel 实例化的模组渲染器会直接 return，
+			// 只画得出静态外壳（齿轮 / 传动轴这类渲染器几何整块消失）
+			previewLevel = new PreviewLevel(level, view);
 
 			// 蓝图里的方块实体数据：键是容器局部坐标，先按落地链换算成帧内坐标
 			// （与下面的特殊标记同一套换算；.litematic 走世界帧，局部坐标和帧内坐标差着旋转/镜像/平移）
@@ -273,7 +284,8 @@ public class GhostBlockRenderer
 						// 方块实体：先造出来，BE 渲染与 ModelData 都靠它
 						if (level != null && blockState.hasBlockEntity())
 						{
-							BlockEntity be = createBlockEntity(blockState, pos, level);
+							BlockEntity be = createBlockEntity(blockState, pos, level,
+								previewLevel != null ? previewLevel : level);
 							if (be != null)
 							{
 								loadBlockEntityData(be, framedTileEntities, pos, min, level);
@@ -498,7 +510,17 @@ public class GhostBlockRenderer
 				ps.translate(local.getX() + frameMin.getX() - origin.getX(),
 						local.getY() + frameMin.getY() - origin.getY(),
 						local.getZ() + frameMin.getZ() - origin.getZ());
-				renderer.render(be, partialTick, ps, capture, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+				// 模组渲染器在"没有真实世界"的预览里可能拿不到它要的东西而抛异常：
+				// 单格失败只该让这一格少画点东西，不该把渲染线程整个砸掉（预览假世界见 PreviewLevel）
+				try
+				{
+					renderer.render(be, partialTick, ps, capture, LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+				}
+				catch (Throwable t)
+				{
+					LOGGER.warn("NeoSim-GhostBlockRenderer: block entity renderer {} failed at {} — {}",
+							be.getClass().getName(), local, t.toString());
+				}
 				ps.popPose();
 			}
 
@@ -510,6 +532,14 @@ public class GhostBlockRenderer
 				if (mesh == null) continue;
 
 				RenderType renderType = entry.getKey();
+
+				// 诊断：方块实体渲染器到底写了多少几何（0 = 渲染器在预览环境里空转，方块因此看不见）
+				int beQuads = mesh.drawState().vertexCount() / 4;
+				if (beBeQuadLog.add(renderType.toString()))
+				{
+					LOGGER.info("NeoSim-GhostBlockRenderer: BE layer {} wrote {} quad(s) at frame {}",
+							renderType, beQuads, frameMin);
+				}
 				VertexBuffer buffer = blockEntityBuffers.get(renderType);
 				if (buffer == null)
 				{
@@ -647,6 +677,10 @@ public class GhostBlockRenderer
 			}
 			blockEntityBuffers.clear();
 
+			// 假世界不属于任何真实世界，跟着缓存一起丢
+			previewLevel = null;
+			beBeQuadLog.clear();
+
 			lastSchematic = null;
 			lastLevel = null;
 		}
@@ -667,8 +701,9 @@ public class GhostBlockRenderer
 		}
 
 		// 造一个预览用的方块实体：位置与状态就是帧内那一格（BER 读到的就是蓝图里的朝向）
+		// beLevel 是给 BE 用的 Level：优先传预览假世界 PreviewLevel（见其类注释），缺失时传真实世界兜底
 		@Nullable
-		private static BlockEntity createBlockEntity(BlockState state, BlockPos pos, Level level)
+		private static BlockEntity createBlockEntity(BlockState state, BlockPos pos, Level level, @Nullable Level beLevel)
 		{
 			if (!(state.getBlock() instanceof EntityBlock entityBlock)) return null;
 
@@ -685,10 +720,10 @@ public class GhostBlockRenderer
 			}
 			if (be == null) return null;
 
-			// setLevel 要的是 Level：预览没有自己的虚拟 Level，先用真实世界顶上。
-			// BER 读自身字段/NBT、getLevel().getGameTime() 都没问题；
-			// 少数按 getLevel().getBlockState(自 pos) 读世界的模组机器会取到真实世界的错误位置（已知取舍）
-			be.setLevel(level);
+			// setLevel 要的是 Level：装预览假世界（PreviewLevel）—— 它既不是 Minecraft.level、也不实现 Flywheel
+			// 的 VisualizationLevel，模组渲染器的"支持实例化"判定因此为 false，会走降级绘制把几何真正写出来；
+			// 方块查询由假世界转到蓝图视图。没有假世界时退回真实世界：至少静态模型还能显示
+			be.setLevel(beLevel);
 			return be;
 		}
 

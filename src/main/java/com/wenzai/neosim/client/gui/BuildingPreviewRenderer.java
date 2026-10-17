@@ -15,6 +15,7 @@ import com.mojang.math.Axis;
 import com.wenzai.neosim.client.preview.BlueprintLevelView;
 import com.wenzai.neosim.client.preview.OffsetVertexConsumer;
 import com.wenzai.neosim.client.preview.PreviewFrame;
+import com.wenzai.neosim.client.preview.PreviewLevel;
 import com.wenzai.neosim.schematic.LightweightBlockContainer;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicFrame;
@@ -256,6 +257,10 @@ public final class BuildingPreviewRenderer
 		Map<BlockPos, BlockEntity> blockEntities = new LinkedHashMap<>();
 		levelView.setBlockEntities(blockEntities);
 
+		// BE 的 Level 用预览假世界：否则支持 Flywheel 实例化的模组渲染器会直接 return，
+		// 缩略图里只剩静态外壳（齿轮 / 传动轴这类渲染器几何整块消失）
+		Level beLevel = level != null ? new PreviewLevel(level, levelView) : null;
+
 		float cx = entry.dimX / 2.0F;
 		float cy = entry.dimY / 2.0F;
 		float cz = entry.dimZ / 2.0F;
@@ -312,7 +317,7 @@ public final class BuildingPreviewRenderer
 					// 方块实体：先造出来，BE 烘焙与 ModelData 都靠它
 					if (level != null && state.hasBlockEntity())
 					{
-						BlockEntity be = createBlockEntity(state, pos, level);
+						BlockEntity be = createBlockEntity(state, pos, level, beLevel);
 						if (be != null)
 						{
 							loadBlockEntityData(be, framedTileEntities.get(pos), level);
@@ -399,8 +404,17 @@ public final class BuildingPreviewRenderer
 				BlockPos pos = e.getKey();
 				ps.pushPose();
 				ps.translate(pos.getX() - cx, pos.getY() - cy, pos.getZ() - cz);
-				renderer.render(e.getValue(), 0.0F, ps, capture,
-						LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+				// 模组渲染器在预览假世界下可能抛异常：单格失败只丢这一格，别砸穿整个缩略图构建
+				try
+				{
+					renderer.render(e.getValue(), 0.0F, ps, capture,
+							LightTexture.FULL_BRIGHT, OverlayTexture.NO_OVERLAY);
+				}
+				catch (Throwable t)
+				{
+					LOGGER.warn("NeoSim-BuildingPreviewRenderer: block entity renderer {} failed at {} — {}",
+							e.getValue().getClass().getName(), pos, t.toString());
+				}
 				ps.popPose();
 			}
 
@@ -476,8 +490,9 @@ public final class BuildingPreviewRenderer
 	}
 
 	// 造一个缩略图用的方块实体：位置与状态就是帧内那一格
+	// beLevel 是给 BE 用的 Level：优先传预览假世界 PreviewLevel（见其类注释），没有真实世界时为 null
 	@Nullable
-	private static BlockEntity createBlockEntity(BlockState state, BlockPos pos, Level level)
+	private static BlockEntity createBlockEntity(BlockState state, BlockPos pos, Level level, @Nullable Level beLevel)
 	{
 		if (!(state.getBlock() instanceof EntityBlock entityBlock)) return null;
 
@@ -492,8 +507,10 @@ public final class BuildingPreviewRenderer
 		}
 		if (be == null) return null;
 
-		// setLevel 要的是 Level：缩略图没有虚拟世界，用真实世界顶上（BER 基本只读自身字段/NBT）
-		be.setLevel(level);
+		// setLevel 要的是 Level：装预览假世界（PreviewLevel）—— 它既不是 Minecraft.level、也不实现 Flywheel
+		// 的 VisualizationLevel，模组渲染器的"支持实例化"判定因此为 false，会走降级绘制把几何真正写出来。
+		// 没有真实世界（beLevel 为 null）时退回：BER 只读自身字段/NBT 也能画
+		be.setLevel(beLevel != null ? beLevel : level);
 		return be;
 	}
 

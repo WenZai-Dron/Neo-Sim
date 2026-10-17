@@ -90,10 +90,19 @@ public class ConfigPanel
 	private static final String[] CATEGORY_KEYS =
 			{ "category.compat", "category.building", "category.work", "category.mapping", "category.ui" };
 
-	// 各分类计划中的文件（未开放分类的占位提示）
+	// 各分类已可管理的文件（1 个文件 = 1 张内容表）
 	private static final String[][] CATEGORY_FILES = {
 			{ "attached_blocks.json", "crops.json", "modded_blocks.json" },
 			{ "materials.json", "rules.json" },
+			{ "mine_filter.json", "farm_crops.json" },
+			{ "block_id_mapping.json" },
+			{ "个人设置：<玩家名>.json" },
+	};
+
+	// 未开放分类的"计划中文件"占位提示（建造分类的 materials.json / rules.json 已落地）
+	private static final String[][] CATEGORY_PLAN = {
+			{ "attached_blocks.json", "crops.json", "modded_blocks.json" },
+			{ "rules.json" },
 			{ "mine_filter.json", "farm_crops.json" },
 			{ "block_id_mapping.json" },
 			{ "个人设置：<玩家名>.json" },
@@ -483,7 +492,7 @@ public class ConfigPanel
 			gfx.drawCenteredString(font, Component.translatable(P + "category.notOpen").getString(),
 					screenWidth / 2, STATUS_Y, 0xFFAA00);
 			gfx.drawCenteredString(font, Component.translatable(P + "category.plan",
-							String.join(" · ", CATEGORY_FILES[selectedCategory])).getString(),
+							String.join(" · ", CATEGORY_PLAN[selectedCategory])).getString(),
 					screenWidth / 2, STATUS_Y + 20, 0xAAAAAA);
 			return false;
 		}

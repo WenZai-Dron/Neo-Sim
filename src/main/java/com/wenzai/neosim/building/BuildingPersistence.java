@@ -13,11 +13,13 @@ import net.minecraft.world.level.block.Rotation;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 public class BuildingPersistence
 {
@@ -28,6 +30,8 @@ public class BuildingPersistence
 
 	private static final Logger LOGGER = LogUtils.getLogger();
 
+	private static final String FILE_NAME = "BuildingConstructor.json";
+
 	// 新格式：player.json 同目录下的 BuildingConstructor.json（按城市）
 	private static Path getCityPath(ServerLevel level, String cityName)
 	{
@@ -35,11 +39,11 @@ public class BuildingPersistence
 		if (dedicated)
 		{
 			return FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data")
-					.resolve(cityName).resolve("BuildingConstructor.json");
+					.resolve(cityName).resolve(FILE_NAME);
 		}
 		String saveName = level.getServer().getWorldData().getLevelName();
 		return FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data")
-				.resolve(saveName).resolve(cityName).resolve("BuildingConstructor.json");
+				.resolve(saveName).resolve(cityName).resolve(FILE_NAME);
 	}
 
 	// 按城市保存使用中的模盒状态
@@ -52,6 +56,42 @@ public class BuildingPersistence
 	public static List<BuildingInstance> loadFromCity(ServerLevel level, String cityName)
 	{
 		return readBuildings(getCityPath(level, cityName));
+	}
+
+	// 删除某栋建筑的记录并立即落盘（列表清空也照样写回：留记录等于给读档留一个必然被恢复的任务）
+	// 完工/取消后必须调它，否则引擎读档时会把已解雇的工人重新雇回来接着盖
+	public static boolean removeAt(ServerLevel level, BuildingInstance building)
+	{
+		if (building == null) return false;
+
+		String city = building.getCachedCity(level);
+		if (city != null && !city.isEmpty())
+		{
+			return removeFromFile(getCityPath(level, city), building);
+		}
+
+		// 放置者已不在任何城市（退城/换档）：退回扫描全部城市目录
+		Path dataDir = FMLPaths.GAMEDIR.get().resolve("NeoSim").resolve("data");
+		if (!level.getServer().isDedicatedServer())
+		{
+			dataDir = dataDir.resolve(level.getServer().getWorldData().getLevelName());
+		}
+		if (!Files.isDirectory(dataDir)) return false;
+
+		try (Stream<Path> dirs = Files.list(dataDir))
+		{
+			for (Path dir : dirs.filter(Files::isDirectory).toList())
+			{
+				Path file = dir.resolve(FILE_NAME);
+				if (!Files.exists(file)) continue;
+				if (removeFromFile(file, building)) return true;
+			}
+		}
+		catch (IOException e)
+		{
+			LOGGER.error("NeoSim-BuildingPersistence: removeAt failed", e);
+		}
+		return false;
 	}
 
 	private static void writeBuildings(Path file, List<BuildingInstance> buildings)
@@ -89,6 +129,34 @@ public class BuildingPersistence
 		}
 		LOGGER.info("NeoSim-BuildingPersistence: loaded {} buildings from {}", buildings.size(), file);
 		return buildings;
+	}
+
+	// 从单个城市文件里删掉这条记录；没命中返回 false（不做无意义的整文件重写）
+	private static boolean removeFromFile(Path file, BuildingInstance building)
+	{
+		List<BuildingInstance> buildings = readBuildings(file);
+		if (!buildings.removeIf(b -> sameRecord(b, building))) return false;
+
+		writeBuildings(file, buildings);
+
+		// 坐标优先模盒；记录缺模盒坐标时用控制箱
+		BlockPos at = building.getConstructorPos() != null
+				? building.getConstructorPos() : building.getControlBoxPos();
+		LOGGER.info("NeoSim-BuildingPersistence: removed building record {} ({} left in {})",
+				at, buildings.size(), file);
+		return true;
+	}
+
+	// 同一条记录：模盒坐标优先，记录缺模盒坐标时退回控制箱坐标
+	private static boolean sameRecord(BuildingInstance a, BuildingInstance b)
+	{
+		BlockPos aCon = a.getConstructorPos();
+		BlockPos bCon = b.getConstructorPos();
+		if (aCon != null && bCon != null) return aCon.equals(bCon);
+
+		BlockPos aBox = a.getControlBoxPos();
+		BlockPos bBox = b.getControlBoxPos();
+		return aBox != null && bBox != null && aBox.equals(bBox);
 	}
 
 	private static JsonObject buildingToJson(BuildingInstance b)

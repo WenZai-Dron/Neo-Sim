@@ -101,8 +101,18 @@ public final class BlockMatcher
 		}
 		else if (namespace != null)
 		{
-			kind = Kind.NAMESPACE;
-			value = namespace;
+			// 命名空间也支持通配：写 "*" 或 "create*" 时按 id 通配匹配（"*" 即"全部方块"）
+			if (namespace.indexOf('*') >= 0 || namespace.indexOf('?') >= 0)
+			{
+				kind = Kind.ID;
+				value = namespace.toLowerCase(java.util.Locale.ROOT).contains(":")
+						? namespace : namespace + ":*";
+			}
+			else
+			{
+				kind = Kind.NAMESPACE;
+				value = namespace;
+			}
 		}
 		else if (tagRaw != null)
 		{

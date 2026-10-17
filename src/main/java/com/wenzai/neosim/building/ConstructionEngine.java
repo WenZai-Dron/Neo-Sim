@@ -304,6 +304,13 @@ public class ConstructionEngine
 
 				// 完工清理：解雇工人、恢复NPC的AI、清空模盒任务
 				BuildingInstance finished = task.getBuilding();
+
+				// 完工记录立即从磁盘删掉（列表清空也写回）：
+				// 留着旧记录，读档时 maybeRestoreTasks 会把它当成未完工的任务恢复，
+				// 于是刚自动解雇的工人被重新雇佣、重新盖一遍
+				finished.setWorkerName(null);
+				BuildingPersistence.removeAt(level, finished);
+
 				BlockPos conPos = finished.getConstructorPos();
 				if (conPos != null)
 				{
@@ -402,6 +409,22 @@ public class ConstructionEngine
 		}
 	}
 
+	// 释放记录里记的工人：全图按名查找（限半径会漏掉离家/远走的工人）；
+	// 已被别的岗位雇走的一律不动（解雇只针对本岗位）
+	private static void releaseRecordedWorker(ServerLevel level, BuildingInstance building)
+	{
+		String worker = building.getWorkerName();
+		if (worker == null || worker.isEmpty()) return;
+		if (NeoSim.WORKER_MAP.containsValue(worker)) return;
+
+		com.wenzai.neosim.npc.Entity npc = com.wenzai.neosim.npc.Entity.findByNpcName(level, worker);
+		if (npc != null)
+		{
+			npc.releaseFromSite();
+			npc.setBuildAnim(0.0F);
+		}
+	}
+
 	// 蓝图注册表加载完成后，从磁盘恢复各城市的模盒任务
 	private static boolean restoredFromDisk;
 
@@ -432,25 +455,25 @@ public class ConstructionEngine
 						continue;
 					}
 
+					// 记录已标记完工/中止：这栋楼不该再有任务 ——
+					// 恢复它等于把自动解雇的工人重新雇回来接着盖，直接删记录并释放
+					if (building.isBuildingComplete()
+							|| building.getState() == BuildingInstance.BuildState.COMPLETE)
+					{
+						LOGGER.warn("NeoSim-ConstructionEngine: drop finished record '{}' at {}",
+								building.getSchematicName(), building.getControlBoxPos());
+						releaseRecordedWorker(level, building);
+						BuildingPersistence.removeAt(level, building);
+						continue;
+					}
+
 					if (building.getConstructorPos() != null
 							&& !(PhysicsWorld.getBlockState(level, building.getConstructorPos()).getBlock()
 									instanceof com.wenzai.neosim.block.BuildingConstructor))
 					{
 						LOGGER.warn("NeoSim-ConstructionEngine: skip restore '{}' — constructor box gone at {}",
 								building.getSchematicName(), building.getConstructorPos());
-
-						// 释放对应NPC（全图按名查找，防漏）
-						String worker = building.getWorkerName();
-						if (worker != null && !worker.isEmpty())
-						{
-							com.wenzai.neosim.npc.Entity npc =
-									com.wenzai.neosim.npc.Entity.findByNpcName(level, worker);
-							if (npc != null)
-							{
-								npc.releaseFromSite();
-								npc.setBuildAnim(0.0F);
-							}
-						}
+						releaseRecordedWorker(level, building);
 						continue;
 					}
 

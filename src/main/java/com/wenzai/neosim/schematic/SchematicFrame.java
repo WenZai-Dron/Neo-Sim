@@ -24,8 +24,11 @@ public enum SchematicFrame
 	// 所以世界帧本身推不出固定朝向：这里按玩家的面朝方向把蓝图转过去（跟 .txt 一样"跟着人转"），
 	// 基准角 = 朝南放置时相对"保存时的朝向"把蓝图转几次：
 	// NONE=不转、CLOCKWISE_90=转 1 次、CLOCKWISE_180=转 2 次、COUNTERCLOCKWISE_90=转 3 次
-	// 现在选「转 3 次」（270°）。注意：转 1 次时落点才会和同名 .txt 完全重合；
-	// 转 2/3 次会把投影甩到 origin 的另一侧（和 .txt 不重叠，可能把模盒圈进地基）
+	//
+	// 现在选「转 3 次」（270°，COUNTERCLOCKWISE_90）：投影在放置时会**自动转三次**，不需要玩家自己按 R。
+	// 幽灵预览、GUI 缩略图、实际建造三处共用这一个值（SchematicFrame.toWorld / toWorldState），
+	// 所以预览里看到的朝向就是建出来的朝向。
+	// 玩家再按 R 是在这个基准之上继续叠加，不会把这个自动旋转顶掉。
 	private static final Rotation LITEMATIC_BASE = Rotation.COUNTERCLOCKWISE_90;
 
 	// 是否跟随玩家面朝方向：真 = 南按基准角、东=基准+90°、西=基准-90°、北=基准+180°

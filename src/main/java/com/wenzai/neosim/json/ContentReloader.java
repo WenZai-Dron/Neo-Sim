@@ -31,6 +31,12 @@ public final class ContentReloader
 		com.wenzai.neosim.compat.modded.ModBlockRegistry.reload();
 		com.wenzai.neosim.compat.attached.AttachedBlockTable.reload();
 		com.wenzai.neosim.compat.crops.CropRegistry.reload();
+
+		// 材料消耗表要在 ModBlockRegistry 之后加载：它的兜底判定要问"这个方块是不是模组的"
+		com.wenzai.neosim.building.MaterialRules.reload();
+
+		// 建造顺序表：依赖 AttachedBlockTable 的流体判定（isFluid），排在它后面
+		com.wenzai.neosim.building.ConstructionRules.reload();
 		com.wenzai.neosim.schematic.MaterialCalculator.invalidateClassification();
 
 		// 建造费用按"是不是模组方块"分价：判定依据刚重载过，报价缓存一并作废

@@ -93,6 +93,9 @@ public class ConstructionTask
 	// 最近一次已通知的缺料
 	private Item lastNotifiedMissingItem;
 
+	// 诊断：本次建造的朝向下、扫描顺序明细只打一次（便于对照"到底哪一步在转"）
+	private boolean scanLogged;
+
 	// 当前缺料
 	private Item lastMissingMaterial;
 
@@ -380,6 +383,13 @@ public class ConstructionTask
 		// 放置后触发完整方块更新（邻居更新/形状传播/onPlace），保证模组方块（机械连接、红石等）正确联动
 		int placeFlags = Block.UPDATE_ALL;
 
+		// 扫描顺序：resumeIndex 的解码方式（哪条轴铺一排、哪条轴一排排推进）由建筑朝向决定，
+		// 保证"不管玩家按 R 转了几次，都是一排排朝面向方向推进"（见 SchematicScanOrder）
+		SchematicScanOrder scan = SchematicScanOrder.of(
+				building.placement(), sx, container.getSizeY(), sz);
+		BlockPos.MutableBlockPos scanPos = new BlockPos.MutableBlockPos();
+		logScanOrderOnce(scan, sx, container.getSizeY(), sz, scanPos);
+
 		// C6b/C7：跳过循环每 tick 上限——大段空气/标记区不得单 tick 连续扫描数万格
 		int scanned = 0;
 		while (resumeIndex < totalVolume)
@@ -388,9 +398,11 @@ public class ConstructionTask
 			{
 				return;
 			}
-			int layer = resumeIndex / (sx * sz);
-			int depth = (resumeIndex / sx) % sz;
-			int width = resumeIndex % sx;
+			// 蓝图局部坐标：层 低→高，每排沿玩家面向推进，排内横穿视野
+			scan.pos(resumeIndex, scanPos);
+			int width = scanPos.getX();
+			int layer = scanPos.getY();
+			int depth = scanPos.getZ();
 
 			BlockState desired = container.get(width, layer, depth);
 
@@ -414,9 +426,12 @@ public class ConstructionTask
 				continue;
 			}
 
-			// 两轮：第一轮只放实心方块；第二轮放依附性方块与流体（水 / 岩浆）。
-			// 流体排在第二轮是为了让池底 / 池壁先围好，水最后落进容器里，不在建造过程中先漫开。
-			if (MaterialCalculator.isAttachedBlock(desired) != phaseTwo)
+			// 两轮：第一轮只放实心方块，第二轮放依附性方块（门 / 火把 / 梯子 / 灯笼…）与流体（水 / 岩浆）。
+			// 每一轮内部都按 Sim-U-Kraft 的顺序推进：层(低→高) → 深度 → 宽度，逐格不跳档
+			// （容器索引 y*(sizeX*sizeZ) + z*sizeX + x 就是这个次序，resumeIndex 单调递增，回卷只发生在整轮扫完之后）。
+			// 流体排第二轮是为了让池底 / 池壁先围好，水最后落进容器里，不在建造过程中先漫开。
+			// 哪些方块算"第二轮专属"由 ConstructionRules（building/rules.json）决定
+			if (ConstructionRules.deferredToSecondPass(desired) != phaseTwo)
 			{
 				resumeIndex++;
 				continue;
@@ -505,7 +520,7 @@ public class ConstructionTask
 				continue;
 			}
 
-			// 材料检查与消耗
+			// 材料检查与消耗（创造模式一律免费，由 requiresMaterial 内部短路）
 			if (MaterialCalculator.requiresMaterial(desired, currentMode()))
 			{
 				Item item = desired.getBlock().asItem();
@@ -608,7 +623,8 @@ public class ConstructionTask
 			retryRound = 0;
 			deferredThisRound = 0;
 			placedThisRound = false;
-			LOGGER.info("NeoSim-ConstructionTask: phase 1 done, building attached blocks / fluids — {}",
+			LOGGER.info("NeoSim-ConstructionTask: phase 1 done (layer->depth->width), "
+							+ "building attached blocks / fluids — {}",
 					building.getSchematicName());
 		}
 
@@ -654,6 +670,31 @@ public class ConstructionTask
 			LOGGER.info("NeoSim-ConstructionTask: Complete {} (Lv.{}, builder auto-resigned)",
 					building.getSchematicName(), (int) builderLevel);
 		}
+	}
+
+	// 诊断：一次建造只打一遍——朝向/旋转/镜像 + 蓝图各轴在世界里的走向 + 前 20 格的落点顺序。
+	// 拿来判断"建造顺序/方向不对"到底出在哪一步（蓝图朝向、玩家旋转、扫描顺序）
+	private void logScanOrderOnce(SchematicScanOrder scan, int sx, int sy, int sz,
+								  BlockPos.MutableBlockPos scanPos)
+	{
+		if (scanLogged) return;
+		scanLogged = true;
+
+		StringBuilder order = new StringBuilder();
+		int shown = Math.min(20, sx * sy * sz);
+		for (int i = 0; i < shown; i++)
+		{
+			scan.pos(i, scanPos);
+			BlockPos w = building.blueprintToWorld(scanPos.getX(), scanPos.getY(), scanPos.getZ());
+			order.append('(').append(scanPos.getX()).append(',').append(scanPos.getY()).append(',')
+					.append(scanPos.getZ()).append(")→").append(w.getX()).append(',').append(w.getZ())
+					.append("  ");
+		}
+
+		LOGGER.info("NeoSim-ConstructionTask: scan order — size={}x{}x{} facing={} rotation={} mirror={} "
+						+ "boxes={} | first {} cells (blueprint→world x,z): {}",
+				sx, sy, sz, building.getFacing(), building.getRotation(), building.getMirror(),
+				building.getControlBoxPos(), shown, order);
 	}
 
 	// 特殊标记
@@ -971,17 +1012,21 @@ public class ConstructionTask
 		LightweightBlockContainer container = schematic.getBlockContainer();
 		int sx = container.getSizeX();
 		int sz = container.getSizeZ();
+		SchematicScanOrder scan = SchematicScanOrder.of(
+				building.placement(), sx, container.getSizeY(), sz);
+		BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 		Item result = null;
 		for (int i = resumeIndex; i < container.getTotalVolume(); i++)
 		{
-			int layer = i / (sx * sz);
-			int depth = (i / sx) % sz;
-			int width = i % sx;
+			scan.pos(i, pos);
+			int width = pos.getX();
+			int layer = pos.getY();
+			int depth = pos.getZ();
 			BlockState desired = container.get(width, layer, depth);
 			if (desired.isAir()) continue;
 
-			// 检查当前轮次的方块
-			if (MaterialCalculator.isAttachedBlock(desired) != phaseTwo) continue;
+			// 检查当前轮次的方块（第二轮专属 = 依附性方块与流体，见 ConstructionRules）
+			if (ConstructionRules.deferredToSecondPass(desired) != phaseTwo) continue;
 			BlockPos worldPos = building.blueprintToWorld(width, layer, depth);
 			BlockState current = PhysicsWorld.getBlockState(level, worldPos);
 			if (current.equals(building.placement().state(desired))) continue;
@@ -1057,11 +1102,15 @@ public class ConstructionTask
 			LightweightBlockContainer container = schematic.getBlockContainer();
 			int sx = container.getSizeX();
 			int sz = container.getSizeZ();
+			SchematicScanOrder scan = SchematicScanOrder.of(
+					building.placement(), sx, container.getSizeY(), sz);
+			BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 			for (int i = resumeIndex; i < container.getTotalVolume(); i++)
 			{
-				int layer = i / (sx * sz);
-				int depth = (i / sx) % sz;
-				int width = i % sx;
+				scan.pos(i, pos);
+				int width = pos.getX();
+				int layer = pos.getY();
+				int depth = pos.getZ();
 				BlockState st = container.get(width, layer, depth);
 				if (st.getBlock().asItem() == item) need++;
 			}

@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 import java.util.*;
 
-// 统计蓝图所需的全部方块数量
+// 统计蓝图所需的全部方块数量；"某方块某模式要不要材料"的完整口径见 requiresMaterial（材料消耗表 → 硬编码分类）
 public class MaterialCalculator
 {
 	// 工具类：只有静态成员，禁止实例化
@@ -35,6 +35,9 @@ public class MaterialCalculator
 		CLASS_CACHE.clear();
 		cachedCalcKey = null;
 		cachedCalcResult = null;
+
+		// 材料消耗表（building/materials.json）的判定缓存一并失效
+		com.wenzai.neosim.building.MaterialRules.invalidate();
 	}
 
 	// 方块注册名
@@ -128,38 +131,31 @@ public class MaterialCalculator
 				|| name.contains("farmland");
 	}
 
-	// 按运行模式判断该方块是否需要（分类结果走 IdentityHashMap 缓存）
+	// 按运行模式判断该方块是否需要材料（判定结果走 IdentityHashMap 缓存，按模式下标取用）
+	//
+	// 创造模式（2）：全部方块免费，材料消耗表与硬编码分类都不参与（这里直接短路，一处说清）。
+	// 其余模式顺序：① 材料消耗表（building/materials.json 自定义规则 + "模组方块默认耗材"）给出结论就用它；
+	//            ② 没结论（原版 / 本模组方块）才回落到下面的硬编码分类。
 	public static boolean requiresMaterial(BlockState state, byte mode)
 	{
 		if (state.isAir()) return false;
-		return switch (mode)
+
+		// 创造模式：一律不耗材 —— 与运行模式里其他"创造免费"判定（快递扣款 / 重建扣款 / 整地…）同一口径
+		if (mode == 2) return false;
+
+		Block block = state.getBlock();
+		Boolean fromTable = com.wenzai.neosim.building.MaterialRules.requires(block, mode);
+		if (fromTable != null) return fromTable;
+
+		boolean[] c = CLASS_CACHE.get(block);
+		if (c == null)
 		{
-			case 2 -> false;
-			case 3 -> {
-				Block block = state.getBlock();
-				boolean[] c = CLASS_CACHE.get(block);
-				if (c == null)
-				{
-					c = new boolean[2];
-					c[0] = computeNormalRequired(block);
-					c[1] = computeHardcoreFree(block);
-					CLASS_CACHE.put(block, c);
-				}
-				yield !c[1];
-			}
-			default -> {
-				Block block = state.getBlock();
-				boolean[] c = CLASS_CACHE.get(block);
-				if (c == null)
-				{
-					c = new boolean[2];
-					c[0] = computeNormalRequired(block);
-					c[1] = computeHardcoreFree(block);
-					CLASS_CACHE.put(block, c);
-				}
-				yield c[0];
-			}
-		};
+			c = new boolean[2];
+			c[0] = computeNormalRequired(block);
+			c[1] = computeHardcoreFree(block);
+			CLASS_CACHE.put(block, c);
+		}
+		return mode == 3 ? !c[1] : c[0];
 	}
 
 	// 按数量降序排列的材料清单条目（按 (schematicName, mode) 缓存 + 按 palette 项聚合）
