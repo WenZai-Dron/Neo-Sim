@@ -39,7 +39,7 @@ displayName="新模拟城市"
 logoFile="assets/neo_sim/neo_sim_logo.png"
 
 # A text field displayed in the mod UI
-#credits="" #optional
+credits="Based on Sim-U-Kraft by Scott Hather. Legacy blueprints and three block textures from Sim-U-Kraft (authors kept in AU= fields); .litematic format reference: Litematica (masa and contributors); Sable interop via reflection only."
 
 # The authors of the mod, displayed in the mod UI (optional)
 authors="文仔"

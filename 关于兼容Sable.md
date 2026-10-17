@@ -9,7 +9,8 @@
 
 - 本模组**不依赖任何模组**，也能在"被物理化的方块"上放置方块（自动化建筑）。
 - 物理化 = 方块被组装进 Sable 的 **SubLevel（子世界）**（航空学飞船 / Simulated 物理组装器）。
-- 无硬依赖：Sable 仅作为 compileOnly 编译期引用，运行时按需守卫加载；玩家不装 Sable 完全不受影响。
+- 零依赖：Sable 只经反射访问（SablePhysicsAdapter 不 import 任何 dev.ryanhcode.sable 类型），
+  编译期不需要任何模组 jar、运行期不需要玩家安装任何模组；不装 Sable 完全不受影响。
 
 ## 2. Sable 架构要点（源码调研结论）
 
@@ -31,11 +32,19 @@
 
 ## 3. 已实现（代码均在 src/main/java/com/wenzai/neosim/compat/）
 
-- IPhysicsAdapter —— 纯 Minecraft 类型接口（getBlockState / setBlock / destroyBlock / isAvailable）
-- SablePhysicsAdapter —— 双坐标空间适配器（局部 getContaining / 世界 getAllIntersecting+变换）；
-  含 plot 直接写路径（plot chunk + setUnsaved(false) + sendBlockUpdated）、NPC 跟踪（attachToSubLevel）、toWorld 投影
-- PhysicsWorld —— 门面：Class.forName + isLoaded("sable") 守卫加载，全程 try/catch 降级
-- build.gradle —— compileOnly files("libs/sable-neoforge-1.21.1-2.0.5.jar", "libs/sable-companion-common-1.21.1-1.6.0.jar")
+兼容代码全部位于 compat/sable/（Sable 兼容模块，自足子包，compat/ 根目录无类）：
+
+- sable/IPhysicsAdapter —— 纯 Minecraft 类型接口（方块读写 + modId / isBlockIoSupported / toWorld /
+  isOnStructure / attachNpc 辅助能力，均带原版降级默认实现；命名中立，不绑定 Sable 术语）
+- sable/PhysicsAdapterRegistry —— 注册表：NeoSim 构造时 init() 按"模组是否加载"反射加载适配器类，
+  未安装模组的适配器类永不加载（零硬依赖）；适配器类在静态块中 register() 注册自身；
+  新增模组只需在 init() 追加一行 tryLoad(modId, 类名)
+- sable/SablePhysicsAdapter —— 纯反射实现的双坐标空间适配器（局部 getContaining / 世界 getAllIntersecting+变换）；
+  含 plot 直接写路径（plot chunk + setUnsaved(false) + sendBlockUpdated）、NPC 跟踪（attachNpc）、toWorld 投影；
+  isBlockIoSupported() 返回 false 停用方块读写（见第 4 节保存卡死）
+- sable/PhysicsWorld —— 门面：方块读写受 BLOCK_IO_ENABLED 总开关控制（当前 false），
+  辅助能力（投影/判定/NPC 跟踪）遍历所有可用适配器，多模组互不干扰
+- build.gradle —— dependencies 块不声明任何模组依赖，Sable 兼容完全由反射适配器承担
 - 附带安全修复：onPlayerLogout 无限 AABB（Sable 会拦截并中止无限范围实体查询）、
   模盒消失自动取消任务、NPC 世界坐标生成、data/sable/tags/entity_type/retain_in_sub_level.json
 
@@ -68,8 +77,8 @@ ConcurrentLinkedDeque）在 ConcurrentLinkedDeque.skipDeletedSuccessors 死循�
 | 项 | 状态 |
 |---|---|
 | 普通地面建造/雇佣/存档 | 完全正常（原版路径） |
-| 物理化结构上的建造 | 拒绝创建任务（ConstructionEngine.createBuilding 检查 PhysicsWorld.isInSubLevel，日志 reject - constructor on physicized structure (unsupported)） |
-| Sable 适配器 | 停用（PhysicsWorld.load() 返回 null，代码保留可恢复） |
+| 物理化结构上的建造 | 拒绝创建任务（ConstructionEngine.createBuilding 检查 PhysicsWorld.isOnStructure，日志 reject - constructor on physicized structure (unsupported)） |
+| Sable 适配器 | 停用（方块读写总开关 BLOCK_IO_ENABLED=false，代码保留可恢复） |
 | onPlayerLogout 无限 AABB | 修复 |
 | 模盒消失自动取消任务 | 保留 |
 | NPC 世界坐标生成 + retain 标签 | 保留 |
@@ -79,8 +88,9 @@ ConcurrentLinkedDeque）在 ConcurrentLinkedDeque.skipDeletedSuccessors 死循�
 
 1. **前提**：Sable 修复 ChunkMap.processUnloads 自旋（转储 dump1/dump2.txt 可直接作为
    ryanhcode/sable 的 bug 报告材料）。
-2. 恢复 PhysicsWorld.load() 的 Class.forName 加载逻辑。
-3. 移除 ConstructionEngine.createBuilding 中的 isInSubLevel 拒绝。
+2. 把 PhysicsWorld.BLOCK_IO_ENABLED 改为 true，并把 SablePhysicsAdapter.isBlockIoSupported()
+   改回 true（两块开关都要改，缺一不可）。
+3. 移除 ConstructionEngine.createBuilding 中的 isOnStructure 拒绝。
 4. 重新评估位置投影：logicalPose 服务端位姿与客户端渲染位姿不一致（见第 2 节），
    世界坐标放置会偏位；需确认甲板真实世界坐标（站甲板上按 F3）后校准。
 
@@ -88,9 +98,10 @@ ConcurrentLinkedDeque）在 ConcurrentLinkedDeque.skipDeletedSuccessors 死循�
 
 | 文件 | 说明 |
 |---|---|
-| compat/PhysicsWorld.java | 门面；load() 已停用 |
-| compat/SablePhysicsAdapter.java | 适配器（双空间、plot 直写、NPC 跟踪、toWorld） |
-| compat/IPhysicsAdapter.java | 接口 |
-| libs/sable-*.jar | compileOnly 依赖（Modrinth 下载 + jarJar 内解出的 companion） |
+| compat/sable/PhysicsWorld.java | 门面；方块读写受 BLOCK_IO_ENABLED 开关控制（当前 false） |
+| compat/sable/PhysicsAdapterRegistry.java | 注册表：按模组加载状态反射加载适配器，新增模组在此追加 |
+| compat/sable/IPhysicsAdapter.java | 接口（方块读写 + 辅助能力默认实现） |
+| compat/sable/SablePhysicsAdapter.java | Sable 适配器（双空间、plot 直写、NPC 跟踪、toWorld） |
+| libs/ 与 run/mods/ | 仅供本机调试（已 gitignore）；入库代码不引用其中任何 jar |
 | data/sable/tags/entity_type/retain_in_sub_level.json | NPC 保留标签 |
 | 桌面/dump1.txt, dump2.txt | 保存卡死线程转储（Sable bug 报告材料） |

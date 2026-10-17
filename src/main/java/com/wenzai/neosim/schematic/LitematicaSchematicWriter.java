@@ -15,6 +15,7 @@ import java.nio.file.Path;
 // 与读取侧严格同口径（LitematicaSchematicReader / BlockStatePalette）：
 //   palette[0] 固定 air、region 索引 (y*sizeZ+z)*sizeX+x、BlockStates 是 LSB-first 打包的 long[]，
 //   bits 由 BlockStatePalette 给出（最低 2 bit，和 Litematica 的 Math.max(2, ...) 一致）
+// 来源：Litematica（masa 及贡献者）；格式按其公开规范独立实现
 public final class LitematicaSchematicWriter
 {
 	private static final int VERSION = 7;

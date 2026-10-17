@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+// 建造状态机：按蓝图逐格放置，两轮建造（先实心、后依附方块与流体）。
+// 来源：Sim-U-Kraft 0.12.1（Scott Hather）；流程对照其 JobBuilder 重写，代码为独立实现
 public class ConstructionTask
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

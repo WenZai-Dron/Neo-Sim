@@ -1,0 +1,14 @@
+Neo-Sim (新模拟城市)
+Copyright (C) 文仔 and contributors
+Licensed under the GNU General Public License v3.0 (see META-INF/LICENSE.txt).
+
+Based on Sim-U-Kraft by Scott Hather (Satscape).
+The 154 legacy .txt blueprints (and their .litematic conversions) and three block textures
+are redistributed from Sim-U-Kraft; the original author name is kept in each blueprint's AU= field.
+Blueprint credits: assets/neo_sim/buildings/CREDITS.md
+
+.litematic format implementation is independently written with reference to the Litematica
+project by masa and contributors.
+
+Sable by RyanHCode is used only through reflection for interoperability;
+no Sable code or assets are included.

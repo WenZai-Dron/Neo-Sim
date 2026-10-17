@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.*;
 
 // 统计蓝图所需的全部方块数量；"某方块某模式要不要材料"的完整口径见 requiresMaterial（材料消耗表 → 硬编码分类）
+// 来源：Sim-U-Kraft 0.12.1（Scott Hather）；材料口径对照其 Building 计算重写，代码为独立实现
 public class MaterialCalculator
 {
 	// 工具类：只有静态成员，禁止实例化

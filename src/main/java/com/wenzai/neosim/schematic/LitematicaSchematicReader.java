@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 // .litematic文件读取
+// 来源：Litematica（masa 及贡献者）；格式按其公开规范独立实现，本类不含其代码
 public class LitematicaSchematicReader implements ISchematicReader
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

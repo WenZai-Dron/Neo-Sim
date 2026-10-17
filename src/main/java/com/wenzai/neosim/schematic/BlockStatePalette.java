@@ -13,6 +13,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 // 双向映射
+// 来源：Litematica（masa 及贡献者）；调色板与位打包口径与其兼容，实现为独立编写
 public class BlockStatePalette
 {
 	private static final int LINEAR_THRESHOLD = 16;

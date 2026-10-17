@@ -18,6 +18,7 @@ import java.util.Map;
 import javax.annotation.Nullable;
 
 // .txt文件读取
+// 来源：Sim-U-Kraft 0.12.1（Scott Hather）；格式与行为按其旧版蓝图复现，代码为独立实现
 public class SimUKraftSchematicReader implements ISchematicReader
 {
 

@@ -5,6 +5,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.world.level.block.state.BlockState;
 
 // 三维方块容器，使用{@link LightweightBitArray}紧凑存储和{@link BlockStatePalette}
+// 来源：Litematica；数据布局与其 BlockStateContainer 同口径，实现为独立编写
 public class LightweightBlockContainer
 {
 	private final int sizeX;

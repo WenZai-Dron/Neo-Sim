@@ -20,7 +20,7 @@
 - 重建模盒：放在建筑控制箱旁，读取相邻箱子材料，自动把缺失方块补回去，**不需要 建筑师**
 
 ### 自动化建筑
-- 保留 **155 项 Sim-U-Kraft 旧版社区建筑**
+- 保留 **154 项 Sim-U-Kraft 社区建筑**
 - 支持 **投影** 文件，导入自定义建筑
 
 ### 自动化生产
@@ -55,6 +55,8 @@
 ---
 
 ## 致谢
+
+**Based on Sim-U-Kraft by Scott Hather.**
 
 - **所有曾在 Sim-U-Kraft 社区上传建筑的玩家**
 - [Satscape](https://www.youtube.com/satscapeminecraft) 与 Sim-U-Kraft

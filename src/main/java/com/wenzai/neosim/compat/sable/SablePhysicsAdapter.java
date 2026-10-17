@@ -25,6 +25,8 @@ import java.lang.reflect.Method;
 // 当前仅保留与子世界无写交互的辅助能力（世界坐标投影、NPC 跟踪、子世界判定）；
 // 方块读写已通过 isBlockIoSupported() 停用——任何对子世界的访问都可能触发
 // Sable 卸载队列自旋（保存卡死），见 关于兼容Sable.md。Sable 修复后改回 true 即可恢复
+//
+// 仅反射调用 Sable 的公共 API；本模组不复制、不打包其代码或素材。来源：Sable（RyanHCode）
 public class SablePhysicsAdapter implements IPhysicsAdapter
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

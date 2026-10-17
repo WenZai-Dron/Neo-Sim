@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 // 无任何模组硬依赖——适配器由 PhysicsAdapterRegistry 按模组加载状态反射加载，
 // 新增兼容模组只需实现 IPhysicsAdapter 并在注册表 init() 追加一行
 // 注意：结构内方块读写集成已停用（见 BLOCK_IO_ENABLED），仅保留投影/判定/NPC 跟踪等辅助能力
+// Sable 仅经反射互操作，本模组不包含其代码；来源：Sable（RyanHCode）
 public final class PhysicsWorld
 {
 	private static final Logger LOGGER = LogUtils.getLogger();

@@ -11,6 +11,7 @@ import javax.annotation.Nullable;
 // 每个需要兼容的外部模组（Sable / Create Simulated 等）提供一个实现，在类静态块中
 // 经 PhysicsAdapterRegistry.register() 注册；未安装的模组其适配器类永远不会被加载
 // 返回 null / false 表示"该位置不属于该模组管理的结构，请走原版逻辑"
+// 各适配器对应的第三方模组：Sable（RyanHCode）等
 public interface IPhysicsAdapter
 {
 	// 适配器对应的模组 id（注册去重与日志用）

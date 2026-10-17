@@ -21,7 +21,7 @@ For the algorithmic work behind it, see [算法改进](算法改进.md) (Chinese
 
 ### Automated Construction
 
-- Keeps all **155 legacy Sim-U-Kraft community buildings**
+- Keeps all **154 Sim-U-Kraft community buildings**
 - Imports custom buildings from **Litematica** files
 
 ### Automated Production
@@ -63,6 +63,8 @@ For the algorithmic work behind it, see [算法改进](算法改进.md) (Chinese
 ---
 
 ## Credits
+
+**Based on Sim-U-Kraft by Scott Hather.**
 
 - **Every player who ever uploaded a building to the Sim-U-Kraft community**
 - [Satscape](https://www.youtube.com/satscapeminecraft) and Sim-U-Kraft

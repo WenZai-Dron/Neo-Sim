@@ -1,6 +1,7 @@
 package com.wenzai.neosim.schematic;
 
 // 紧凑位打包数组，使用{@code long[]}作为底层存储
+// 来源：Litematica；位打包布局与其 LitematicaBitArray 同口径，实现为独立编写
 public class LightweightBitArray
 {
 	private final long[] data;

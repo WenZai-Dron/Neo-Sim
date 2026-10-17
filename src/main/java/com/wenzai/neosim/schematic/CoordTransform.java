@@ -8,6 +8,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 // 蓝图坐标同步到世界坐标
+// 来源：Sim-U-Kraft 0.12.1（Scott Hather）；映射口径复现其 buildDirection 行为，代码为独立实现
 public class CoordTransform
 {
 	// 工具类：只有静态成员，禁止实例化

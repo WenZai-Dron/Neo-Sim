@@ -14,6 +14,7 @@ public enum SchematicFrame
 {
 	// Sim-U-Kraft 旧版 .txt：数据在作者上传时的蓝图帧里，
 	// 必须走 Suk 的 buildDirection 映射（已与 0.12.1 原版源码逐行核对一致）
+	// 来源：Sim-U-Kraft 0.12.1（Scott Hather）；行为复现，代码为独立实现
 	SUKRAFT,
 
 	// 世界坐标帧：.litematic 等（投影是照世界导出的）
