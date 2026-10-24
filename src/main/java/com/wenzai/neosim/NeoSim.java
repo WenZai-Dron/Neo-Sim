@@ -5,6 +5,7 @@ import com.wenzai.neosim.block.MarkerManager;
 import com.wenzai.neosim.block.ModBlocks;
 import com.wenzai.neosim.client.gui.HUD;
 import com.wenzai.neosim.compat.sable.PhysicsAdapterRegistry;
+import com.wenzai.neosim.container.ContainerFinder;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.network.ClientToServerPayloads;
 import com.wenzai.neosim.network.ServerToClientPayloads;
@@ -553,11 +554,12 @@ public class NeoSim
 				sim > 0 ? sim : "off", appliedSim);
 	}
 
-	// 配置热重载：只重新应用视距 / 模拟距离
+	// 配置热重载：重新应用视距 / 模拟距离，并让容器黑名单与解析缓存按新配置重建
 	private void onConfigReloading(ModConfigEvent.Reloading event)
 	{
 		if (event.getConfig().getSpec() != Config.SPEC) return;
 		applyServerDistances(net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer());
+		ContainerFinder.invalidateCache();
 	}
 
 	// 世界加载：从存档恢复标记位置
@@ -590,6 +592,9 @@ public class NeoSim
 
 		// 单例持 ServerLevel，关档后钉住旧世界 → 置空
 		com.wenzai.neosim.storage.ModSavedData.resetInstance();
+
+		// 容器解析缓存持有 ServerLevel 与本刻句柄 → 清空，防跨存档钉住旧世界
+		ContainerFinder.invalidateCache();
 
 		// player.json 成员缓存跨存档残留 → 清空
 		com.wenzai.neosim.storage.FileCreater.clearPlayerCache();

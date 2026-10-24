@@ -5,6 +5,7 @@ import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.ControlBoxPersistence;
 import com.wenzai.neosim.block.ControlBoxPersistence.ControlBoxRecord;
 import com.wenzai.neosim.block.ControlBoxPersistence.Resident;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.network.ServerToClientPayloads.HireListResponsePayload.HireEntry;
 import com.wenzai.neosim.network.ServerToClientPayloads.MissingScanResponsePayload.MissingEntry;
 import com.wenzai.neosim.npc.Entity;
@@ -16,7 +17,6 @@ import com.wenzai.neosim.storage.NpcData;
 import com.wenzai.neosim.util.JsonUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -125,15 +125,8 @@ public final class ListServices
 		SchematicData sd = task.getBuilding().getSchematic();
 		if (sd == null) return out;
 
-		List<ChestBlockEntity> chests = new ArrayList<>(InventoryManager.findNearbyChests(level, boxPos));
-		BlockPos cp = task.getBuilding().getControlBoxPos();
-		if (cp != null && !cp.equals(boxPos))
-		{
-			for (ChestBlockEntity chest : InventoryManager.findNearbyChests(level, cp))
-			{
-				if (!chests.contains(chest)) chests.add(chest);
-			}
-		}
+		List<ContainerHandle> chests = InventoryManager.findMergedNearbyContainers(level, boxPos,
+				task.getBuilding().getControlBoxPos());
 
 		// 缺料量按全服全局模式计算（立项基线 0.1：模式不按城市隔离）
 		byte mode = ModSavedData.get(level).getMode();

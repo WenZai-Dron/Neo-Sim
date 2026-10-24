@@ -245,6 +245,46 @@ public class Config
 		BUILDER.pop();
 	}
 
+	// 跨模组容器：读箱子 / 写箱子都走 Capabilities.ItemHandler.BLOCK，不 import 任何模组类
+	static
+	{
+		BUILDER.push("container");
+
+		// 关掉 = 退回「只认原版箱子 / 木桶」，等于本次改动前的行为，给整合包作者兜底
+		CONTAINER_ALLOW_FOREIGN = BUILDER
+				.translation("config.neosim.containerAllowForeign")
+				.comment("Read and write other mods' containers through Capabilities.ItemHandler.BLOCK",
+						"false = only vanilla chests / barrels (behaviour before this feature)")
+				.define("allowForeignContainers", true);
+
+		// 快递站点箱链的容器数量上限，按方块位置计（一个 3×3×3 多方块容器占 27 个名额）
+		// 同时是这条链的强加载票据数量上限来源
+		CONTAINER_MAX_CHAIN = BUILDER
+				.translation("config.neosim.containerMaxChain")
+				.comment("Max containers in a delivery station chain, counted by block position",
+						"Also bounds how many chunks that chain may keep loaded")
+				.defineInRange("maxChainContainers", 64, 1, 1024);
+
+		// 单次统计 / 存取的槽位预算：巨型容器（万槽）到此为止，只进日志
+		CONTAINER_SCAN_SLOT_BUDGET = BUILDER
+				.translation("config.neosim.containerScanSlotBudget")
+				.comment("Max slots a single scan may look at (huge multi-block containers stop here)")
+				.defineInRange("scanSlotBudget", 4096, 1, 1000000);
+
+		// 单次遍历的时间预算（微秒）；0 = 不设时间上限，只按槽位预算截断
+		CONTAINER_SCAN_TIME_BUDGET_MICROS = BUILDER
+				.translation("config.neosim.containerScanTimeBudgetMicros")
+				.comment("Max time a single scan may spend per container, in microseconds (0 = no time limit)")
+				.defineInRange("scanTimeBudgetMicros", 2000, 0, 100000);
+
+		// 方块 id 列表：命中的方块不当容器读，也不作为快递站点链的中继
+		CONTAINER_BLACKLIST = BUILDER
+				.translation("config.neosim.containerBlacklist")
+				.comment("Block ids that are never treated as containers (neither read nor used as a chain relay)")
+				.defineList("containerBlacklist", List.<String>of(), obj -> obj instanceof String s && !s.isBlank());
+		BUILDER.pop();
+	}
+
 	// 工作盒总开关：同时作用于快递盒与重建模盒
 	static
 	{
@@ -526,6 +566,21 @@ public class Config
 
 	// 快递盒：快递员滚动区块窗口半径（区块数）
 	public static final ModConfigSpec.IntValue DELIVERY_CHUNK_RADIUS;
+
+	// 跨模组容器：总开关（false = 只认原版箱子 / 木桶）
+	public static final ModConfigSpec.BooleanValue CONTAINER_ALLOW_FOREIGN;
+
+	// 跨模组容器：快递站点链的容器数量上限（按方块位置计）
+	public static final ModConfigSpec.IntValue CONTAINER_MAX_CHAIN;
+
+	// 跨模组容器：单次扫描的槽位预算
+	public static final ModConfigSpec.IntValue CONTAINER_SCAN_SLOT_BUDGET;
+
+	// 跨模组容器：单次扫描的时间预算（微秒，0 = 不设上限）
+	public static final ModConfigSpec.IntValue CONTAINER_SCAN_TIME_BUDGET_MICROS;
+
+	// 跨模组容器：黑名单（方块 id 列表，默认空）
+	public static final ModConfigSpec.ConfigValue<List<? extends String>> CONTAINER_BLACKLIST;
 
 	// 工作盒总开关（快递盒 + 重建模盒）
 	public static final ModConfigSpec.BooleanValue WORKBOX_ENABLED;

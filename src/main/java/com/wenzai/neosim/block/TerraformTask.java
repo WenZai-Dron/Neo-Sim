@@ -4,6 +4,7 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.npc.NpcGoals;
@@ -14,11 +15,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 // 整地任务状态机：复用模盒已雇佣的建筑师，逐块整地
 public class TerraformTask
@@ -38,6 +40,9 @@ public class TerraformTask
 
 	// 缺料后重新检查箱子的间隔（3 秒）
 	private static final int RESOURCE_RECHECK_TICKS = 60;
+
+	// 「任意树苗」判定：NATURE 方案从箱子里挑树苗、数树苗都用它
+	private static final Predicate<ItemStack> SAPLINGS = stack -> stack.is(ItemTags.SAPLINGS);
 
 	// 区块窗口：作业游标 3×3；跟随游标滚动的刷新间隔
 	private static final int CHUNK_WINDOW_RADIUS = 1;
@@ -73,7 +78,7 @@ public class TerraformTask
 	private int processedIndex;
 	private int totalTargets;
 	private Entity worker;
-	private List<ChestBlockEntity> nearbyChests = new ArrayList<>();
+	private List<ContainerHandle> nearbyChests = new ArrayList<>();
 	private int workerMissingTicks;
 	private boolean chunksLoaded;
 	private boolean scanWindowLoaded;
@@ -322,7 +327,7 @@ public class TerraformTask
 
 	private void doCheckChests()
 	{
-		nearbyChests = InventoryManager.findNearbyChests(level, boxPos());
+		nearbyChests = InventoryManager.findNearbyContainers(level, boxPos());
 		if (nearbyChests.isEmpty())
 		{
 			// 一次性提示（避免每 tick 刷屏）
@@ -440,7 +445,7 @@ public class TerraformTask
 		if (resourceWaitTicks < RESOURCE_RECHECK_TICKS) return;
 		resourceWaitTicks = 0;
 
-		nearbyChests = InventoryManager.findNearbyChests(level, boxPos());
+		nearbyChests = InventoryManager.findNearbyContainers(level, boxPos());
 		if (nearbyChests.isEmpty()) return;
 
 		TerraformPlan plan = getPlan();
@@ -742,9 +747,9 @@ public class TerraformTask
 	private List<BlockPos> chestPositions()
 	{
 		List<BlockPos> out = new ArrayList<>(nearbyChests.size());
-		for (ChestBlockEntity chest : nearbyChests)
+		for (ContainerHandle handle : nearbyChests)
 		{
-			out.add(chest.getBlockPos());
+			out.add(handle.pos());
 		}
 		return out;
 	}
@@ -817,39 +822,15 @@ public class TerraformTask
 	}
 
 	// 从箱子取任意树苗，返回取到的树苗物品（未取到返回 null）
-	private Item extractAnySapling(List<ChestBlockEntity> chests)
+	private Item extractAnySapling(List<ContainerHandle> chests)
 	{
-		for (ChestBlockEntity chest : chests)
-		{
-			for (int i = 0; i < chest.getContainerSize(); i++)
-			{
-				ItemStack stack = chest.getItem(i);
-				if (!stack.isEmpty() && stack.is(net.minecraft.tags.ItemTags.SAPLINGS))
-				{
-					stack.shrink(1);
-					chest.setChanged();
-					return stack.getItem();
-				}
-			}
-		}
-		return null;
+		ItemStack got = InventoryManager.extractFirstMatching(chests, SAPLINGS);
+		return got.isEmpty() ? null : got.getItem();
 	}
 
 	// 统计箱子中树苗总数量
-	private int countAnySapling(List<ChestBlockEntity> chests)
+	private int countAnySapling(List<ContainerHandle> chests)
 	{
-		int total = 0;
-		for (ChestBlockEntity chest : chests)
-		{
-			for (int i = 0; i < chest.getContainerSize(); i++)
-			{
-				ItemStack stack = chest.getItem(i);
-				if (!stack.isEmpty() && stack.is(net.minecraft.tags.ItemTags.SAPLINGS))
-				{
-					total += stack.getCount();
-				}
-			}
-		}
-		return total;
+		return InventoryManager.countMatching(chests, SAPLINGS);
 	}
 }

@@ -4,12 +4,12 @@ import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.building.BuildingInstance;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.util.ChunkWindows;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -169,9 +169,9 @@ public final class ChunkLoaders
 			Set<Long> set = boxTickets.computeIfAbsent(box, b -> new HashSet<>());
 			Set<Long> desired = new HashSet<>();
 			ChunkWindows.addAround(desired, box, 1);
-			for (ChestBlockEntity chest : InventoryManager.findChainedChests(level, box))
+			for (ContainerHandle handle : InventoryManager.findChainedContainers(level, box))
 			{
-				desired.add(ChunkWindows.of(chest.getBlockPos()));
+				desired.add(ChunkWindows.of(handle.pos()));
 			}
 
 			for (Long l : desired)

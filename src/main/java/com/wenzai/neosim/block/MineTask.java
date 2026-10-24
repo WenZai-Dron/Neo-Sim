@@ -167,7 +167,7 @@ public class MineTask extends PlotTask
 			}
 			for (ItemStack stack : kept)
 			{
-				InventoryManager.depositItems(nearbyChests, stack);
+				InventoryManager.depositItems(level, nearbyChests, stack);
 			}
 			level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 			deductCredits(Config.WORK_MINE_CREDIT_PER_BLOCK.get());
@@ -312,6 +312,6 @@ public class MineTask extends PlotTask
 
 	private void refreshChests()
 	{
-		nearbyChests = InventoryManager.findNearbyChests(level, boxPos());
+		nearbyChests = InventoryManager.findNearbyContainers(level, boxPos());
 	}
 }

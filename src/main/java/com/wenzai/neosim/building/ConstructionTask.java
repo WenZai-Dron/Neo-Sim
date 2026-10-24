@@ -6,6 +6,7 @@ import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.block.*;
 import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.NpcGoals;
@@ -19,7 +20,6 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
@@ -109,7 +109,7 @@ public class ConstructionTask
 	// 当前缺料
 	private Item lastMissingMaterial;
 
-	private List<ChestBlockEntity> nearbyChests;
+	private List<ContainerHandle> nearbyChests;
 
 	public ConstructionTask(BuildingInstance building, ServerLevel level)
 	{
@@ -144,7 +144,7 @@ public class ConstructionTask
 		{
 			currentState = BuildingInstance.BuildState.LOADING_BLUEPRINT;
 			building.setState(currentState);
-			nearbyChests = findNearbyChestsNow();
+			nearbyChests = findNearbyContainersNow();
 			LOGGER.info("NeoSim-ConstructionTask: worker arrived, loading blueprint — {}",
 					building.getSchematicName());
 		}
@@ -921,26 +921,14 @@ public class ConstructionTask
 	// 继续等待
 	private boolean hasMaterial(Item item)
 	{
-		nearbyChests = findNearbyChestsNow();
+		nearbyChests = findNearbyContainersNow();
 		return InventoryManager.countItems(nearbyChests, item) > 0;
 	}
 
-	private List<ChestBlockEntity> findNearbyChestsNow()
+	private List<ContainerHandle> findNearbyContainersNow()
 	{
-		List<ChestBlockEntity> chests = new ArrayList<>(
-				InventoryManager.findNearbyChests(level, building.getControlBoxPos()));
-		BlockPos box = building.getConstructorPos();
-		if (box != null && !box.equals(building.getControlBoxPos()))
-		{
-			for (ChestBlockEntity chest : InventoryManager.findNearbyChests(level, box))
-			{
-				if (!chests.contains(chest))
-				{
-					chests.add(chest);
-				}
-			}
-		}
-		return chests;
+		return InventoryManager.findMergedNearbyContainers(level,
+				building.getControlBoxPos(), building.getConstructorPos());
 	}
 
 	private void extractMaterial(Item item)
@@ -1072,7 +1060,7 @@ public class ConstructionTask
 	{
 		if (nearbyChests == null || nearbyChests.isEmpty())
 		{
-			nearbyChests = findNearbyChestsNow();
+			nearbyChests = findNearbyContainersNow();
 		}
 		int need;
 		if (item == cachedMissingItem && cachedMissingScanIndex == resumeIndex)

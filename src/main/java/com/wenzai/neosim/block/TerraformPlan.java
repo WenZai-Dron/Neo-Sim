@@ -2,6 +2,7 @@ package com.wenzai.neosim.block;
 
 import com.wenzai.neosim.Config;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.container.ContainerHandle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Containers;
@@ -11,7 +12,6 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FlowerBlock;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.Fluids;
 
@@ -44,7 +44,7 @@ public enum TerraformPlan
 		}
 
 		@Override
-		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests)
+		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests)
 		{
 			removeInto(level, pos, chests);
 			return true;
@@ -71,7 +71,7 @@ public enum TerraformPlan
 		}
 
 		@Override
-		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests)
+		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests)
 		{
 			level.setBlock(pos, Blocks.DIRT.defaultBlockState(), 3);
 			return true;
@@ -98,7 +98,7 @@ public enum TerraformPlan
 		}
 
 		@Override
-		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests)
+		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests)
 		{
 			level.setBlock(pos, Blocks.GRASS_BLOCK.defaultBlockState(), 3);
 			return true;
@@ -144,7 +144,7 @@ public enum TerraformPlan
 		}
 
 		@Override
-		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests)
+		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests)
 		{
 			level.setBlock(pos, Blocks.DIRT.defaultBlockState(), 3);
 			return true;
@@ -174,7 +174,7 @@ public enum TerraformPlan
 		}
 
 		@Override
-		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests)
+		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests)
 		{
 			removeInto(level, pos, chests);
 			return true;
@@ -214,7 +214,7 @@ public enum TerraformPlan
 		}
 
 		@Override
-		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests)
+		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests)
 		{
 			if (processedIndex % 15 == 0 && !material.isEmpty())
 			{
@@ -251,7 +251,7 @@ public enum TerraformPlan
 		}
 
 		@Override
-		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests)
+		public boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests)
 		{
 			removeInto(level, pos, chests);
 			return true;
@@ -298,7 +298,7 @@ public enum TerraformPlan
 	public abstract boolean matches(ServerLevel level, BlockPos pos);
 
 	// 执行变换；返回是否实际改变了方块（用于扣款）
-	public abstract boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ChestBlockEntity> chests);
+	public abstract boolean apply(ServerLevel level, BlockPos pos, int processedIndex, ItemStack material, List<ContainerHandle> chests);
 
 	// 非法名返回 null
 	public static TerraformPlan valueOfSafe(String name)
@@ -368,7 +368,7 @@ public enum TerraformPlan
 	}
 
 	// 挖除方块：掉落物尝试入箱，放不下则自然掉落（防物品丢失）
-	private static void removeInto(ServerLevel level, BlockPos pos, List<ChestBlockEntity> chests)
+	private static void removeInto(ServerLevel level, BlockPos pos, List<ContainerHandle> chests)
 	{
 		BlockState state = level.getBlockState(pos);
 		List<ItemStack> drops = InventoryManager.getBlockDrops(level, pos, state);
@@ -378,7 +378,7 @@ public enum TerraformPlan
 			if (drop.isEmpty()) continue;
 			if (!chests.isEmpty() && InventoryManager.canDeposit(chests, drop))
 			{
-				InventoryManager.depositItems(chests, drop);
+				InventoryManager.depositItems(level, chests, drop);
 			}
 			else
 			{

@@ -16,18 +16,22 @@ For the algorithmic work behind it, see [算法改进](算法改进.md) (Chinese
 
 ### Signature Blocks
 
-- **Delivery Box** `delivery_box`: When a build site runs short of materials, a courier fetches them from the station chest, walks them to the site, and pays on drop-off
-- **Rebuild Box** `rebuild_box`: Place it next to a building's Control Box; it reads the adjacent chests for materials and automatically restores any missing blocks; **no architect needed**
+- **Delivery Box**: When a build site runs short of materials, a courier fetches them from the station chest, walks them to the site, and pays on drop-off
+- **Rebuild Box**: Place it next to a building's Control Box; it reads the materials from the adjacent chests and automatically puts the missing blocks back; **no architect needed**
 
 ### Automated Construction
 
-- Keeps all **154 Sim-U-Kraft community buildings**
+- Keeps all **151 Sim-U-Kraft community buildings**
 - Imports custom buildings from **Litematica** files
 
 ### Automated Production
 
 - **Workboxes** do the work for you: farming, mining, delivery, and land clearing
 - **Automatic mod block / crop compatibility**: the registry of installed mods is scanned, so mod crops automatically feed into the farming box
+
+### Cross-Mod Containers
+
+- Boxes are not limited to vanilla chests: **Iron Chests, drawers, Sophisticated Storage, Colossal Chests** and other containers can all serve as material boxes and drop-off containers
 
 ### NPC
 

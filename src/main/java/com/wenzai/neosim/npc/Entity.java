@@ -9,6 +9,7 @@ import com.wenzai.neosim.block.FarmingBox;
 import com.wenzai.neosim.block.MiningBox;
 import com.wenzai.neosim.building.InventoryManager;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.life.Genealogy;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.life.SocialGoal;
@@ -47,7 +48,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.level.pathfinder.PathType;
@@ -587,8 +587,8 @@ public class Entity extends PathfinderMob
 		}
 
 		BlockPos site = getAssignedSite();
-		List<ChestBlockEntity> chests = site != null
-				? InventoryManager.findChainedChests(serverLevel, site) : List.of();
+		List<ContainerHandle> chests = site != null
+				? InventoryManager.findChainedContainers(serverLevel, site) : List.of();
 		for (int i = 0; i < carriage.size(); i++)
 		{
 			ItemStack stack = carriage.get(i);
@@ -596,7 +596,7 @@ public class Entity extends PathfinderMob
 			int room = InventoryManager.spaceFor(chests, stack);
 			if (room > 0)
 			{
-				InventoryManager.depositItems(chests, stack.copyWithCount(Math.min(room, stack.getCount())));
+				InventoryManager.depositItems(serverLevel, chests, stack.copyWithCount(Math.min(room, stack.getCount())));
 			}
 			carriage.set(i, ItemStack.EMPTY);
 		}

@@ -5,15 +5,14 @@ import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.building.ConstructionEngine;
 import com.wenzai.neosim.building.ConstructionTask;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.network.ServerToClientPayloads.StationItemsResponsePayload.StationEntry;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.storage.FileCreater;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.loading.FMLPaths;
@@ -311,19 +310,12 @@ public class DeliveryEngine
 
 	public static StationScan scanStation(ServerLevel level, BlockPos boxPos)
 	{
-		List<ChestBlockEntity> chests = InventoryManager.findChainedChests(level, boxPos);
+		List<ContainerHandle> containers = InventoryManager.findChainedContainers(level, boxPos);
 
-		// 同一物品合并计数（与 countItems/缺料扫描一致：按物品类型，不区分组件）
+		// 同一物品合并计数（与 countItems 一致：按物品类型，不区分组件；只算取得出的）
 		Map<Item, Integer> counts = new LinkedHashMap<>();
-		for (ChestBlockEntity chest : chests)
-		{
-			for (int i = 0; i < chest.getContainerSize(); i++)
-			{
-				ItemStack stack = chest.getItem(i);
-				if (stack.isEmpty()) continue;
-				counts.merge(stack.getItem(), stack.getCount(), Integer::sum);
-			}
-		}
+		InventoryManager.forEachItem(containers,
+				stack -> counts.merge(stack.getItem(), stack.getCount(), Integer::sum));
 
 		List<StationEntry> entries = new ArrayList<>();
 		for (Map.Entry<Item, Integer> e : counts.entrySet())
@@ -338,7 +330,7 @@ public class DeliveryEngine
 			return a.item().getDescription().getString()
 					.compareTo(b.item().getDescription().getString());
 		});
-		return new StationScan(chests.size(), entries);
+		return new StationScan(containers.size(), entries);
 	}
 
 	// 盒子放置者所属城市（放置者未入城返回空）

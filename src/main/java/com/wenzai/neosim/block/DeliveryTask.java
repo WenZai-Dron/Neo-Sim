@@ -6,6 +6,7 @@ import com.wenzai.neosim.NeoSim;
 import com.wenzai.neosim.building.ConstructionEngine;
 import com.wenzai.neosim.building.ConstructionTask;
 import com.wenzai.neosim.building.InventoryManager;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.life.LifeSystem;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
@@ -18,7 +19,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -475,7 +475,7 @@ public class DeliveryTask
 
 		// 站点库存、工地缺口、单趟运力三者取最小
 		// 站点库存：读取与快递盒相连的整条箱链
-		List<ChestBlockEntity> stationChests = InventoryManager.findChainedChests(level, boxPos());
+		List<ContainerHandle> stationChests = InventoryManager.findChainedContainers(level, boxPos());
 		int stock = InventoryManager.countItems(stationChests, item);
 		if (stock <= 0)
 		{
@@ -499,7 +499,7 @@ public class DeliveryTask
 		int loaded = worker.loadCarriage(new ItemStack(item, taken), slots);
 		if (loaded < taken)
 		{
-			InventoryManager.depositItems(stationChests, new ItemStack(item, taken - loaded));
+			InventoryManager.depositItems(level, stationChests, new ItemStack(item, taken - loaded));
 		}
 		if (loaded <= 0)
 		{
@@ -538,13 +538,13 @@ public class DeliveryTask
 		int delivered = 0;
 		if (worker != null && !worker.isCarriageEmpty())
 		{
-			List<ChestBlockEntity> chests = siteChests(targetControl, targetSite);
+			List<ContainerHandle> chests = siteChests(targetControl, targetSite);
 			if (!chests.isEmpty())
 			{
 				for (ItemStack stack : worker.getCarriage())
 				{
 					if (stack.isEmpty()) continue;
-					InventoryManager.depositItems(chests, stack.copy());
+					InventoryManager.depositItems(level, chests, stack.copy());
 					delivered += stack.getCount();
 				}
 				worker.clearCarriage();
@@ -571,20 +571,9 @@ public class DeliveryTask
 
 	// 工地旁的箱子：控制箱 6 邻面 ∪ 模盒 6 邻面（去重）
 	// 注意：这里刻意不用箱链——工地侧是建筑控制箱/模盒，非快递盒方块，按规则只能读紧邻 6 面的箱子
-	private List<ChestBlockEntity> siteChests(BlockPos control, BlockPos constructor)
+	private List<ContainerHandle> siteChests(BlockPos control, BlockPos constructor)
 	{
-		List<ChestBlockEntity> chests = new ArrayList<>(InventoryManager.findNearbyChests(level, control));
-		if (constructor != null && !constructor.equals(control))
-		{
-			for (ChestBlockEntity chest : InventoryManager.findNearbyChests(level, constructor))
-			{
-				if (!chests.contains(chest))
-				{
-					chests.add(chest);
-				}
-			}
-		}
-		return chests;
+		return InventoryManager.findMergedNearbyContainers(level, control, constructor);
 	}
 
 	// 释放当前订单（认领 + 字段清零）；在途物品原路退回站点，不掉落

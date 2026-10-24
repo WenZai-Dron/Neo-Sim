@@ -8,6 +8,7 @@ import com.wenzai.neosim.building.InventoryManager;
 import com.wenzai.neosim.building.PlacementSupport;
 import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.schematic.BlueprintPlacement;
 import com.wenzai.neosim.schematic.LightweightBlockContainer;
 import com.wenzai.neosim.schematic.MaterialCalculator;
@@ -26,7 +27,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.DoorBlock;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.slf4j.Logger;
 
@@ -205,7 +205,7 @@ public class RebuildTask
 		}
 
 		byte mode = ModSavedData.get(level).getMode();
-		List<ChestBlockEntity> chests = null;
+		List<ContainerHandle> chests = null;
 
 		// 扫描与放置共用一个每 tick 上限（rebuildPerTick）
 		int scanBudget = Config.REBUILD_PER_TICK.get();
@@ -338,7 +338,7 @@ public class RebuildTask
 			{
 				if (chests == null)
 				{
-					chests = InventoryManager.findNearbyChests(level, boxPos);
+					chests = InventoryManager.findNearbyContainers(level, boxPos);
 				}
 				Item item = desired.getBlock().asItem();
 				if (!takeOne(chests, item))
@@ -499,9 +499,9 @@ public class RebuildTask
 		{
 			windowChestTimer = 0;
 			windowChests = new ArrayList<>();
-			for (ChestBlockEntity chest : InventoryManager.findNearbyChests(level, boxPos))
+			for (ContainerHandle handle : InventoryManager.findNearbyContainers(level, boxPos))
 			{
-				windowChests.add(chest.getBlockPos());
+				windowChests.add(handle.pos());
 			}
 		}
 
@@ -698,10 +698,9 @@ public class RebuildTask
 		}
 	}
 
-	private static boolean takeOne(List<ChestBlockEntity> chests, Item item)
+	private static boolean takeOne(List<ContainerHandle> chests, Item item)
 	{
-		if (chests.isEmpty()) return false;
-		if (InventoryManager.countItems(chests, item) <= 0) return false;
+		// 取料以实际返回为准：取不到就返回 0，不必先统计一遍
 		return InventoryManager.extractItem(chests, item, 1) > 0;
 	}
 }

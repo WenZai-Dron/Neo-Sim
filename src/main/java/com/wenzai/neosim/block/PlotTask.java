@@ -2,6 +2,7 @@ package com.wenzai.neosim.block;
 
 import com.mojang.logging.LogUtils;
 import com.wenzai.neosim.NeoSim;
+import com.wenzai.neosim.container.ContainerHandle;
 import com.wenzai.neosim.npc.Entity;
 import com.wenzai.neosim.npc.Manage;
 import com.wenzai.neosim.npc.NpcGoals;
@@ -12,7 +13,6 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -68,7 +68,7 @@ public abstract class PlotTask
 	private long animStartTime;
 
 	protected Entity worker;
-	protected List<ChestBlockEntity> nearbyChests = new ArrayList<>();
+	protected List<ContainerHandle> nearbyChests = new ArrayList<>();
 	protected int workerMissingTicks;
 	protected boolean chunksLoaded;
 	private int chunkWindowTimer;
@@ -255,7 +255,7 @@ public abstract class PlotTask
 		// 工作阶段
 		if (state == PlotState.CHECKING_CHESTS)
 		{
-			nearbyChests = com.wenzai.neosim.building.InventoryManager.findNearbyChests(level, boxPos());
+			nearbyChests = com.wenzai.neosim.building.InventoryManager.findNearbyContainers(level, boxPos());
 			if (nearbyChests.isEmpty())
 			{
 				clearHand();
@@ -612,9 +612,9 @@ public abstract class PlotTask
 	private List<BlockPos> chestPositions()
 	{
 		List<BlockPos> out = new ArrayList<>(nearbyChests.size());
-		for (ChestBlockEntity chest : nearbyChests)
+		for (ContainerHandle handle : nearbyChests)
 		{
-			out.add(chest.getBlockPos());
+			out.add(handle.pos());
 		}
 		return out;
 	}

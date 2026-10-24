@@ -769,7 +769,7 @@ public class FarmTask extends PlotTask
 				}
 				for (ItemStack stack : drops)
 				{
-					InventoryManager.depositItems(nearbyChests, stack);
+					InventoryManager.depositItems(level, nearbyChests, stack);
 				}
 				level.setBlock(pos, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 				deductCredits(Config.WORK_FARM_CREDIT_PER_BLOCK.get());
@@ -971,7 +971,7 @@ public class FarmTask extends PlotTask
 			}
 			for (ItemStack stack : drops)
 			{
-				InventoryManager.depositItems(nearbyChests, stack);
+				InventoryManager.depositItems(level, nearbyChests, stack);
 			}
 			level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
 			deductCredits(Config.WORK_FARM_CREDIT_PER_BLOCK.get());
@@ -1342,7 +1342,7 @@ public class FarmTask extends PlotTask
 		}
 		for (ItemStack stack : drops)
 		{
-			InventoryManager.depositItems(nearbyChests, stack);
+			InventoryManager.depositItems(level, nearbyChests, stack);
 		}
 		animal.discard();
 		deductCredits(Config.WORK_FARM_CREDIT_PER_BLOCK.get());
@@ -1537,7 +1537,7 @@ public class FarmTask extends PlotTask
 
 	private void refreshChests()
 	{
-		nearbyChests = InventoryManager.findNearbyChests(level, boxPos());
+		nearbyChests = InventoryManager.findNearbyContainers(level, boxPos());
 
 		// 箱子内容可能变化 → 作物/树苗/骨粉缓存失效（下轮扫描重算一次）
 		plantableComputed = false;
