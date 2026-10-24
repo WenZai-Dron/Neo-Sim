@@ -1,6 +1,6 @@
 # 旧版社区蓝图作者
 
-`buildings/old/` 中的 154 份 `.txt` 蓝图来自 Sim-U-Kraft 社区（作者 Scott Hather / Satscape 公开源码时一并发布），
+`buildings/old/` 中的 148 份 `.txt` 蓝图来自 Sim-U-Kraft 社区（作者 Scott Hather / Satscape 公开源码时一并发布），
 每份文件第二行的 `AU=` 字段是原作者署名。`buildings/new/` 下同名的 `.litematic` 由这些文件转换而来，
 作者信息沿用原文件。项目整体来源见 README 致谢。
 
@@ -65,7 +65,6 @@
 | Sim-U-Master | 2 |
 | Slutnick | 1 |
 | SpatialHeather | 21 |
-| StealthLava | 6 |
 | steven | 1 |
 | Subby | 1 |
 | Subby72 | 5 |
@@ -83,4 +82,5 @@
 - 24 份官方建筑没有 `AU=` 字段，按 Sim-U-Kraft 旧版默认作者记为 Satscape（转换时写入 `Author` 元数据）；
 - 1 份文件原文为 `AU=%`，视为未署名；
 - 作者名大小写、后缀与电子邮箱均按原文件原样保留，未做合并或改写；
+- `buildings/new/residential/` 中的 `PKID461~463-Apartment (3R, Stone/Sandst/Nether)` 三份改以 `.litematic` 收录（无对应 `.txt`），`Author` 仍署原作者 StealthLava，故不计入上表（上表按 `buildings/old/` 的 `.txt` 统计）；
 - 如某位作者不希望作品被收录，请提交 issue，我们会从后续版本中移除。
