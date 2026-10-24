@@ -72,6 +72,16 @@ public class ConstructionTask
 	// 两轮建造
 	private boolean phaseTwo;
 
+	// 进度缓存：状态页每帧、指令按需读取；缓存已扫过的方块数，按 resumeIndex 增量推进，避免整栋重扫
+	private int progressCacheIndex = -1;
+	private boolean progressCachePhaseTwo;
+	private int progressCacheValue;
+
+	// 第一轮的方块总数（不计空气）：第二轮的进度以它为基数，算一次即可
+	private int phaseOneBlocks = -1;
+
+	private final BlockPos.MutableBlockPos progressScanPos = new BlockPos.MutableBlockPos();
+
 	// 依附方块表兜底：第二轮扫完后仍有被推迟的方块时回卷重试的上限
 	private static final int MAX_RETRY_ROUNDS = 4;
 
@@ -1401,15 +1411,66 @@ public class ConstructionTask
 		building.setState(state);
 	}
 
-	// GUI进度：两轮显示
-	public int getProgress()
-	{
-		return phaseTwo ? schematic.getTotalVolume() + resumeIndex : resumeIndex;
-	}
-
+	// GUI/指令进度：按蓝图方块数计（两轮把方块分成两批，每块只建一次）
 	public int getTotal()
 	{
-		return schematic.getTotalVolume() * 2;
+		return schematic.getTotalSolidBlocks();
+	}
+
+	// 已完成的方块数：统计进度游标之前、属于当前轮次的蓝图方块（空气不计）；
+	// 第二轮以第一轮的总数为基数，两轮不会把同一块算两次。
+	// 回卷重试 / 进入第二轮会把 resumeIndex 归零，缓存失效后从头重算（只发生几次，不是每帧）。
+	public synchronized int getProgress()
+	{
+		LightweightBlockContainer container = schematic.getBlockContainer();
+		SchematicScanOrder scan = building.scanOrder();
+		if (container == null || scan == null) return 0;
+
+		int total = getTotal();
+		int target = Math.max(0, Math.min(resumeIndex, container.getTotalVolume()));
+
+		if (progressCacheIndex >= 0 && progressCachePhaseTwo == phaseTwo && target >= progressCacheIndex)
+		{
+			if (target > progressCacheIndex)
+			{
+				progressCacheValue += countBlocks(scan, container, progressCacheIndex, target, phaseTwo);
+				progressCacheIndex = target;
+			}
+
+			return Math.min(progressCacheValue, total);
+		}
+
+		progressCachePhaseTwo = phaseTwo;
+		progressCacheIndex = 0;
+		progressCacheValue = phaseTwo ? phaseOneBlockCount(scan, container) : 0;
+		progressCacheValue += countBlocks(scan, container, 0, target, phaseTwo);
+		progressCacheIndex = target;
+		return Math.min(progressCacheValue, total);
+	}
+
+	// 统计 [from, to) 内属于当前轮次的非空气方块数
+	private int countBlocks(SchematicScanOrder scan, LightweightBlockContainer container,
+			int from, int to, boolean secondPass)
+	{
+		int count = 0;
+		for (int i = from; i < to; i++)
+		{
+			scan.pos(i, progressScanPos);
+			BlockState state = container.get(progressScanPos.getX(), progressScanPos.getY(), progressScanPos.getZ());
+			if (state.isAir() || ConstructionRules.deferredToSecondPass(state) != secondPass) continue;
+			count++;
+		}
+		return count;
+	}
+
+	// 第一轮的方块总数（不计空气）：第二轮的进度以它为基数
+	private int phaseOneBlockCount(SchematicScanOrder scan, LightweightBlockContainer container)
+	{
+		if (phaseOneBlocks < 0)
+		{
+			phaseOneBlocks = countBlocks(scan, container, 0, container.getTotalVolume(), false);
+		}
+		return phaseOneBlocks;
 	}
 
 	public BuildingInstance getBuilding()
