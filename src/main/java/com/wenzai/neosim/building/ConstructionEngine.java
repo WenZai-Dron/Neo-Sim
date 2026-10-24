@@ -85,7 +85,8 @@ public class ConstructionEngine
 			return null;
 		}
 
-		// 相交冲突检测：与已有任务区域重叠则拒绝
+		// 相交冲突检测：与已有任务区域重叠则拒绝。
+		// 同一模盒的旧任务不参与检测：它马上会被本次选择替换（见 replaceTasksAt）。
 		AABB newBox = computeBuildingBox(preview, schematic);
 		if (newBox != null)
 		{
@@ -94,6 +95,8 @@ public class ConstructionEngine
 				for (ConstructionTask existing : tasks)
 				{
 					BuildingInstance other = existing.getBuilding();
+					if (sameConstructor(other, constructorPos)) continue;
+
 					AABB otherBox = computeBuildingBox(other);
 					if (otherBox != null && newBox.intersects(otherBox))
 					{
@@ -108,6 +111,10 @@ public class ConstructionEngine
 				}
 			}
 		}
+
+		// 一个建筑模盒只对应一个蓝图：再次选择蓝图时替换旧任务，
+		// 而不是让同一个模盒同时挂多个建造任务。
+		replaceTasksAt(level, constructorPos);
 
 		ConstructionTask task = new ConstructionTask(building, level);
 
@@ -134,6 +141,58 @@ public class ConstructionEngine
 		}
 		saveAllTasks(level);
 		return building;
+	}
+
+	// 移除指定模盒上的全部旧建造任务：同一个模盒再次选蓝图时用来“重新选择”，
+	// 保证一个模盒最多只有一个蓝图任务（旧任务占用的区块与落盘记录一并清理）。
+	private static void replaceTasksAt(ServerLevel level, BlockPos constructorPos)
+	{
+		if (constructorPos == null) return;
+
+		List<ConstructionTask> replaced = new ArrayList<>();
+		synchronized (tasks)
+		{
+			Iterator<ConstructionTask> it = tasks.iterator();
+			while (it.hasNext())
+			{
+				ConstructionTask task = it.next();
+				if (sameConstructor(task.getBuilding(), constructorPos))
+				{
+					replaced.add(task);
+					it.remove();
+				}
+			}
+		}
+
+		for (ConstructionTask task : replaced)
+		{
+			BuildingInstance old = task.getBuilding();
+			LOGGER.info("NeoSim-ConstructionEngine: replace task '{}' at {} — blueprint re-selected for the same constructor",
+					old.getSchematicName(), constructorPos);
+
+			// 释放旧任务加载的区块
+			ChunkLoaders.Building.releaseForBuilding(old, level);
+
+			// 旧任务落盘记录撤掉；新任务随后会重新保存
+			BuildingPersistence.removeAt(level, old);
+
+			if (lastTask == task) lastTask = null;
+		}
+	}
+
+	// 任务是否属于指定模盒（记录缺模盒坐标时退回控制箱坐标，与 findTask 同口径）
+	private static boolean sameConstructor(BuildingInstance building, BlockPos constructorPos)
+	{
+		BlockPos key = constructorKey(building);
+		return key != null && key.equals(constructorPos);
+	}
+
+	// 建筑归属的模盒坐标：优先模盒，旧记录缺模盒坐标时退回控制箱
+	private static BlockPos constructorKey(BuildingInstance building)
+	{
+		if (building == null) return null;
+		return building.getConstructorPos() != null
+				? building.getConstructorPos() : building.getControlBoxPos();
 	}
 
 	// 计算建筑占用的世界包围盒
@@ -177,11 +236,7 @@ public class ConstructionEngine
 		{
 			for (ConstructionTask task : tasks)
 			{
-				BuildingInstance building = task.getBuilding();
-				BlockPos con = building.getConstructorPos();
-
-				if ((con != null && con.equals(constructorPos))
-						|| (con == null && building.getControlBoxPos().equals(constructorPos)))
+				if (sameConstructor(task.getBuilding(), constructorPos))
 				{
 					return task;
 				}
@@ -262,9 +317,7 @@ public class ConstructionEngine
 			while (it.hasNext())
 			{
 				ConstructionTask task = it.next();
-				BlockPos con = task.getBuilding().getConstructorPos();
-				if ((con != null && con.equals(constructorPos))
-						|| (con == null && task.getBuilding().getControlBoxPos().equals(constructorPos)))
+				if (sameConstructor(task.getBuilding(), constructorPos))
 				{
 					removedTasks.add(task);
 					it.remove();
@@ -446,7 +499,24 @@ public class ConstructionEngine
 			{
 				String cityName = dir.getFileName().toString();
 				List<BuildingInstance> buildings = BuildingPersistence.loadFromCity(level, cityName);
+
+				// 一个模盒只认一条蓝图记录：同一模盒出现多条记录时，
+				// 按记录顺序保留最后一条（=最近一次选择），其余丢弃并立即写回。
+				Map<BlockPos, BuildingInstance> latestByConstructor = new LinkedHashMap<>();
 				for (BuildingInstance building : buildings)
+				{
+					BlockPos key = constructorKey(building);
+					if (key != null) latestByConstructor.put(key, building);
+				}
+				List<BuildingInstance> restored = new ArrayList<>(latestByConstructor.values());
+				if (restored.size() != buildings.size())
+				{
+					LOGGER.warn("NeoSim-ConstructionEngine: {} duplicate blueprint record(s) in city '{}' — keeping the latest per constructor",
+							buildings.size() - restored.size(), cityName);
+					BuildingPersistence.saveToCity(level, cityName, restored);
+				}
+
+				for (BuildingInstance building : restored)
 				{
 					if (building.getSchematic() == null)
 					{
