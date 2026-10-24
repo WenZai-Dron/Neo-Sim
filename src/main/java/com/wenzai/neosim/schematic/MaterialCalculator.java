@@ -1,5 +1,6 @@
 package com.wenzai.neosim.schematic;
 
+import com.wenzai.neosim.block.ModBlocks;
 import com.wenzai.neosim.compat.attached.AttachedBlockTable;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.*;
@@ -39,6 +40,17 @@ public class MaterialCalculator
 
 		// 材料消耗表（building/materials.json）的判定缓存一并失效
 		com.wenzai.neosim.building.MaterialRules.invalidate();
+	}
+
+	// 控制箱 / 生活点 / 标记棒：特殊标记落成的方块，不是建材
+	// 任何模式下都不耗材，也不计入建造费用（另见 ConstructionEngine.countMarkerBlocks）
+	// .litematic 里的控制箱与标记棒就是真实方块，所以必须在材料消耗表与内置分类之前短路：
+	// 否则困难模式会停下等玩家往箱子里塞控制箱，而控制箱没有配方也不掉落，建造永远卡在缺料
+	public static boolean isMarkerBlock(Block block)
+	{
+		return block == ModBlocks.CONTROL_BOX.get()
+				|| block == ModBlocks.LIVING_POINT.get()
+				|| block == ModBlocks.MARKER.get();
 	}
 
 	// 方块注册名
@@ -140,6 +152,9 @@ public class MaterialCalculator
 	public static boolean requiresMaterial(BlockState state, byte mode)
 	{
 		if (state.isAir()) return false;
+
+		// 控制箱 / 生活点 / 标记棒：任何模式都不耗材（见 isMarkerBlock）
+		if (isMarkerBlock(state.getBlock())) return false;
 
 		// 创造模式：一律不耗材 —— 与运行模式里其他"创造免费"判定（快递扣款 / 重建扣款 / 整地…）同一口径
 		if (mode == 2) return false;

@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "_comment": "材料消耗表（建造分类）：决定普通 / 困难模式下哪些方块建造耗材。规则字段：mode = normal / hardcore / none / all（逗号分隔可多选，缺省 all；写 creative 无效——创造模式恒免费）；requires = true 耗材 / false 免费。匹配键四选一：id（支持 * 与 ? 通配）/ namespace（也支持 * 与 ?，写 \"*\" 即全部方块）/ tag / regex。默认行为：创造模式全部方块免费，本表与内置分类都不生效；普通 / 困难模式下，未命中任何规则的模组方块（命名空间非 minecraft / neo_sim）一律耗材，原版 / 本模组方块回落到模组内置分类（普通模式仅基础建材耗材，困难模式除免费清单外全部耗材）。写规则即覆盖默认行为：同一模式下后写的规则覆盖先写的，例如 { \"namespace\": \"create\", \"mode\": \"normal\", \"requires\": false } 可让 create 的方块在普通模式下免费。外部文件 NeoSim/Json/building/materials.json 覆盖本内置文件，加载摘要写在 _state/loaded-building-materials.json。",
+  "_comment": "材料消耗表（建造分类）：决定普通 / 困难模式下哪些方块建造耗材。规则字段：mode = normal / hardcore / none / all（逗号分隔可多选，缺省 all；写 creative 无效——创造模式恒免费）；requires = true 耗材 / false 免费。匹配键四选一：id（支持 * 与 ? 通配）/ namespace（也支持 * 与 ?，写 \"*\" 即全部方块）/ tag / regex。默认行为：创造模式全部方块免费，本表与内置分类都不生效；控制箱 / 生活点 / 标记棒（特殊标记落成的方块）在任何模式下都不耗材、不计建造费，本表也覆盖不到；普通 / 困难模式下，未命中任何规则的模组方块（命名空间非 minecraft / neo_sim）一律耗材，原版 / 本模组方块回落到模组内置分类（普通模式仅基础建材耗材，困难模式除免费清单外全部耗材）。写规则即覆盖默认行为：同一模式下后写的规则覆盖先写的，例如 { \"namespace\": \"create\", \"mode\": \"normal\", \"requires\": false } 可让 create 的方块在普通模式下免费。外部文件 NeoSim/Json/building/materials.json 覆盖本内置文件，加载摘要写在 _state/loaded-building-materials.json。",
   "rules": []
 }

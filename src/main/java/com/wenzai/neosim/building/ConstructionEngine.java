@@ -9,6 +9,7 @@ import com.wenzai.neosim.compat.modded.ModBlockRegistry;
 import com.wenzai.neosim.compat.sable.PhysicsWorld;
 import com.wenzai.neosim.schematic.BlockStatePalette;
 import com.wenzai.neosim.schematic.LightweightBlockContainer;
+import com.wenzai.neosim.schematic.MaterialCalculator;
 import com.wenzai.neosim.schematic.PreviewState;
 import com.wenzai.neosim.schematic.SchematicData;
 import com.wenzai.neosim.schematic.SchematicRegistry;
@@ -47,6 +48,9 @@ public class ConstructionEngine
 
 	// 蓝图 -> 其他模组方块数：GUI 每帧报价都要用，按蓝图实例缓存；键用弱引用，蓝图重建后旧条目可回收
 	private static final Map<SchematicData, Integer> MODDED_BLOCK_COUNT = new WeakHashMap<>();
+
+	// 蓝图 -> 控制箱 / 生活点 / 标记棒的数量：不计建造费，缓存口径同上
+	private static final Map<SchematicData, Integer> MARKER_BLOCK_COUNT = new WeakHashMap<>();
 
 	// 从预览状态创建建造任务
 	public static BuildingInstance createBuilding(SchematicData schematic,
@@ -576,11 +580,15 @@ public class ConstructionEngine
 
 	// 整栋建筑的建造费用：原版 / 本模组方块按 [general] creditsPerBlock，
 	// 其他模组的方块（命名空间非 minecraft / neo_sim）按 [general] moddedCreditsPerBlock。
+	// 控制箱 / 生活点 / 标记棒是特殊标记落成的方块、不是建材，不计费 ——
+	// 与 MaterialCalculator.isMarkerBlock 的"任何模式都不耗材"同一口径
 	// 开工扣款与 GUI 报价必须同源，只此一份实现
 	public static double buildCost(SchematicData data)
 	{
 		int modded = countModdedBlocks(data);
-		int vanilla = Math.max(0, data.getTotalSolidBlocks() - modded);
+		int marker = countMarkerBlocks(data);
+		// 这三类方块都是本模组方块，必然落在 vanilla 桶里
+		int vanilla = Math.max(0, data.getTotalSolidBlocks() - modded - marker);
 		return vanilla * Config.CREDITS_PER_BLOCK.get() + modded * Config.MODDED_CREDITS_PER_BLOCK.get();
 	}
 
@@ -601,12 +609,33 @@ public class ConstructionEngine
 		}
 	}
 
+	// 蓝图里控制箱 / 生活点 / 标记棒的个数：不计费，按蓝图实例缓存
+	public static int countMarkerBlocks(SchematicData data)
+	{
+		synchronized (MARKER_BLOCK_COUNT)
+		{
+			Integer cached = MARKER_BLOCK_COUNT.get(data);
+			if (cached != null)
+			{
+				return cached;
+			}
+
+			int count = countMarker(data);
+			MARKER_BLOCK_COUNT.put(data, count);
+			return count;
+		}
+	}
+
 	// 内容表重载后清空缓存（方块解析结果可能已变）
 	public static void invalidateBuildCost()
 	{
 		synchronized (MODDED_BLOCK_COUNT)
 		{
 			MODDED_BLOCK_COUNT.clear();
+		}
+		synchronized (MARKER_BLOCK_COUNT)
+		{
+			MARKER_BLOCK_COUNT.clear();
 		}
 	}
 
@@ -630,6 +659,33 @@ public class ConstructionEngine
 
 			BlockState state = palette.getBlockState(id);
 			if (state != null && ModBlockRegistry.isModded(state.getBlock()))
+			{
+				count += usage[id];
+			}
+		}
+		return count;
+	}
+
+	// 按 palette 聚合统计控制箱 / 生活点 / 标记棒：只在缓存未命中时扫一遍蓝图
+	private static int countMarker(SchematicData data)
+	{
+		LightweightBlockContainer container = data.getBlockContainer();
+		BlockStatePalette palette = container.getPalette();
+		int[] usage = container.countPaletteUsage();
+
+		int count = 0;
+		int n = Math.min(palette.size(), usage.length);
+
+		// palette id 0 = 空气，从 1 开始
+		for (int id = 1; id < n; id++)
+		{
+			if (usage[id] == 0)
+			{
+				continue;
+			}
+
+			BlockState state = palette.getBlockState(id);
+			if (state != null && MaterialCalculator.isMarkerBlock(state.getBlock()))
 			{
 				count += usage[id];
 			}
