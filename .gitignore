@@ -1,26 +1,61 @@
-# eclipse
-bin
-*.launch
-.settings
-.metadata
-.classpath
-.project
+### Gradle ###
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/**/build/
 
-# idea
-out
-*.ipr
+### IntelliJ IDEA ###
+.idea/
+out/
+!**/src/**/out/
 *.iws
 *.iml
-.idea
+*.ipr
 
-# gradle
-build
-.gradle
+### Eclipse ###
+bin/
+!**/src/**/bin/
+.apt_generated
+.classpath
+.eclipse/
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+*.launch
+.metadata
+eclipse/
 
-# other
-eclipse
-run
-runs
-run-data
+### VS Code ###
+.vscode/
 
-repo
+### macOS ###
+.DS_Store
+
+### Minecraft Modding ###
+run/
+runs/
+run-data/
+!**/src/**/run/
+**/src/generated/**/.cache/
+repo/
+!**/src/**/repo/
+
+### 第三方参考源码与本机调试文件：不随仓库/发布分发，第三方归属见 src/main/resources/META-INF/NOTICE
+/reference/
+/sim-u-kraft/
+/FarmersDelight-1.21/
+/libs/
+/.recode/
+/games/
+/logs/
+
+### 数据生成产物（runData 可随时重新生成）
+/src/generated/
+
+### 文档：只有仓库根的两个 README 入库，其余 md 与 docs/ 都不入库
+/*.md
+!/README.md
+!/README_EN.md
+/docs/
