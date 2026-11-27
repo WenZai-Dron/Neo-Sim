@@ -54,8 +54,11 @@ repo/
 ### 数据生成产物（runData 可随时重新生成）
 /src/generated/
 
-### 文档：只有仓库根的两个 README 入库，其余 md 与 docs/ 都不入库
+### 文档：只有仓库根的两个 README 与三份早期中文文档入库，其余 md 与 docs/ 都不入库
 /*.md
 !/README.md
 !/README_EN.md
+!/开发文档.md
+!/兼容.md
+!/关于兼容Sable.md
 /docs/
